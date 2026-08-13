@@ -1,12 +1,10 @@
-// ============================================================
 // auth.js – Autenticación con Microsoft Entra ID (MSAL)
-// ============================================================
 
 const msalConfig = {
   auth: {
     clientId: 'e9cdd347-5f61-4b4b-b509-c7d049bb58d3',
     authority: 'https://login.microsoftonline.com/857456d6-603c-4fa7-a6f6-3fadde5383ec',
-    redirectUri: 'http://localhost:3000'
+    redirectUri: window.location.origin + window.location.pathname
   },
   cache: {
     cacheLocation: 'sessionStorage',
@@ -14,10 +12,9 @@ const msalConfig = {
   }
 };
 
-// Scopes: login básico + envío de correo + OneDrive (subida/lectura de archivos).
+// login
 const loginRequest = {
   scopes: ['User.Read', 'Mail.Send', 'Files.ReadWrite'],
-  // FORZAMOS EL CONSENTIMIENTO PARA QUE EL TOKEN INCLUYA TODOS LOS SCOPES
   prompt: 'consent'
 };
 
