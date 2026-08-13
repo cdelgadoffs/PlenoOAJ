@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Generador de Orden del Día</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="print.css" media="print" />
+</head>
+<body>
+
+<!-- ===== PANTALLA DE INICIO DE SESIÓN (obligatoria) ===== -->
+<div class="login-gate" id="loginGate">
+  <div class="login-box">
+    <img src="https://raw.githubusercontent.com/cdelgadoffs/CGD/535876195bedc1b602f98438ee3a42ff11cbb817/logo.png" alt="Logo institucional" class="login-logo" />
+    <div class="login-title">Generador de Orden del Día</div>
+    <div class="login-sub">Acceso restringido a cuentas institucionales</div>
+    <button id="btnLogin" class="btn-login">Iniciar sesión</button>
+    <div id="loginError" class="login-error"></div>
+    <div id="loginLoading" class="login-loading hidden">Verificando sesión...</div>
+  </div>
+</div>
+
+<!-- ===== APP (oculta hasta iniciar sesión) ===== -->
+<div class="app-shell hidden" id="appShell">
+
+<!-- ===== BARRA SUPERIOR ===== -->
+<header class="topbar">
+  <div class="topbar-left">
+    <button id="btnToggleNuevoSidebar" class="btn-hamburguesa" aria-label="Toggle nuevo panel">☰</button>
+    <img src="https://raw.githubusercontent.com/cdelgadoffs/CGD/535876195bedc1b602f98438ee3a42ff11cbb817/logo.png" alt="Logo institucional" style="height:50px; width:auto; margin-right:8px;" />
+  </div>
+  <div class="topbar-right">
+    <div class="search-wrapper">
+      <input type="text" id="buscadorGlobal" class="topbar-search" placeholder="Buscar punto..." />
+      <span id="clearSearchBtn" class="clear-search-btn" style="display:none;">✕</span>
+    </div>
+    <button class="btn-nuevo-proyecto-top" id="btnNuevoProyecto">
+      <span class="btn-np-icon">+</span><span class="btn-np-label">Nuevo proyecto</span>
+    </button>
+    <span id="fechaActual"></span>
+    <div class="user-session">
+      <span id="userNombre" class="user-nombre"></span>
+      <button id="btnLogout" class="btn-logout" title="Cerrar sesión">Salir</button>
+    </div>
+  </div>
+</header>
+
+<div class="shell">
+
+  <!-- ===== NUEVO SIDEBAR NEGRO (se superpone) ===== -->
+  <aside class="sidebar-nuevo" id="sidebarNuevo">
+    <div class="sb-header sb-header-nuevo">
+      <div class="sb-title sb-title-nuevo">Panel de control</div>
+      <div class="sb-subtitle sb-subtitle-nuevo" id="sidebarNuevoSubtitle">Futuras funcionalidades</div>
+    </div>
+
+    <!-- Vista: menú principal -->
+    <div class="sb-nav nuevo-panel" id="panelMenuNuevo">
+      <ul class="nuevo-menu-list">
+        <li class="nuevo-menu-item" data-permiso="email" id="menuItemEmail">Email</li>
+        <li class="nuevo-menu-item">Estadísticas</li>
+        <li class="nuevo-menu-item">Notificaciones</li>
+        <li class="nuevo-menu-item">Perfil</li>
+      </ul>
+    </div>
+
+    <!-- Vista: formulario de correo -->
+    <div class="sb-nav nuevo-panel hidden" id="panelEmailNuevo">
+      <button class="btn-volver-nuevo" id="btnVolverMenuNuevo">‹ Volver</button>
+
+      <div class="email-field">
+        <label class="email-label">Destinatarios</label>
+        <div id="listaDestinatariosFicticios" class="email-dest-lista"></div>
+      </div>
+
+      <div class="email-field">
+        <label class="email-label">Agregar invitado</label>
+        <div class="email-invitado-input">
+          <input type="email" id="inputInvitadoEmail" placeholder="correo@ejemplo.com" />
+          <button id="btnAgregarInvitado" class="btn-add-invitado">+</button>
+        </div>
+        <div id="listaInvitados" class="email-invitados-lista"></div>
+      </div>
+
+      <div class="email-field">
+        <label class="email-label">Asunto</label>
+        <input type="text" id="emailAsunto" class="email-asunto-input" placeholder="Asunto del correo" />
+      </div>
+
+      <div class="email-field email-field-grow">
+        <label class="email-label">Mensaje</label>
+        <textarea id="emailCuerpo" class="email-textarea" placeholder="Redacta el mensaje..."></textarea>
+      </div>
+
+      <div class="email-field">
+        <label class="email-label">Adjuntar documentos</label>
+        <div id="listaDocumentosAdjuntos" class="email-doc-lista"></div>
+      </div>
+
+      <div id="emailStatus" class="email-status"></div>
+
+      <button id="btnEnviarEmail" class="btn-enviar-email">Enviar correo</button>
+    </div>
+  </aside>
+
+  <!-- ===== SIDEBAR PRINCIPAL (VISTAS) ===== -->
+  <aside class="sidebar-principal" id="sidebarPrincipal">
+    <div class="sb-header">
+      <div class="sb-title" id="docTitleSidebar">Sesión Ordinaria N° 1</div>
+      <div class="sb-subtitle" id="docSubSidebar">12 de marzo de 2026</div>
+    </div>
+    <nav class="sb-nav" id="navPrincipal">
+      <div class="nav-item active" data-vista="inicio">
+        <span class="nav-dot"></span> Inicio
+      </div>
+      <div class="nav-item" data-vista="proyecto" id="navProyecto">
+        <span class="nav-dot"></span>
+        <span>Proyecto del orden del día</span>
+        <span class="badge-total" id="totalBadge">0</span>
+      </div>
+      <div class="nav-item" data-vista="sesionPrevia">
+        <span class="nav-dot"></span> Sesión previa
+      </div>
+      <div class="nav-item" data-vista="actaSesion">
+        <span class="nav-dot"></span> Acta de sesión
+      </div>
+    </nav>
+
+    <!-- Resumen de clasificaciones -->
+    <div id="resumenClasificacion" style="padding:12px 16px; border-top:1px solid #e0e0e0; margin-top:auto; font-size:12px; color:#444;">
+      <div style="font-weight:600; margin-bottom:6px;">Clasificaciones</div>
+      <div id="contenedorClasificaciones"></div>
+    </div>
+
+    <button class="btn-nuevo-proyecto" id="btnGenerarPDFSidebar">Generar PDF</button>
+  </aside>
+
+  <!-- ===== SIDEBAR SECUNDARIO (SECCIONES) ===== -->
+  <aside class="sidebar-secundario hidden" id="sidebarSecundario">
+    <div class="sb-header">
+      <div class="sb-header-top">
+        <div class="sb-badge" id="secBadgeLabel">Secciones</div>
+        <div class="sb-header-actions">
+          <button class="btn-add" id="btnAgregarSeccion" title="Crear nuevo punto">+</button>
+          <button class="btn-add" id="btnAprobarTodos" title="Marcar/desmarcar todos" style="display:none;">&#8595;</button>
+        </div>
+      </div>
+      <div class="sb-subtitle" id="secSubtitle">5 secciones</div>
+    </div>
+    <nav class="sb-nav" id="navSecundario"></nav>
+  </aside>
+
+  <!-- ===== SIDEBAR TERCIARIO (FORMULARIO DE CREACIÓN) ===== -->
+  <aside class="sidebar-terciario hidden" id="sidebarTerciario">
+    <div class="sb-header">
+      <div class="sb-badge">Nuevo punto</div>
+      <div class="sb-header-top">
+        <span class="sb-title" id="terTitle">Crear punto</span>
+      </div>
+      <div class="sb-subtitle" id="terSubtitle">Sección: <span id="formSeccionActual">Aprobaciones</span></div>
+    </div>
+    <div class="ter-form">
+      <div class="ter-field">
+        <label class="ter-label">Dependencia</label>
+        <select id="filtroDependencia" class="ter-select">
+          <option value="pleno" selected>Pleno</option>
+          <option value="direcciones">Direcciones generales</option>
+          <option value="comisiones">Comisiones</option>
+        </select>
+      </div>
+
+      <div id="listaDependencias" class="ter-lista-dep">
+        <!-- Se llena dinámicamente -->
+      </div>
+
+      <div id="depSeleccionadaDisplay" class="ter-dep-actual">
+        Ninguna seleccionada
+      </div>
+
+      <div class="ter-field">
+        <label class="ter-label">Tipo de asunto</label>
+        <select id="asuntoSelect" class="ter-select">
+          <option value="Licencia médica">Licencia médica</option>
+          <option value="Solicitud de seguridad">Solicitud de seguridad</option>
+          <option value="Renuncia">Renuncia</option>
+          <option value="Cambio de adscripción">Cambio de adscripción</option>
+        </select>
+      </div>
+
+      <div class="ter-field ter-field-grow">
+        <label for="cuerpoTextarea" class="ter-label">Resumen</label>
+        <textarea id="cuerpoTextarea" class="ter-textarea" placeholder="Breve descripción..."></textarea>
+      </div>
+
+      <!-- Archivos adjuntos -->
+      <div class="ter-field">
+        <label class="ter-label">Archivos adjuntos</label>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <input type="file" id="archivosInput" multiple style="flex:1; padding:4px; border:1px solid #ccc; border-radius:4px; background:#fff; font-size:12px;" />
+          <button id="btnAdjuntarArchivo" class="btn-confirm" style="padding:4px 12px; font-size:12px;">Adjuntar</button>
+        </div>
+        <div id="listaArchivosTemporales" style="margin-top:6px; font-size:12px; color:#555; max-height:60px; overflow-y:auto;">
+          <span style="color:#aaa;">Ningún archivo adjunto</span>
+        </div>
+        <div id="oneDriveStatus" class="onedrive-status"></div>
+      </div>
+
+      <div class="ter-acciones">
+        <button class="btn-cancel" id="btnCancelarCreacion">Cancelar</button>
+        <button class="btn-confirm" id="btnConfirmarCreacion">Añadir</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===== PANEL PRINCIPAL ===== -->
+  <main class="main" id="panelPrincipal">
+    <!-- Se llena dinámicamente -->
+  </main>
+
+  <!-- ===== SIDEBAR DERECHO (ESQUEMA) ===== -->
+  <div class="sidebar-derecho" id="sidebarDerecho">
+    <div class="sb-header">
+      <div class="header-top">
+        <span class="sb-title">Esquema</span>
+        <button class="btn-close-derecho" id="btnCerrarDerecho">✕</button>
+      </div>
+      <select id="filtroDependenciaEsquema" class="filtro-select">
+        <option value="">Todas las dependencias</option>
+      </select>
+    </div>
+    <nav class="sb-nav" id="navEsquema"></nav>
+  </div>
+
+  <!-- Botón toggle para abrir el sidebar derecho -->
+  <button class="btn-toggle-derecho hidden" id="btnToggleDerecho">Esquema</button>
+
+</div> <!-- fin .shell -->
+
+</div> <!-- fin .app-shell -->
+
+<!-- ===== MODALES ===== -->
+
+<!-- MODAL PARA APROBACIÓN DE ACTAS -->
+<div class="modal-overlay" id="modalActa">
+  <div class="modal-content">
+    <h3>Agregar aprobación de acta</h3>
+    <div style="margin-bottom:12px;">
+      <label>Tipo de sesión</label>
+      <select id="actaTipoSesion">
+        <option value="Ordinaria">Ordinaria</option>
+        <option value="Extraordinaria">Extraordinaria</option>
+      </select>
+    </div>
+    <div>
+      <label>Fecha de la sesión</label>
+      <input type="date" id="actaFecha" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="actaCancel">Cancelar</button>
+      <button class="btn-confirm" id="actaConfirm">Agregar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NUEVO PROYECTO -->
+<div class="modal-overlay" id="modalNuevoProyecto">
+  <div class="modal-content">
+    <h3>Crear nuevo proyecto</h3>
+    <p style="margin-bottom:16px; color:#666;">Ingresa los datos de la sesión</p>
+    <div>
+      <label>Tipo de sesión</label>
+      <select id="nuevoTipoSesion">
+        <option value="Ordinaria">Ordinaria</option>
+        <option value="Extraordinaria">Extraordinaria</option>
+      </select>
+    </div>
+    <div>
+      <label>Número de sesión</label>
+      <input type="number" id="nuevoNumeroSesion" value="1" min="1" />
+    </div>
+    <div>
+      <label>Fecha</label>
+      <input type="date" id="nuevoFecha" />
+    </div>
+    <div class="checkbox-group">
+      <input type="checkbox" id="confirmNewProject" />
+      <label for="confirmNewProject" style="display:inline; font-weight:400;">Crear nuevo proyecto</label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="modalNuevoCancel">Cancelar</button>
+      <button class="btn-confirm" id="modalNuevoConfirm" disabled>Crear nuevo proyecto</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PREVISUALIZACIÓN ARCHIVO -->
+<div class="modal-overlay" id="modalPrevisualizacion">
+  <!-- La clase 'modal-content' tendrá 'modal-preview' o 'modal-small' según el tipo -->
+  <div class="modal-content modal-preview">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-shrink:0;">
+      <h3 id="previewTitle" style="font-size: 20px;">Vista previa</h3>
+      <button class="btn-close-derecho" id="btnCerrarPreview" style="font-size: 28px; background: none; border: none; cursor: pointer; color: #1a1a1a; font-weight: 300;">✕</button>
+    </div>
+    <div id="previewContent" style="text-align: center; min-height: 100px;"></div>
+    <div class="modal-actions" style="margin-top: 10px; text-align: right; flex-shrink:0;">
+      <button class="btn-cancel" id="btnCerrarPreview2">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3/lib/msal-browser.min.js"></script>
+<script src="auth.js"></script>
+<script src="onedrive.js"></script>
+<script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
+<script src="app.js"></script>
+<script src="email.js"></script>
+</body>
+</html>
