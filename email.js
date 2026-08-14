@@ -12,19 +12,9 @@ const DESTINATARIOS_FICTICIOS = [
 let invitadosEmail = [];
 
 // ========== REFERENCIAS DOM ==========
-const menuItemEmail = document.getElementById('menuItemEmail');
-const panelMenuNuevo = document.getElementById('panelMenuNuevo');
-const panelEmailNuevo = document.getElementById('panelEmailNuevo');
-const btnVolverMenuNuevo = document.getElementById('btnVolverMenuNuevo');
+// menuItemEmail, panelMenuNuevo, panelEmailNuevo y btnVolverMenuNuevo
+// ya están declarados en app.js (mismo scope global)
 const listaDestinatariosFicticios = document.getElementById('listaDestinatariosFicticios');
-const inputInvitadoEmail = document.getElementById('inputInvitadoEmail');
-const btnAgregarInvitado = document.getElementById('btnAgregarInvitado');
-const listaInvitados = document.getElementById('listaInvitados');
-const emailAsunto = document.getElementById('emailAsunto');
-const emailCuerpo = document.getElementById('emailCuerpo');
-const listaDocumentosAdjuntos = document.getElementById('listaDocumentosAdjuntos');
-const emailStatus = document.getElementById('emailStatus');
-const btnEnviarEmail = document.getElementById('btnEnviarEmail');
 
 // ========== PERMISOS (solo Editor/Admin) ==========
 function actualizarVisibilidadMenuEmail() {
@@ -42,6 +32,9 @@ function abrirPanelEmail() {
   renderDocumentosAdjuntos();
   emailStatus.textContent = '';
   emailStatus.className = 'email-status';
+  if (typeof window.actualizarBotonNuevoCalendario === 'function') {
+    window.actualizarBotonNuevoCalendario();
+  }
 }
 
 function volverAlMenuNuevo() {
