@@ -191,47 +191,7 @@ function aplicarExcepciones() {
     }
     cambios = true;
   });
-  if (cambios) {
-    guardarSesiones();
-    recalcularNumerosSesion();
-  }
-}
-
-// ========== NUMERACIÓN CONSECUTIVA DE SESIONES ==========
-function recalcularNumerosSesion() {
-  const hoy = hoyLocalISO();
-  const porAnioTipo = {};
-
-  Object.keys(sesiones).sort().forEach(f => {
-    const anio = f.substring(0, 4);
-    const sesion = sesiones[f];
-    if (!sesion) return;
-
-    const tipo = sesion.tipoSesion || 'Ordinaria';
-    const clave = anio + '_' + tipo;
-
-    const esPasada = f < hoy;
-    const tieneContenido = sesion.secciones && sesion.secciones.some(s => !s.fijo);
-    const noCelebrada = esPasada && !tieneContenido;
-
-    if (!porAnioTipo[clave]) porAnioTipo[clave] = 0;
-
-    if (noCelebrada) {
-      // No consume número: deja hueco para que la siguiente sesión del mismo tipo lo ocupe.
-      sesion.numeroSesion = null;
-    } else {
-      porAnioTipo[clave] += 1;
-      sesion.numeroSesion = porAnioTipo[clave];
-    }
-  });
-
-  guardarSesiones();
-
-  if (sesionActivaFecha && sesiones[sesionActivaFecha]) {
-    proyectoMeta.numeroSesion = sesiones[sesionActivaFecha].numeroSesion || 1;
-    guardarProyectoMeta();
-    actualizarTituloSidebar();
-  }
+  if (cambios) guardarSesiones();
 }
 
 // ========== MANEJO DE SESIONES ==========
@@ -245,10 +205,9 @@ function guardarEstadoActual() {
     };
   }
   sesiones[sesionActivaFecha].tipoSesion = proyectoMeta.tipoSesion;
+  sesiones[sesionActivaFecha].numeroSesion = proyectoMeta.numeroSesion;
   sesiones[sesionActivaFecha].secciones = JSON.parse(JSON.stringify(secciones));
   guardarSesiones();
-  recalcularNumerosSesion();
-  if (window.fsSync) window.fsSync.sincronizarSesion(sesionActivaFecha);
 }
 function cargarSesion(fecha) {
   if (!fecha) return;
@@ -261,11 +220,10 @@ function cargarSesion(fecha) {
       secciones: []
     };
     guardarSesiones();
-    recalcularNumerosSesion();
   }
   const data = sesiones[fecha];
   proyectoMeta.tipoSesion = data.tipoSesion;
-  proyectoMeta.numeroSesion = data.numeroSesion || 1;
+  proyectoMeta.numeroSesion = data.numeroSesion;
   proyectoMeta.fecha = fecha;
   secciones = JSON.parse(JSON.stringify(data.secciones));
   asegurarPuntosFijos();
@@ -298,10 +256,7 @@ function limpiarSesionesInvalidas() {
     delete sesiones[fecha];
     hayCambios = true;
   });
-  if (hayCambios) {
-    guardarSesiones();
-    recalcularNumerosSesion();
-  }
+  if (hayCambios) guardarSesiones();
 }
 function generarCalendarioAnual(anioParam) {
   const anio = anioParam || new Date().getFullYear();
@@ -345,8 +300,6 @@ function generarCalendarioAnual(anioParam) {
       if (proxima) cargarSesion(proxima);
     }
   }
-
-  recalcularNumerosSesion();
   return fechas;
 }
 function obtenerProximaSesion() {
@@ -373,21 +326,14 @@ function eliminarSesion(fecha) {
     return;
   }
   const sesion = sesiones[fecha];
-  if (sesion.tipoSesion !== 'Extraordinaria') {
-    alert('Las sesiones ordinarias no se pueden eliminar, solo editar. Si necesitas ajustarlas, usa vacaciones o asuetos en el calendario.');
-    return;
-  }
   const tieneContenido = sesion.secciones && sesion.secciones.some(s => !s.fijo);
   if (tieneContenido) {
     if (!confirm(`La sesión del ${formatearFechaES(fecha)} tiene contenido. ¿Seguro que quieres eliminarla?`)) return;
   } else {
     if (!confirm(`¿Eliminar la sesión del ${formatearFechaES(fecha)}?`)) return;
   }
-  const tipoEliminada = sesion.tipoSesion;
   delete sesiones[fecha];
   guardarSesiones();
-  recalcularNumerosSesion();
-  if (window.fsSync) window.fsSync.eliminarSesionArchivo(fecha, tipoEliminada);
   if (vistaActual === 'proyecto' || vistaActual === 'inicio') {
     renderCintaSesiones(mesCintaActual || fecha.substring(0, 7));
     inicializarControlAnual();
@@ -548,8 +494,8 @@ const btnVolverMenuCalendario = document.getElementById('btnVolverMenuCalendario
 const btnVolverMenuNuevo = document.getElementById('btnVolverMenuNuevo');
 const menuItemCalendarizacion = document.getElementById('menuItemCalendarizacion');
 const menuItemEmail = document.getElementById('menuItemEmail');
-const btnNuevoCalendario = document.getElementById('btnNuevoCalendario');
 
+const btnNuevoCalendario = document.getElementById('btnNuevoCalendario');
 const panelCreacionCalendario = document.getElementById('panelCreacionCalendario');
 const panelControlAnual = document.getElementById('panelControlAnual');
 const confirmSobrescribir = document.getElementById('confirmSobrescribir');
@@ -1322,19 +1268,23 @@ function renderResumenClasificacion() {
 function actualizarVistaCalendarizacion() {
   if (!panelCreacionCalendario || !panelControlAnual) return;
   const haySesiones = Object.keys(sesiones).length > 0;
-
-  if (haySesiones && !window.formularioActivo) {
+  // Por defecto, si hay sesiones, mostramos control y ocultamos formulario
+  // El botón "+" alternará
+  if (haySesiones && !panelCreacionCalendario.style.display || panelCreacionCalendario.style.display === 'none') {
+    // Si hay sesiones y el formulario no está visible por defecto, mostramos control
     panelControlAnual.style.display = 'block';
-    panelCreacionCalendario.style.display = 'none';
+    // Pero si el formulario fue mostrado manualmente, respetamos esa decisión
+    // Para simplificar, usaremos una variable para saber si el formulario está activo
+    if (!window.formularioActivo) {
+      panelCreacionCalendario.style.display = 'none';
+    }
   } else if (!haySesiones) {
+    // No hay sesiones: mostrar formulario, ocultar control
     panelCreacionCalendario.style.display = 'block';
     panelControlAnual.style.display = 'none';
     window.formularioActivo = true;
-  } else {
-    panelCreacionCalendario.style.display = 'block';
-    panelControlAnual.style.display = 'none';
   }
-
+  // Actualizar control si está visible
   if (panelControlAnual.style.display !== 'none') {
     inicializarControlAnual();
   }
@@ -1343,12 +1293,15 @@ function actualizarVistaCalendarizacion() {
 function toggleFormularioCalendario() {
   if (!panelCreacionCalendario || !panelControlAnual) return;
   const haySesiones = Object.keys(sesiones).length > 0;
+  // Si el formulario está oculto, lo mostramos y ocultamos control
   if (panelCreacionCalendario.style.display === 'none' || !panelCreacionCalendario.style.display) {
     panelCreacionCalendario.style.display = 'block';
     panelControlAnual.style.display = 'none';
     window.formularioActivo = true;
+    // Marcar checkbox de sobrescribir
     if (confirmSobrescribir) confirmSobrescribir.checked = true;
   } else {
+    // Si está visible, lo ocultamos y mostramos control si hay sesiones
     panelCreacionCalendario.style.display = 'none';
     window.formularioActivo = false;
     if (haySesiones) {
@@ -1397,11 +1350,9 @@ function renderCintaSesiones(month) {
   fechas.forEach(f => {
     const sesion = sesiones[f];
     if (!sesion) return;
-
     const tieneContenido = sesion.secciones && sesion.secciones.some(s => !s.fijo);
     const totalPuntos = sesion.secciones ? sesion.secciones.length : 0;
     const puntosPropios = sesion.secciones ? sesion.secciones.filter(s => !s.fijo).length : 0;
-    const esSeleccionada = f === sesionActivaFecha;
 
     let clase = 'badge-sesion';
     let estado = '';
@@ -1415,18 +1366,10 @@ function renderCintaSesiones(month) {
       clase += ' pendiente';
       estado = 'Pendiente';
     }
-    if (esSeleccionada) clase += ' activa-seleccionada';
-    if (sesion.tipoSesion === 'Extraordinaria') clase += ' extraordinaria';
 
-    const diaLabel = formatearFechaCorta(f);
-    const numero = sesion.numeroSesion;
-    const numeroTexto = numero ? ('N° ' + numero) : '(no celebrada)';
-    const tipoSesionLabel = sesion.tipoSesion || 'Ordinaria';
-    const label = esSeleccionada
-      ? (diaLabel + ' - Sesión ' + tipoSesionLabel + ' ' + numeroTexto)
-      : diaLabel;
-
-    const tooltip = tipoSesionLabel + ' · ' + totalPuntos + ' puntos (' + puntosPropios + ' propios) · ' + estado;
+    const label = formatearFechaCorta(f);
+    const tipo = sesion.tipoSesion || 'Ordinaria';
+    const tooltip = `${tipo} · ${totalPuntos} puntos (${puntosPropios} propios) · ${estado}`;
 
     const span = document.createElement('span');
     span.className = clase;
@@ -1558,11 +1501,6 @@ function renderControlAnual(month) {
     const tieneContenido = sesion.secciones && sesion.secciones.some(s => !s.fijo);
     const totalPts = sesion.secciones ? sesion.secciones.length : 0;
     const ptsPropios = sesion.secciones ? sesion.secciones.filter(s => !s.fijo).length : 0;
-    const esSeleccionada = f === sesionActivaFecha;
-    const puedeEliminar = sesion.tipoSesion === 'Extraordinaria';
-    const numero = sesion.numeroSesion;
-    const numeroTexto = numero ? `N° ${numero}` : '(no celebrada)';
-
     let estado = '';
     let clase = 'control-item';
     if (f === proximaGlobal) {
@@ -1575,47 +1513,20 @@ function renderControlAnual(month) {
       clase += ' pendiente';
       estado = 'Pendiente';
     }
-    if (esSeleccionada) clase += ' seleccionada';
-
-    const tituloEliminar = puedeEliminar
-      ? 'Eliminar sesión'
-      : 'Las sesiones ordinarias no se pueden eliminar, solo editar';
 
     const div = document.createElement('div');
     div.className = clase;
-
-    if (esSeleccionada) {
-      div.innerHTML = `
-        <div class="control-item-expandido">
-          <div class="control-expandido-header">
-            <span class="control-expandido-titulo">Sesión ${sesion.tipoSesion} ${numeroTexto}</span>
-            <span class="control-expandido-estado">${estado}</span>
-          </div>
-          <div class="control-expandido-fecha">${formatearFechaES(f)}</div>
-          <div class="control-expandido-detalle">
-            <span>${totalPts} puntos totales</span>
-            <span>${ptsPropios} propios</span>
-          </div>
-          <div class="control-expandido-acciones">
-            <button class="btn-eliminar-sesion" data-fecha="${f}" title="${tituloEliminar}" ${puedeEliminar ? '' : 'disabled'}>✕ Eliminar</button>
-          </div>
-        </div>
-      `;
-    } else {
-      div.innerHTML = `
-        <span class="control-fecha">Sesión ${sesion.tipoSesion} ${numeroTexto}</span>
-        <span class="control-tipo">${formatearFechaCorta(f)}</span>
-        <span class="control-puntos">${totalPts} pts</span>
-        <span class="control-estado">${estado}</span>
-        <button class="btn-eliminar-sesion" data-fecha="${f}" title="${tituloEliminar}" ${puedeEliminar ? '' : 'disabled'}>✕</button>
-      `;
-    }
-
+    div.innerHTML = `
+      <span class="control-fecha">${formatearFechaES(f)}</span>
+      <span class="control-tipo">${sesion.tipoSesion || 'Ordinaria'}</span>
+      <span class="control-puntos">${totalPts} (${ptsPropios} propios)</span>
+      <span class="control-estado">${estado}</span>
+      <button class="btn-eliminar-sesion" data-fecha="${f}" title="Eliminar sesión">✕</button>
+    `;
     div.addEventListener('click', function(e) {
       if (e.target.closest('.btn-eliminar-sesion')) return;
       cargarSesion(f);
       renderCintaSesiones(f.substring(0, 7));
-      renderControlAnual(month);
       if (vistaActual === 'proyecto') mostrarProyecto();
       else if (vistaActual === 'inicio') mostrarInicio();
     });
@@ -1650,14 +1561,6 @@ function actualizarControlAnual() {
   renderControlAnual(mes);
 }
 
-// ========== BOTÓN NUEVO CALENDARIO (visibilidad) ==========
-function actualizarBotonNuevoCalendario() {
-  if (!btnNuevoCalendario || !panelCalendarizacion) return;
-  const visible = !panelCalendarizacion.classList.contains('hidden');
-  btnNuevoCalendario.style.setProperty('display', visible ? 'flex' : 'none', 'important');
-}
-window.actualizarBotonNuevoCalendario = actualizarBotonNuevoCalendario;
-
 // ========== TOGGLE NUEVO SIDEBAR ==========
 function toggleNuevoSidebar(forceState) {
   if (!sidebarNuevo) return;
@@ -1676,17 +1579,6 @@ function toggleNuevoSidebar(forceState) {
     sidebarNuevo.classList.remove('open');
     localStorage.setItem(NUEVO_SIDEBAR_KEY, 'false');
   }
-  if (newState) {
-    panelMenuNuevo.classList.remove('hidden');
-    panelCalendarizacion.classList.add('hidden');
-    panelEmailNuevo.classList.add('hidden');
-    const panelSyncEl = document.getElementById('panelSync');
-    if (panelSyncEl) panelSyncEl.classList.add('hidden');
-    sidebarNuevo.classList.remove('ancho');
-    sidebarNuevo.classList.add('open');
-    localStorage.setItem(NUEVO_SIDEBAR_KEY, 'true');
-    actualizarBotonNuevoCalendario();
-  }
 }
 
 // ========== ABRIR PANEL DE CALENDARIZACIÓN ==========
@@ -1695,7 +1587,6 @@ function abrirPanelCalendarizacion() {
   panelMenuNuevo.classList.add('hidden');
   panelCalendarizacion.classList.remove('hidden');
   sidebarNuevo.classList.add('ancho');
-  window.formularioActivo = false;
   actualizarVistaCalendarizacion();
   renderExcepciones();
   if (!sidebarNuevo.classList.contains('open')) {
@@ -1703,6 +1594,13 @@ function abrirPanelCalendarizacion() {
   }
   actualizarBotonNuevoCalendario();
 }
+
+function actualizarBotonNuevoCalendario() {
+  if (!btnNuevoCalendario || !panelCalendarizacion) return;
+  const visible = !panelCalendarizacion.classList.contains('hidden');
+  btnNuevoCalendario.style.setProperty('display', visible ? 'flex' : 'none', 'important');
+}
+window.actualizarBotonNuevoCalendario = actualizarBotonNuevoCalendario;
 
 // ========== VISTAS ==========
 function mostrarInicio() {
@@ -2333,13 +2231,13 @@ async function confirmarNuevoProyecto() {
   modalNuevoConfirm.disabled = true;
   modalNuevoConfirm.textContent = 'Creando...';
 
+  const numero = 1;
   sesiones[fecha] = {
     tipoSesion: 'Extraordinaria',
-    numeroSesion: 1,
+    numeroSesion: numero,
     secciones: []
   };
   guardarSesiones();
-  recalcularNumerosSesion();
 
   cargarSesion(fecha);
   asegurarPuntosFijos();
@@ -2377,7 +2275,6 @@ function init() {
   sesiones = cargarSesiones();
 
   asegurarCalendarioDisponible();
-  recalcularNumerosSesion();
 
   let fechaActiva = obtenerProximaSesion();
   if (!fechaActiva) {
@@ -2468,8 +2365,10 @@ function init() {
 
   if (btnToggleNuevoSidebar) btnToggleNuevoSidebar.addEventListener('click', toggleNuevoSidebar);
 
+  // Botón "+" del panel de calendarización (alterna formulario)
   if (btnNuevoCalendario) {
     btnNuevoCalendario.addEventListener('click', function() {
+      // Asegurar que el panel de calendarización esté visible
       if (panelCalendarizacion.classList.contains('hidden')) {
         abrirPanelCalendarizacion();
       } else {
@@ -2492,14 +2391,15 @@ function init() {
     menuItemCalendarizacion.addEventListener('click', abrirPanelCalendarizacion);
   }
   if (btnVolverMenuCalendario) {
-    btnVolverMenuCalendario.addEventListener('click', function() {
-      panelCalendarizacion.classList.add('hidden');
-      panelMenuNuevo.classList.remove('hidden');
-      sidebarNuevo.classList.remove('ancho');
-      actualizarBotonNuevoCalendario();
-    });
-  }
+  btnVolverMenuCalendario.addEventListener('click', function() {
+    panelCalendarizacion.classList.add('hidden');
+    panelMenuNuevo.classList.remove('hidden');
+    sidebarNuevo.classList.remove('ancho');
+    actualizarBotonNuevoCalendario();
+  });
+}
 
+  // Validación de fechas para vacaciones
   if (vacacionInicio) {
     vacacionInicio.addEventListener('change', function() {
       const inicio = this.value;
@@ -2514,8 +2414,10 @@ function init() {
     });
   }
 
+  // Generar calendario (sobrescribir)
   if (btnGenerarCalendario) {
     btnGenerarCalendario.addEventListener('click', function() {
+      // Verificar checkbox de confirmación
       if (!confirmSobrescribir || !confirmSobrescribir.checked) {
         alert('Debes marcar la casilla "Sobrescribir calendario existente" para regenerar el calendario.');
         return;
@@ -2523,9 +2425,11 @@ function init() {
 
       const dia = parseInt(diaSesionSelect.value, 10);
       if (dia >= 1 && dia <= 5) {
+        // Borrar todas las sesiones existentes (sobrescribir)
         sesiones = {};
         diaSesion = dia;
         guardarDiaSesion();
+        // Generar nuevo calendario
         generarCalendarioAnual(new Date().getFullYear());
         aplicarExcepciones();
         limpiarSesionesInvalidas();
@@ -2534,7 +2438,7 @@ function init() {
         const proxima = obtenerProximaSesion();
         if (proxima) cargarSesion(proxima);
         if (vistaActual === 'proyecto') mostrarProyecto();
-        window.formularioActivo = false;
+        // Actualizar vistas
         actualizarVistaCalendarizacion();
         renderCintaSesiones();
         renderExcepciones();
@@ -2545,6 +2449,7 @@ function init() {
     });
   }
 
+  // Agregar periodo vacacional
   if (btnAgregarVacacion) {
     btnAgregarVacacion.addEventListener('click', function() {
       const inicio = vacacionInicio.value, fin = vacacionFin.value;
@@ -2552,6 +2457,8 @@ function init() {
       if (inicio > fin) { alert('La fecha de inicio debe ser anterior a la de fin.'); return; }
       excepciones.vacaciones.push({ inicio, fin });
       guardarExcepciones();
+      // Regenerar calendario aplicando nuevas excepciones
+      // No sobrescribimos, solo aplicamos excepciones
       generarCalendarioAnual(new Date().getFullYear());
       aplicarExcepciones();
       limpiarSesionesInvalidas();
@@ -2563,6 +2470,7 @@ function init() {
     });
   }
 
+  // Manejo de asuetos
   if (asuetoFecha) {
     asuetoFecha.addEventListener('change', function() {
       const fecha = this.value;

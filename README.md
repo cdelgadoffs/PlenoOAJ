@@ -1,3 +1,3 @@
-github
+previos, directos de código para respaldo total
 
-versión dedesarrollo, pr a main
+ambiente de desarrollo a prueba y error
