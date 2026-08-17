@@ -198,36 +198,30 @@ function aplicarExcepciones() {
 }
 
 // ========== NUMERACIÓN CONSECUTIVA DE SESIONES ==========
-// Regla: las sesiones se numeran de forma consecutiva y sin huecos, por año,
-// en orden cronológico. Una sesión pasada que NO fue celebrada (fecha ya
-// pasó y no tiene puntos propios de contenido) NO consume número: su lugar
-// lo toma automáticamente la siguiente sesión. Las sesiones ya celebradas
-// conservan su número tal cual (no se recalculan retroactivamente su
-// contenido, solo se re-deriva el consecutivo en cada pasada porque el
-// propio historial de "celebrada/no celebrada" ya está fijo una vez pasada
-// la fecha). Las sesiones futuras/pendientes sí cuentan en la numeración
-// provisional y se ajustan automáticamente conforme el calendario cambia.
 function recalcularNumerosSesion() {
   const hoy = hoyLocalISO();
-  const porAnio = {};
+  const porAnioTipo = {};
 
   Object.keys(sesiones).sort().forEach(f => {
     const anio = f.substring(0, 4);
     const sesion = sesiones[f];
     if (!sesion) return;
 
+    const tipo = sesion.tipoSesion || 'Ordinaria';
+    const clave = anio + '_' + tipo;
+
     const esPasada = f < hoy;
     const tieneContenido = sesion.secciones && sesion.secciones.some(s => !s.fijo);
     const noCelebrada = esPasada && !tieneContenido;
 
-    if (!porAnio[anio]) porAnio[anio] = 0;
+    if (!porAnioTipo[clave]) porAnioTipo[clave] = 0;
 
     if (noCelebrada) {
-      // No consume número: deja hueco para que la siguiente sesión lo ocupe.
+      // No consume número: deja hueco para que la siguiente sesión del mismo tipo lo ocupe.
       sesion.numeroSesion = null;
     } else {
-      porAnio[anio] += 1;
-      sesion.numeroSesion = porAnio[anio];
+      porAnioTipo[clave] += 1;
+      sesion.numeroSesion = porAnioTipo[clave];
     }
   });
 
@@ -254,6 +248,7 @@ function guardarEstadoActual() {
   sesiones[sesionActivaFecha].secciones = JSON.parse(JSON.stringify(secciones));
   guardarSesiones();
   recalcularNumerosSesion();
+  if (window.fsSync) window.fsSync.sincronizarSesion(sesionActivaFecha);
 }
 function cargarSesion(fecha) {
   if (!fecha) return;
@@ -388,9 +383,11 @@ function eliminarSesion(fecha) {
   } else {
     if (!confirm(`¿Eliminar la sesión del ${formatearFechaES(fecha)}?`)) return;
   }
+  const tipoEliminada = sesion.tipoSesion;
   delete sesiones[fecha];
   guardarSesiones();
   recalcularNumerosSesion();
+  if (window.fsSync) window.fsSync.eliminarSesionArchivo(fecha, tipoEliminada);
   if (vistaActual === 'proyecto' || vistaActual === 'inicio') {
     renderCintaSesiones(mesCintaActual || fecha.substring(0, 7));
     inicializarControlAnual();
@@ -1400,9 +1397,11 @@ function renderCintaSesiones(month) {
   fechas.forEach(f => {
     const sesion = sesiones[f];
     if (!sesion) return;
+
     const tieneContenido = sesion.secciones && sesion.secciones.some(s => !s.fijo);
     const totalPuntos = sesion.secciones ? sesion.secciones.length : 0;
     const puntosPropios = sesion.secciones ? sesion.secciones.filter(s => !s.fijo).length : 0;
+    const esSeleccionada = f === sesionActivaFecha;
 
     let clase = 'badge-sesion';
     let estado = '';
@@ -1416,10 +1415,18 @@ function renderCintaSesiones(month) {
       clase += ' pendiente';
       estado = 'Pendiente';
     }
+    if (esSeleccionada) clase += ' activa-seleccionada';
+    if (sesion.tipoSesion === 'Extraordinaria') clase += ' extraordinaria';
 
-    const label = formatearFechaCorta(f);
-    const tipo = sesion.tipoSesion || 'Ordinaria';
-    const tooltip = `${tipo} · ${totalPuntos} puntos (${puntosPropios} propios) · ${estado}`;
+    const diaLabel = formatearFechaCorta(f);
+    const numero = sesion.numeroSesion;
+    const numeroTexto = numero ? ('N° ' + numero) : '(no celebrada)';
+    const tipoSesionLabel = sesion.tipoSesion || 'Ordinaria';
+    const label = esSeleccionada
+      ? (diaLabel + ' - Sesión ' + tipoSesionLabel + ' ' + numeroTexto)
+      : diaLabel;
+
+    const tooltip = tipoSesionLabel + ' · ' + totalPuntos + ' puntos (' + puntosPropios + ' propios) · ' + estado;
 
     const span = document.createElement('span');
     span.className = clase;
@@ -1668,6 +1675,17 @@ function toggleNuevoSidebar(forceState) {
   } else {
     sidebarNuevo.classList.remove('open');
     localStorage.setItem(NUEVO_SIDEBAR_KEY, 'false');
+  }
+  if (newState) {
+    panelMenuNuevo.classList.remove('hidden');
+    panelCalendarizacion.classList.add('hidden');
+    panelEmailNuevo.classList.add('hidden');
+    const panelSyncEl = document.getElementById('panelSync');
+    if (panelSyncEl) panelSyncEl.classList.add('hidden');
+    sidebarNuevo.classList.remove('ancho');
+    sidebarNuevo.classList.add('open');
+    localStorage.setItem(NUEVO_SIDEBAR_KEY, 'true');
+    actualizarBotonNuevoCalendario();
   }
 }
 

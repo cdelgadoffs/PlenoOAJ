@@ -979,6 +979,11 @@ input[type="checkbox"] {
 .cinta-nav:hover {
   background: #e8e8e8;
 }
+.cinta-nav-group {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
 .cinta-mes {
   font-weight: 600;
   font-size: 14px;
@@ -1015,9 +1020,9 @@ input[type="checkbox"] {
   border-color: #a5d6a7;
 }
 .badge-sesion.proxima {
-  background: #fff9c4;
-  color: #f57f17;
-  border-color: #ffd54f;
+  background: #bbdefb;
+  color: #1565c0;
+  border-color: #64b5f6;
   font-weight: 700;
 }
 .badge-sesion.no-celebrada {
@@ -1029,6 +1034,19 @@ input[type="checkbox"] {
   background: #e0e0e0;
   color: #666;
   border-color: #ccc;
+}
+.badge-sesion.activa-seleccionada {
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 5px 14px;
+  margin: 0 6px;
+  transform: scale(1.05);
+}
+.badge-sesion.activa-seleccionada:hover {
+  transform: scale(1.08);
+}
+.badge-sesion.extraordinaria {
+  border-radius: 999px;
 }
 
 /* ===== CONTROL ANUAL ===== */
