@@ -117,9 +117,53 @@ body {
   background: rgba(255,255,255,0.1);
 }
 
+/* ===== MODO LECTURA ===== */
+.modo-lectura .btn-add,
+.modo-lectura .btn-eliminar,
+.modo-lectura .btn-mover,
+.modo-lectura .btn-adjuntar,
+.modo-lectura #btnAgregarSeccion,
+.modo-lectura #btnAprobarTodos,
+.modo-lectura #btnNuevoProyecto,
+.modo-lectura #btnGenerarPDFSidebar {
+  display: none !important;
+}
+.modo-lectura .punto-card {
+  cursor: default;
+}
+.modo-lectura .punto-card:hover {
+  background: none;
+  border-color: var(--gray-200);
+}
+.modo-lectura input[type="checkbox"] {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
 /* ===== APP SHELL ===== */
 .app-shell.hidden {
   display: none;
+}
+/* ===== BOTÓN ADJUNTAR ===== */
+.btn-adjuntar {
+  background: none;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all var(--transition);
+  color: var(--gray-600);
+  padding: 4px 8px;
+  line-height: 1;
+}
+.btn-adjuntar:hover:not(:disabled) {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.btn-adjuntar:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 
 /* ===== BARRA SUPERIOR ===== */
@@ -1601,10 +1645,11 @@ input[type="checkbox"] {
 .ter-form {
   padding: 14px 18px 18px;
   flex: 1;
+  min-height: 0;          /* ← CLAVE: permite que el contenedor se encoga */
   display: flex;
   flex-direction: column;
   gap: 14px;
-  overflow: hidden;
+  overflow-y: auto;       /* ← ya lo tienes */
 }
 .ter-field {
   flex-shrink: 0;
@@ -1822,4 +1867,24 @@ input[type="checkbox"] {
 }
 .sidebar-nuevo .sb-header .btn-add.oculto {
   display: none !important;
+}
+/* Modo formulario: ocultar navegación y badges, mostrar título */
+.cinta-sesiones-wrap.modo-formulario .cinta-nav-group,
+.cinta-sesiones-wrap.modo-formulario .cinta-mes,
+.cinta-sesiones-wrap.modo-formulario .cinta-fechas {
+  display: none;
+}
+.cinta-sesiones-wrap.modo-formulario .cinta-titulo-sesion {
+  display: block !important;
+}
+.cinta-sesiones-wrap.modo-formulario {
+  padding: 10px 24px; /* mismo padding */
+  background: #fafafa; /* mismo fondo */
+}
+.cinta-sesiones-wrap.modo-formulario .cinta-titulo-sesion {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1a1a;
+  text-align: center;
+  flex: 1;
 }
