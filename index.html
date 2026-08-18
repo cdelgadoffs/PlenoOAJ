@@ -9,7 +9,7 @@
 </head>
 <body>
 
-<!-- ===== PANTALLA DE INICIO DE SESIÓN (obligatoria) ===== -->
+<!-- ===== PANTALLA DE INICIO DE SESIÓN ===== -->
 <div class="login-gate" id="loginGate">
   <div class="login-box">
     <img src="https://raw.githubusercontent.com/cdelgadoffs/CGD/535876195bedc1b602f98438ee3a42ff11cbb817/logo.png" alt="Logo institucional" class="login-logo" />
@@ -21,7 +21,7 @@
   </div>
 </div>
 
-<!-- ===== APP (oculta hasta iniciar sesión) ===== -->
+<!-- ===== APP ===== -->
 <div class="app-shell hidden" id="appShell">
 
 <!-- ===== BARRA SUPERIOR ===== -->
@@ -36,7 +36,7 @@
       <span id="clearSearchBtn" class="clear-search-btn" style="display:none;">✕</span>
     </div>
     <button class="btn-nuevo-proyecto-top" id="btnNuevoProyecto">
-      <span class="btn-np-icon">+</span><span class="btn-np-label">Nuevo proyecto</span>
+      <span class="btn-np-icon">+</span><span class="btn-np-label">Nueva extraordinaria</span>
     </button>
     <span id="fechaActual"></span>
     <div class="user-session">
@@ -46,34 +46,109 @@
   </div>
 </header>
 
+<!-- ===== CINTA DE SESIONES ===== -->
+<div class="cinta-sesiones-wrap hidden" id="cintaSesionesWrap">
+  <div class="cinta-sesiones" id="cintaSesionesContainer">
+    <div class="cinta-nav-group">
+      <button class="cinta-nav" id="cintaAnterior">◀</button>
+      <button class="cinta-nav" id="cintaSiguiente">▶</button>
+    </div>
+    <div class="cinta-mes" id="cintaMesLabel"></div>
+    <div class="cinta-fechas" id="cintaFechas"></div>
+  </div>
+</div>
+
 <div class="shell">
 
-  <!-- ===== NUEVO SIDEBAR NEGRO (se superpone) ===== -->
+  <!-- ===== NUEVO SIDEBAR NEGRO ===== -->
   <aside class="sidebar-nuevo" id="sidebarNuevo">
+    <!-- Header -->
     <div class="sb-header sb-header-nuevo">
-      <div class="sb-title sb-title-nuevo">Panel de control</div>
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div class="sb-title sb-title-nuevo">Panel de control</div>
+        <button id="btnNuevoCalendario" class="btn-add" title="Crear nuevo calendario anual" style="display:none;">+</button>
+      </div>
       <div class="sb-subtitle sb-subtitle-nuevo" id="sidebarNuevoSubtitle">Futuras funcionalidades</div>
     </div>
 
-    <!-- Vista: menú principal -->
+    <!-- Menú principal -->
     <div class="sb-nav nuevo-panel" id="panelMenuNuevo">
       <ul class="nuevo-menu-list">
+        <li class="nuevo-menu-item" id="menuItemCalendarizacion">Calendarización anual</li>
         <li class="nuevo-menu-item" data-permiso="email" id="menuItemEmail">Email</li>
         <li class="nuevo-menu-item">Estadísticas</li>
         <li class="nuevo-menu-item">Notificaciones</li>
         <li class="nuevo-menu-item">Perfil</li>
+        <li class="nuevo-menu-item" id="menuItemSync">Carpeta local</li>
       </ul>
     </div>
 
-    <!-- Vista: formulario de correo -->
+    <!-- Panel de calendarización -->
+    <div class="sb-nav nuevo-panel hidden" id="panelCalendarizacion">
+      <button class="btn-volver-nuevo" id="btnVolverMenuCalendario">‹ Volver</button>
+
+      <!-- Formulario de creación (visible si no hay calendario o se pulsa +) -->
+      <div id="panelCreacionCalendario">
+        <div class="email-field">
+          <label class="email-label">Día de la sesión ordinaria</label>
+          <select id="diaSesionSelect" class="ter-select">
+            <option value="1">Lunes</option>
+            <option value="2">Martes</option>
+            <option value="3">Miércoles</option>
+            <option value="4">Jueves</option>
+            <option value="5">Viernes</option>
+          </select>
+        </div>
+
+        <div class="email-field" style="margin-top:10px; border-top:1px solid #333; padding-top:16px;">
+          <label class="email-label">Periodo vacacional (excluye sesiones)</label>
+          <div style="display:flex; gap:6px;">
+            <input type="date" id="vacacionInicio" class="ter-select" style="flex:1;" />
+            <input type="date" id="vacacionFin" class="ter-select" style="flex:1;" />
+          </div>
+          <button id="btnAgregarVacacion" class="btn-add-invitado" style="width:100%; margin-top:6px;">Agregar periodo</button>
+          <div id="listaVacaciones" class="email-invitados-lista"></div>
+        </div>
+
+        <div class="email-field" style="margin-top:16px; border-top:1px solid #333; padding-top:16px;">
+          <label class="email-label">Día de asueto (reprograma la sesión)</label>
+          <input type="date" id="asuetoFecha" class="ter-select" style="width:100%;" />
+          <div id="asuetoOpciones" style="display:none; margin-top:6px;">
+            <select id="asuetoDestino" class="ter-select" style="width:100%;"></select>
+            <button id="btnAgregarAsueto" class="btn-add-invitado" style="width:100%; margin-top:6px;">Agregar asueto</button>
+          </div>
+          <div id="listaAsuetos" class="email-invitados-lista"></div>
+        </div>
+
+        <div class="email-field" style="margin-top:16px; border-top:1px solid #333; padding-top:16px;">
+          <label style="display:flex; align-items:center; gap:8px; font-size:12.5px; color:#ddd; cursor:pointer;">
+            <input type="checkbox" id="confirmSobrescribir" />
+            Sobrescribir calendario existente
+          </label>
+        </div>
+
+        <button id="btnGenerarCalendario" class="btn-enviar-email" style="margin-top:16px;">Generar calendario anual</button>
+        <div id="calendarioStatus" class="email-status" style="margin-top:10px;"></div>
+      </div>
+
+      <!-- Control anual (visible solo si hay sesiones) -->
+      <div id="panelControlAnual" style="display:none;">
+        <div class="email-field">
+          <label class="email-label">Control anual de sesiones</label>
+          <select id="controlMesSelect" class="ter-select" style="margin-bottom:8px;"></select>
+          <div id="controlResumen" class="control-resumen" style="display:flex; gap:16px; font-size:12px; color:#aaa; margin:8px 0 4px; padding-bottom:8px; border-bottom:1px solid #333;"></div>
+          <div id="controlAnualLista" class="control-anual-grid"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel de correo -->
     <div class="sb-nav nuevo-panel hidden" id="panelEmailNuevo">
       <button class="btn-volver-nuevo" id="btnVolverMenuNuevo">‹ Volver</button>
-
       <div class="email-field">
         <label class="email-label">Destinatarios</label>
         <div id="listaDestinatariosFicticios" class="email-dest-lista"></div>
       </div>
-
       <div class="email-field">
         <label class="email-label">Agregar invitado</label>
         <div class="email-invitado-input">
@@ -82,61 +157,62 @@
         </div>
         <div id="listaInvitados" class="email-invitados-lista"></div>
       </div>
-
       <div class="email-field">
         <label class="email-label">Asunto</label>
         <input type="text" id="emailAsunto" class="email-asunto-input" placeholder="Asunto del correo" />
       </div>
-
       <div class="email-field email-field-grow">
         <label class="email-label">Mensaje</label>
         <textarea id="emailCuerpo" class="email-textarea" placeholder="Redacta el mensaje..."></textarea>
       </div>
-
       <div class="email-field">
         <label class="email-label">Adjuntar documentos</label>
         <div id="listaDocumentosAdjuntos" class="email-doc-lista"></div>
       </div>
-
       <div id="emailStatus" class="email-status"></div>
-
       <button id="btnEnviarEmail" class="btn-enviar-email">Enviar correo</button>
+    </div>
+
+    <!-- Panel de sincronización local -->
+    <div class="sb-nav nuevo-panel hidden" id="panelSync">
+      <button class="btn-volver-nuevo" id="btnVolverMenuSync">‹ Volver</button>
+      <div class="email-field">
+        <label class="email-label">Carpeta de respaldo local</label>
+        <div id="syncStatus" class="email-status">Ninguna carpeta vinculada</div>
+        <button id="btnVincularCarpeta" class="btn-enviar-email" style="margin-top:8px;">Seleccionar carpeta</button>
+        <button id="btnDesvincularCarpeta" class="btn-add-invitado" style="width:100%; margin-top:8px; display:none;">Desvincular carpeta</button>
+      </div>
+      <div class="email-field">
+        <label class="email-label">Info</label>
+        <div style="font-size:11.5px; color:#999; line-height:1.5;">
+          Cada sesión se guarda automáticamente como un archivo JSON individual: ord-AAAA-MM-DD.json para ordinarias, ext-AAAA-MM-DD.json para extraordinarias. Requiere Chrome o Edge de escritorio.
+        </div>
+      </div>
     </div>
   </aside>
 
-  <!-- ===== SIDEBAR PRINCIPAL (VISTAS) ===== -->
+  <!-- ===== SIDEBAR PRINCIPAL ===== -->
   <aside class="sidebar-principal" id="sidebarPrincipal">
     <div class="sb-header">
       <div class="sb-title" id="docTitleSidebar">Sesión Ordinaria N° 1</div>
       <div class="sb-subtitle" id="docSubSidebar">12 de marzo de 2026</div>
     </div>
     <nav class="sb-nav" id="navPrincipal">
-      <div class="nav-item active" data-vista="inicio">
-        <span class="nav-dot"></span> Inicio
-      </div>
+      <div class="nav-item active" data-vista="inicio"><span class="nav-dot"></span> Inicio</div>
       <div class="nav-item" data-vista="proyecto" id="navProyecto">
-        <span class="nav-dot"></span>
-        <span>Proyecto del orden del día</span>
-        <span class="badge-total" id="totalBadge">0</span>
+        <span class="nav-dot"></span><span>Proyecto del orden del día</span><span class="badge-total" id="totalBadge">0</span>
       </div>
-      <div class="nav-item" data-vista="sesionPrevia">
-        <span class="nav-dot"></span> Sesión previa
-      </div>
-      <div class="nav-item" data-vista="actaSesion">
-        <span class="nav-dot"></span> Acta de sesión
-      </div>
+      <div class="nav-item" data-vista="sesionPrevia"><span class="nav-dot"></span> Previa de sesión</div>
+      <div class="nav-item" data-vista="actaSesion"><span class="nav-dot"></span> Acta de sesión</div>
     </nav>
-
-    <!-- Resumen de clasificaciones -->
     <div id="resumenClasificacion" style="padding:12px 16px; border-top:1px solid #e0e0e0; margin-top:auto; font-size:12px; color:#444;">
       <div style="font-weight:600; margin-bottom:6px;">Clasificaciones</div>
       <div id="contenedorClasificaciones"></div>
     </div>
-
     <button class="btn-nuevo-proyecto" id="btnGenerarPDFSidebar">Generar PDF</button>
   </aside>
 
-  <!-- ===== SIDEBAR SECUNDARIO (SECCIONES) ===== -->
+  <!-- ===== SIDEBAR SECUNDARIO ===== -->
   <aside class="sidebar-secundario hidden" id="sidebarSecundario">
     <div class="sb-header">
       <div class="sb-header-top">
@@ -151,7 +227,7 @@
     <nav class="sb-nav" id="navSecundario"></nav>
   </aside>
 
-  <!-- ===== SIDEBAR TERCIARIO (FORMULARIO DE CREACIÓN) ===== -->
+  <!-- ===== SIDEBAR TERCIARIO (CREACIÓN) ===== -->
   <aside class="sidebar-terciario hidden" id="sidebarTerciario">
     <div class="sb-header">
       <div class="sb-badge">Nuevo punto</div>
@@ -169,15 +245,8 @@
           <option value="comisiones">Comisiones</option>
         </select>
       </div>
-
-      <div id="listaDependencias" class="ter-lista-dep">
-        <!-- Se llena dinámicamente -->
-      </div>
-
-      <div id="depSeleccionadaDisplay" class="ter-dep-actual">
-        Ninguna seleccionada
-      </div>
-
+      <div id="listaDependencias" class="ter-lista-dep"></div>
+      <div id="depSeleccionadaDisplay" class="ter-dep-actual">Ninguna seleccionada</div>
       <div class="ter-field">
         <label class="ter-label">Tipo de asunto</label>
         <select id="asuntoSelect" class="ter-select">
@@ -187,13 +256,10 @@
           <option value="Cambio de adscripción">Cambio de adscripción</option>
         </select>
       </div>
-
       <div class="ter-field ter-field-grow">
         <label for="cuerpoTextarea" class="ter-label">Resumen</label>
         <textarea id="cuerpoTextarea" class="ter-textarea" placeholder="Breve descripción..."></textarea>
       </div>
-
-      <!-- Archivos adjuntos -->
       <div class="ter-field">
         <label class="ter-label">Archivos adjuntos</label>
         <div style="display:flex; gap:8px; align-items:center;">
@@ -205,7 +271,6 @@
         </div>
         <div id="oneDriveStatus" class="onedrive-status"></div>
       </div>
-
       <div class="ter-acciones">
         <button class="btn-cancel" id="btnCancelarCreacion">Cancelar</button>
         <button class="btn-confirm" id="btnConfirmarCreacion">Añadir</button>
@@ -214,11 +279,9 @@
   </aside>
 
   <!-- ===== PANEL PRINCIPAL ===== -->
-  <main class="main" id="panelPrincipal">
-    <!-- Se llena dinámicamente -->
-  </main>
+  <main class="main" id="panelPrincipal"></main>
 
-  <!-- ===== SIDEBAR DERECHO (ESQUEMA) ===== -->
+  <!-- ===== SIDEBAR DERECHO ===== -->
   <div class="sidebar-derecho" id="sidebarDerecho">
     <div class="sb-header">
       <div class="header-top">
@@ -231,31 +294,24 @@
     </div>
     <nav class="sb-nav" id="navEsquema"></nav>
   </div>
-
-  <!-- Botón toggle para abrir el sidebar derecho -->
   <button class="btn-toggle-derecho hidden" id="btnToggleDerecho">Esquema</button>
 
 </div> <!-- fin .shell -->
-
 </div> <!-- fin .app-shell -->
 
 <!-- ===== MODALES ===== -->
 
-<!-- MODAL PARA APROBACIÓN DE ACTAS -->
+<!-- Modal: Confirmar acta anterior -->
 <div class="modal-overlay" id="modalActa">
   <div class="modal-content">
-    <h3>Agregar aprobación de acta</h3>
-    <div style="margin-bottom:12px;">
-      <label>Tipo de sesión</label>
-      <select id="actaTipoSesion">
-        <option value="Ordinaria">Ordinaria</option>
-        <option value="Extraordinaria">Extraordinaria</option>
-      </select>
-    </div>
-    <div>
-      <label>Fecha de la sesión</label>
-      <input type="date" id="actaFecha" />
-    </div>
+    <h3>Aprobación del acta anterior</h3>
+    <label>Tipo de sesión anterior</label>
+    <select id="actaTipoSesion">
+      <option value="Ordinaria">Ordinaria</option>
+      <option value="Extraordinaria">Extraordinaria</option>
+    </select>
+    <label>Fecha de la sesión anterior</label>
+    <input type="date" id="actaFecha" />
     <div class="modal-actions">
       <button class="btn-cancel" id="actaCancel">Cancelar</button>
       <button class="btn-confirm" id="actaConfirm">Agregar</button>
@@ -263,48 +319,35 @@
   </div>
 </div>
 
-<!-- MODAL NUEVO PROYECTO -->
+<!-- Modal: Nuevo proyecto (sesión extraordinaria) -->
 <div class="modal-overlay" id="modalNuevoProyecto">
   <div class="modal-content">
-    <h3>Crear nuevo proyecto</h3>
-    <p style="margin-bottom:16px; color:#666;">Ingresa los datos de la sesión</p>
-    <div>
-      <label>Tipo de sesión</label>
-      <select id="nuevoTipoSesion">
-        <option value="Ordinaria">Ordinaria</option>
-        <option value="Extraordinaria">Extraordinaria</option>
-      </select>
-    </div>
-    <div>
-      <label>Número de sesión</label>
-      <input type="number" id="nuevoNumeroSesion" value="1" min="1" />
-    </div>
-    <div>
-      <label>Fecha</label>
-      <input type="date" id="nuevoFecha" />
-    </div>
+    <h3>Nueva sesión extraordinaria</h3>
+    <label>Fecha de la sesión</label>
+    <input type="date" id="nuevoFecha" />
     <div class="checkbox-group">
       <input type="checkbox" id="confirmNewProject" />
-      <label for="confirmNewProject" style="display:inline; font-weight:400;">Crear nuevo proyecto</label>
+      <label for="confirmNewProject" style="display:inline; text-transform:none; font-weight:400;">
+        Confirmo que quiero crear esta sesión extraordinaria
+      </label>
     </div>
     <div class="modal-actions">
       <button class="btn-cancel" id="modalNuevoCancel">Cancelar</button>
-      <button class="btn-confirm" id="modalNuevoConfirm" disabled>Crear nuevo proyecto</button>
+      <button class="btn-confirm" id="modalNuevoConfirm" disabled>Crear</button>
     </div>
   </div>
 </div>
 
-<!-- MODAL PREVISUALIZACIÓN ARCHIVO -->
+<!-- Modal: Previsualización de archivos -->
 <div class="modal-overlay" id="modalPrevisualizacion">
-  <!-- La clase 'modal-content' tendrá 'modal-preview' o 'modal-small' según el tipo -->
-  <div class="modal-content modal-preview">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-shrink:0;">
-      <h3 id="previewTitle" style="font-size: 20px;">Vista previa</h3>
-      <button class="btn-close-derecho" id="btnCerrarPreview" style="font-size: 28px; background: none; border: none; cursor: pointer; color: #1a1a1a; font-weight: 300;">✕</button>
+  <div class="modal-content">
+    <div class="header-top" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <h3 id="previewTitle" style="margin-bottom:0;">Archivo</h3>
+      <button class="btn-close-derecho" id="btnCerrarPreview2">✕</button>
     </div>
-    <div id="previewContent" style="text-align: center; min-height: 100px;"></div>
-    <div class="modal-actions" style="margin-top: 10px; text-align: right; flex-shrink:0;">
-      <button class="btn-cancel" id="btnCerrarPreview2">Cerrar</button>
+    <div id="previewContent"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" id="btnCerrarPreview">Cerrar</button>
     </div>
   </div>
 </div>
@@ -315,5 +358,6 @@
 <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
 <script src="app.js"></script>
 <script src="email.js"></script>
+<script src="fsSync.js"></script>
 </body>
 </html>
