@@ -62,6 +62,14 @@ function cargarSesiones() {
   if (!data) return {};
   try { return JSON.parse(data); } catch { return {}; }
 }
+function actualizarTituloCinta() {
+  const tituloEl = document.getElementById('cintaTituloSesion');
+  if (!tituloEl) return;
+  const tipo = proyectoMeta.tipoSesion || 'Ordinaria';
+  const numero = proyectoMeta.numeroSesion || 1;
+  let fecha = proyectoMeta.fecha ? formatearFechaES(proyectoMeta.fecha) : 'Fecha no definida';
+  tituloEl.textContent = `Sesión ${tipo} N° ${numero} · ${fecha}`;
+}
 function guardarSesiones() {
   localStorage.setItem(SESIONES_KEY, JSON.stringify(sesiones));
 }
@@ -272,6 +280,8 @@ function cargarSesion(fecha) {
   guardarProyectoMeta();
   guardarEnLocalStorage();
   actualizarTituloSidebar();
+  actualizarTituloSidebar();
+  actualizarTituloCinta();
 }
 function esFechaSesionOrdinaria(fechaStr) {
   const fecha = parsearFechaLocal(fechaStr);
@@ -600,6 +610,12 @@ const asuetoDestino = document.getElementById('asuetoDestino');
 const btnAgregarAsueto = document.getElementById('btnAgregarAsueto');
 const listaAsuetos = document.getElementById('listaAsuetos');
 
+const modalAdjuntar = document.getElementById('modalAdjuntar');
+const adjuntarArchivoInput = document.getElementById('adjuntarArchivoInput');
+const btnAdjuntarCancel = document.getElementById('btnAdjuntarCancel');
+const btnAdjuntarConfirm = document.getElementById('btnAdjuntarConfirm');
+let puntoAdjuntarId = null;
+
 // ========== LISTA DE DEPENDENCIAS ==========
 const TODAS_DEPENDENCIAS = [
   { id: 'Pleno', categoria: 'pleno' },
@@ -772,11 +788,12 @@ function renderSecciones() {
     terminoBusqueda ? `${totalFiltrados} de ${secciones.length} coinciden` : `${SECCIONES_DEL_DOCUMENTO.length} secciones`;
 }
 
-// ========== RENDER DEL PANEL PRINCIPAL ==========
+/* ========= RENDER DEL PANEL PRINCIPAL ========== */
 function renderPanelPrincipal() {
   const puntosFiltrados = obtenerPuntosFiltrados();
   const idsFiltrados = new Set(puntosFiltrados.map(p => p.id));
 
+  // ===== MODO BÚSQUEDA =====
   if (terminoBusqueda) {
     if (puntosFiltrados.length === 0) {
       panelPrincipal.innerHTML = `
@@ -796,6 +813,8 @@ function renderPanelPrincipal() {
       const anexoChecked = (tieneArchivos || sec.anexo === true) ? 'checked' : '';
       const numeroAnexo = idx + 1;
       const dependenciaMostrada = sec.dependencia || 'Pleno';
+      const puedeSubir = idx > 0 && secciones[idx-1].seccion === sec.seccion;
+      const puedeBajar = idx < secciones.length - 1 && secciones[idx+1].seccion === sec.seccion;
 
       let archivosHtml = '';
       if (tieneArchivos) {
@@ -820,7 +839,12 @@ function renderPanelPrincipal() {
               <label for="anexo_${sec.id}">Anexo ${numeroAnexo}</label>
             </div>
             <div class="botones">
-              <span style="font-size:11px; color:#999;">${sec.seccion}</span>
+              <button class="btn-adjuntar" id="btnAdjuntar_${sec.id}" title="Adjuntar archivo"><i class="fas fa-paperclip"></i></button>
+              <button class="btn-mover" id="btnSubir_${sec.id}" ${!puedeSubir ? 'disabled' : ''}>▲</button>
+              <button class="btn-mover" id="btnBajar_${sec.id}" ${!puedeBajar ? 'disabled' : ''}>▼</button>
+              <button class="btn-eliminar" id="btnEliminar_${sec.id}" ${esFijo ? 'disabled' : ''}>
+                ${esFijo ? 'Fijo' : 'Eliminar'}
+              </button>
             </div>
           </div>
         </div>
@@ -829,9 +853,11 @@ function renderPanelPrincipal() {
     html += `</div>`;
     panelPrincipal.innerHTML = html;
 
+    // Asignar eventos en modo búsqueda
     puntosFiltrados.forEach(sec => {
       const card = document.querySelector(`.punto-card[data-id="${sec.id}"]`);
       if (!card) return;
+
       card.addEventListener('click', function(e) {
         if (e.target.closest('button') || e.target.closest('input') || e.target.closest('label') || e.target.closest('.checkbox-group') || e.target.closest('.archivo-item')) return;
         if (puntoSeleccionadoId === sec.id) return;
@@ -845,6 +871,7 @@ function renderPanelPrincipal() {
         actualizarBadgesYVisibilidad();
         actualizarEstadoBotonesYBloques();
       });
+
       const archivosItems = card.querySelectorAll('.archivo-item');
       archivosItems.forEach((item, idx) => {
         item.addEventListener('click', function(e) {
@@ -853,6 +880,7 @@ function renderPanelPrincipal() {
           if (archivo) abrirModalPrevisualizacion(archivo);
         });
       });
+
       const chk = document.getElementById('anexo_' + sec.id);
       if (chk) {
         chk.addEventListener('change', function() {
@@ -861,11 +889,46 @@ function renderPanelPrincipal() {
           renderSidebarDerecho();
         });
       }
+
+      // Botón adjuntar
+      document.getElementById('btnAdjuntar_' + sec.id)?.addEventListener('click', function(e) {
+        e.stopPropagation();
+        abrirModalAdjuntar(sec.id);
+      });
+
+      document.getElementById('btnSubir_' + sec.id)?.addEventListener('click', function() {
+        moverPunto(sec.id, -1);
+      });
+
+      document.getElementById('btnBajar_' + sec.id)?.addEventListener('click', function() {
+        moverPunto(sec.id, 1);
+      });
+
+      const btnEliminar = document.getElementById('btnEliminar_' + sec.id);
+      if (btnEliminar && !sec.fijo) {
+        btnEliminar.addEventListener('click', function() {
+          if (confirm(`¿Eliminar "${getTituloPunto(sec, secciones.indexOf(sec))}"?`)) {
+            const index = secciones.findIndex(s => s.id === sec.id);
+            if (index > 0 && !secciones[index].fijo) {
+              secciones.splice(index, 1);
+              guardarEstadoActual();
+              const ptsRestantes = secciones.filter(s => s.seccion === seccionActual);
+              puntoSeleccionadoId = ptsRestantes.length > 0 ? ptsRestantes[0].id : null;
+              renderPanelPrincipal();
+              actualizarBadgesYVisibilidad();
+              actualizarEstadoBotonesYBloques();
+              renderSidebarDerecho();
+              renderResumenClasificacion();
+              poblarFiltroDependencias();
+            }
+          }
+        });
+      }
     });
     return;
   }
 
-  // --- SIN FILTRO: comportamiento original ---
+  // ===== SIN FILTRO: comportamiento original =====
   const pts = secciones.filter(s => s.seccion === seccionActual);
   const nombreSeccion = seccionActual.charAt(0).toUpperCase() + seccionActual.slice(1);
 
@@ -917,6 +980,7 @@ function renderPanelPrincipal() {
             <label for="anexo_${sec.id}">Anexo ${numeroAnexo}</label>
           </div>
           <div class="botones">
+            <button class="btn-adjuntar" id="btnAdjuntar_${sec.id}" title="Adjuntar archivo"><i class="fas fa-paperclip"></i></button>
             <button class="btn-mover" id="btnSubir_${sec.id}" ${!puedeSubir ? 'disabled' : ''}>▲</button>
             <button class="btn-mover" id="btnBajar_${sec.id}" ${!puedeBajar ? 'disabled' : ''}>▼</button>
             <button class="btn-eliminar" id="btnEliminar_${sec.id}" ${esFijo ? 'disabled' : ''}>
@@ -930,6 +994,7 @@ function renderPanelPrincipal() {
   html += `</div>`;
   panelPrincipal.innerHTML = html;
 
+  // Asignar eventos en modo normal
   pts.forEach(sec => {
     const card = document.querySelector(`.punto-card[data-id="${sec.id}"]`);
     if (!card) return;
@@ -960,15 +1025,23 @@ function renderPanelPrincipal() {
       });
     }
 
-    document.getElementById('btnSubir_' + sec.id)?.addEventListener('click', () => {
+    // Botón adjuntar
+    document.getElementById('btnAdjuntar_' + sec.id)?.addEventListener('click', function(e) {
+      e.stopPropagation();
+      abrirModalAdjuntar(sec.id);
+    });
+
+    document.getElementById('btnSubir_' + sec.id)?.addEventListener('click', function() {
       moverPunto(sec.id, -1);
     });
-    document.getElementById('btnBajar_' + sec.id)?.addEventListener('click', () => {
+
+    document.getElementById('btnBajar_' + sec.id)?.addEventListener('click', function() {
       moverPunto(sec.id, 1);
     });
+
     const btnEliminar = document.getElementById('btnEliminar_' + sec.id);
     if (btnEliminar && !sec.fijo) {
-      btnEliminar.addEventListener('click', () => {
+      btnEliminar.addEventListener('click', function() {
         if (confirm(`¿Eliminar "${getTituloPunto(sec, secciones.indexOf(sec))}"?`)) {
           const index = secciones.findIndex(s => s.id === sec.id);
           if (index > 0 && !secciones[index].fijo) {
@@ -1004,6 +1077,8 @@ function abrirCreacion() {
     return;
   }
   sidebarTerciario.classList.remove('hidden');
+  const wrap = document.getElementById('cintaSesionesWrap');
+  if (wrap) wrap.classList.add('modo-formulario');
   formSeccionActual.textContent = seccionActual.charAt(0).toUpperCase() + seccionActual.slice(1);
 
   archivosTemporales = [];
@@ -1027,6 +1102,8 @@ function abrirCreacion() {
 }
 function cerrarCreacion() {
   sidebarTerciario.classList.add('hidden');
+  const wrap = document.getElementById('cintaSesionesWrap');
+  if (wrap) wrap.classList.remove('modo-formulario');
   btnAgregar.disabled = false;
   renderPanelPrincipal();
 }
@@ -1187,6 +1264,57 @@ function actualizarListaArchivosTemporales() {
       eliminarArchivoTemporal(index);
     });
   });
+}
+
+/* ========= MODAL DE ADJUNTAR ARCHIVO A PUNTO ========== */
+function abrirModalAdjuntar(id) {
+  puntoAdjuntarId = id;
+  adjuntarArchivoInput.value = '';
+  modalAdjuntar.classList.add('active');
+}
+
+function cerrarModalAdjuntar() {
+  modalAdjuntar.classList.remove('active');
+  puntoAdjuntarId = null;
+}
+
+function adjuntarArchivoPunto() {
+  const file = adjuntarArchivoInput.files[0];
+  if (!file) {
+    alert('Selecciona un archivo.');
+    return;
+  }
+  if (file.size > 1024 * 1024) {
+    alert('El archivo excede 1MB.');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const archivo = {
+      nombre: file.name,
+      tipo: file.type,
+      data: e.target.result
+    };
+    const punto = secciones.find(s => s.id === puntoAdjuntarId);
+    if (punto) {
+      if (!punto.archivos) punto.archivos = [];
+      punto.archivos.push(archivo);
+      punto.anexo = true; // marcamos como anexo
+      guardarEstadoActual();
+      // Actualizar todas las vistas que muestran el punto
+      if (vistaActual === 'proyecto') {
+        renderPanelPrincipal();
+        renderSidebarDerecho();
+        renderResumenClasificacion();
+      } else if (vistaActual === 'sesionPrevia') {
+        renderSesionPrevia();
+      } else if (vistaActual === 'actaSesion') {
+        renderActaSesion();
+      }
+      cerrarModalAdjuntar();
+    }
+  };
+  reader.readAsDataURL(file);
 }
 
 // ========== PREVISUALIZACIÓN DE ARCHIVOS ==========
@@ -2170,6 +2298,7 @@ function actualizarTituloSidebar() {
   } else {
     docSubSidebar.textContent = 'Fecha no definida';
   }
+  actualizarTituloCinta();
 }
 
 // ========== GENERACIÓN DE PDF ==========
@@ -2333,6 +2462,7 @@ async function confirmarNuevoProyecto() {
   modalNuevoConfirm.disabled = true;
   modalNuevoConfirm.textContent = 'Creando...';
 
+  // Crear la sesión extraordinaria
   sesiones[fecha] = {
     tipoSesion: 'Extraordinaria',
     numeroSesion: 1,
@@ -2341,13 +2471,41 @@ async function confirmarNuevoProyecto() {
   guardarSesiones();
   recalcularNumerosSesion();
 
+  // Cargar la sesión (esto asigna secciones vacías y asegura puntos fijos)
   cargarSesion(fecha);
-  asegurarPuntosFijos();
+  asegurarPuntosFijos(); // Esto crea los puntos fijos 1, 2, 3 si no existen
+
+  const contenidoActa = `Aprobación, en su caso, del acta de la sesión extraordinaria del ${formatearFechaES(fecha)}.`;
+  const yaExiste = secciones.some(s => s.contenido === contenidoActa && s.seccion === 'aprobaciones');
+  
+  if (!yaExiste) {
+    const nuevoId = 'sec_' + Date.now();
+    const nuevoPunto = {
+      id: nuevoId,
+      clasificacion: 'Pleno',
+      contenido: contenidoActa,
+      seccion: 'aprobaciones',
+      subbloque: 'Pleno',
+      fijo: false,
+      anexo: false,
+      voto: 'Pendiente',
+      anotaciones: '',
+      aprobado: false,
+      dependencia: 'Pleno',
+      asunto: 'Acta extraordinaria',
+      archivos: []
+    };
+    // Insertar en la posición adecuada dentro de la sección "aprobaciones"
+    const insertIdx = getInsertIndex('aprobaciones');
+    secciones.splice(insertIdx, 0, nuevoPunto);
+    guardarEstadoActual();
+  }
 
   cerrarModalNuevoProyecto();
   modalNuevoConfirm.disabled = false;
   modalNuevoConfirm.textContent = 'Crear';
 
+  // Actualizar la vista
   if (vistaActual !== 'proyecto') {
     mostrarProyecto();
   } else {
@@ -2609,8 +2767,17 @@ function init() {
     });
   }
 
+  if (btnAdjuntarCancel) btnAdjuntarCancel.addEventListener('click', cerrarModalAdjuntar);
+  if (modalAdjuntar) {
+    modalAdjuntar.addEventListener('click', function(e) {
+      if (e.target === this) cerrarModalAdjuntar();
+    });
+  }
+  if (btnAdjuntarConfirm) btnAdjuntarConfirm.addEventListener('click', adjuntarArchivoPunto);
+
   renderResumenClasificacion();
   poblarFiltroDependencias();
+  aplicarPermisos();
 }
 
 // ========== FUNCIONES DE EXCEPCIONES RENDER ==========
@@ -2657,5 +2824,70 @@ function iniciarApp() {
   if (appYaIniciada) return;
   appYaIniciada = true;
   init();
+}
+function aplicarPermisos() {
+  const tieneRol = (rol) => window.tieneRol(rol);
+  const esAdmin = tieneRol('Admin') || tieneRol('Administrador');
+
+  // ===== 1. OCULTAR/MOSTRAR ELEMENTOS DEL MENÚ LATERAL =====
+  // Elementos que dependen de un rol específico
+  const elementosPorPermiso = {
+    'menuItemCalendarizacion': 'Calendarization',
+    'menuItemEmail': 'Email',
+    'menuItemSync': 'Admin', // sincronización local solo para administradores
+    'btnNuevoProyecto': 'Admin', // crear sesión extraordinaria
+    'btnAgregarSeccion': 'PuntosWrite',
+    'btnConfirmarCreacion': 'PuntosWrite',
+    'btnAdjuntarArchivo': 'PuntosWrite',
+    'navProyecto': 'PuntosWrite' // ocultar pestaña de proyecto si no tiene permiso
+  };
+
+  Object.keys(elementosPorPermiso).forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const rolNecesario = elementosPorPermiso[id];
+    if (rolNecesario && !tieneRol(rolNecesario) && !esAdmin) {
+      el.style.display = 'none';
+    } else {
+      el.style.display = ''; // restaurar si tiene permiso
+    }
+  });
+
+  // ===== 2. CASO ESPECIAL: LECTOR (ReadOnly) =====
+  const esLector = tieneRol('ReadOnly') && !esAdmin && !tieneRol('PuntosWrite');
+  if (esLector) {
+    // Ocultar todos los botones de edición
+    document.querySelectorAll('.btn-add, .btn-eliminar, .btn-mover, .btn-adjuntar, #btnAgregarSeccion, #btnAprobarTodos, #btnNuevoProyecto, #btnGenerarPDFSidebar').forEach(el => {
+      if (el) el.style.display = 'none';
+    });
+    // Ocultar también el botón de adjuntar archivos en la vista de proyecto
+    document.body.classList.add('modo-lectura');
+  } else {
+    document.body.classList.remove('modo-lectura');
+  }
+
+  // ===== 3. BOTÓN DE CALENDARIO (dentro del sidebar negro) =====
+  const btnNuevoCalendario = document.getElementById('btnNuevoCalendario');
+  if (btnNuevoCalendario) {
+    btnNuevoCalendario.style.display = (tieneRol('Calendarization') || esAdmin) ? 'flex' : 'none';
+  }
+
+  // ===== 4. SI ES LECTOR, FORZAR VISTA A PREVIA O ACTA =====
+  if (esLector) {
+    const vistaActual = document.querySelector('#navPrincipal .nav-item.active')?.dataset.vista;
+    if (vistaActual === 'inicio' || vistaActual === 'proyecto') {
+      // Redirigir a sesión previa si está en inicio o proyecto
+      mostrarSesionPrevia();
+    }
+    // Ocultar las pestañas de inicio y proyecto
+    document.querySelectorAll('#navPrincipal .nav-item[data-vista="inicio"], #navPrincipal .nav-item[data-vista="proyecto"]').forEach(el => {
+      el.style.display = 'none';
+    });
+  } else {
+    // Restaurar pestañas si no es lector
+    document.querySelectorAll('#navPrincipal .nav-item[data-vista="inicio"], #navPrincipal .nav-item[data-vista="proyecto"]').forEach(el => {
+      el.style.display = '';
+    });
+  }
 }
 window.iniciarApp = iniciarApp;

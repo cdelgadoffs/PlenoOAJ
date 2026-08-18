@@ -191,7 +191,46 @@ function aplicarExcepciones() {
     }
     cambios = true;
   });
-  if (cambios) guardarSesiones();
+  if (cambios) {
+    guardarSesiones();
+    recalcularNumerosSesion();
+  }
+}
+
+// ========== NUMERACIÓN CONSECUTIVA DE SESIONES ==========
+function recalcularNumerosSesion() {
+  const hoy = hoyLocalISO();
+  const porAnioTipo = {};
+
+  Object.keys(sesiones).sort().forEach(f => {
+    const anio = f.substring(0, 4);
+    const sesion = sesiones[f];
+    if (!sesion) return;
+
+    const tipo = sesion.tipoSesion || 'Ordinaria';
+    const clave = anio + '_' + tipo;
+
+    const esPasada = f < hoy;
+    const tieneContenido = sesion.secciones && sesion.secciones.some(s => !s.fijo);
+    const noCelebrada = esPasada && !tieneContenido;
+
+    if (!porAnioTipo[clave]) porAnioTipo[clave] = 0;
+
+    if (noCelebrada) {
+      sesion.numeroSesion = null;
+    } else {
+      porAnioTipo[clave] += 1;
+      sesion.numeroSesion = porAnioTipo[clave];
+    }
+  });
+
+  guardarSesiones();
+
+  if (sesionActivaFecha && sesiones[sesionActivaFecha]) {
+    proyectoMeta.numeroSesion = sesiones[sesionActivaFecha].numeroSesion || 1;
+    guardarProyectoMeta();
+    actualizarTituloSidebar();
+  }
 }
 
 // ========== MANEJO DE SESIONES ==========
@@ -205,9 +244,10 @@ function guardarEstadoActual() {
     };
   }
   sesiones[sesionActivaFecha].tipoSesion = proyectoMeta.tipoSesion;
-  sesiones[sesionActivaFecha].numeroSesion = proyectoMeta.numeroSesion;
   sesiones[sesionActivaFecha].secciones = JSON.parse(JSON.stringify(secciones));
   guardarSesiones();
+  recalcularNumerosSesion();
+  if (window.fsSync) window.fsSync.sincronizarSesion(sesionActivaFecha);
 }
 function cargarSesion(fecha) {
   if (!fecha) return;
@@ -220,10 +260,11 @@ function cargarSesion(fecha) {
       secciones: []
     };
     guardarSesiones();
+    recalcularNumerosSesion();
   }
   const data = sesiones[fecha];
   proyectoMeta.tipoSesion = data.tipoSesion;
-  proyectoMeta.numeroSesion = data.numeroSesion;
+  proyectoMeta.numeroSesion = data.numeroSesion || 1;
   proyectoMeta.fecha = fecha;
   secciones = JSON.parse(JSON.stringify(data.secciones));
   asegurarPuntosFijos();
@@ -256,7 +297,10 @@ function limpiarSesionesInvalidas() {
     delete sesiones[fecha];
     hayCambios = true;
   });
-  if (hayCambios) guardarSesiones();
+  if (hayCambios) {
+    guardarSesiones();
+    recalcularNumerosSesion();
+  }
 }
 function generarCalendarioAnual(anioParam) {
   const anio = anioParam || new Date().getFullYear();
@@ -300,6 +344,8 @@ function generarCalendarioAnual(anioParam) {
       if (proxima) cargarSesion(proxima);
     }
   }
+
+  recalcularNumerosSesion();
   return fechas;
 }
 function obtenerProximaSesion() {
@@ -310,13 +356,8 @@ function obtenerProximaSesion() {
   }
   return null;
 }
-function obtenerSesionesDelMesActual() {
-  const hoy = new Date();
-  const prefijo = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0');
-  return Object.keys(sesiones).filter(f => f.startsWith(prefijo)).sort();
-}
-function obtenerSesionesDelMes(mesStr) {
-  return Object.keys(sesiones).filter(f => f.startsWith(mesStr)).sort();
+function obtenerSesionesDelMes(month) {
+  return Object.keys(sesiones).filter(f => f.startsWith(month)).sort();
 }
 function eliminarSesion(fecha) {
   if (!fecha) return;
@@ -326,14 +367,21 @@ function eliminarSesion(fecha) {
     return;
   }
   const sesion = sesiones[fecha];
+  if (sesion.tipoSesion !== 'Extraordinaria') {
+    alert('Las sesiones ordinarias no se pueden eliminar, solo editar. Si necesitas ajustarlas, usa vacaciones o asuetos en el calendario.');
+    return;
+  }
   const tieneContenido = sesion.secciones && sesion.secciones.some(s => !s.fijo);
   if (tieneContenido) {
     if (!confirm(`La sesión del ${formatearFechaES(fecha)} tiene contenido. ¿Seguro que quieres eliminarla?`)) return;
   } else {
     if (!confirm(`¿Eliminar la sesión del ${formatearFechaES(fecha)}?`)) return;
   }
+  const tipoEliminada = sesion.tipoSesion;
   delete sesiones[fecha];
   guardarSesiones();
+  recalcularNumerosSesion();
+  if (window.fsSync) window.fsSync.eliminarSesionArchivo(fecha, tipoEliminada);
   if (vistaActual === 'proyecto' || vistaActual === 'inicio') {
     renderCintaSesiones(mesCintaActual || fecha.substring(0, 7));
     inicializarControlAnual();
@@ -494,8 +542,8 @@ const btnVolverMenuCalendario = document.getElementById('btnVolverMenuCalendario
 const btnVolverMenuNuevo = document.getElementById('btnVolverMenuNuevo');
 const menuItemCalendarizacion = document.getElementById('menuItemCalendarizacion');
 const menuItemEmail = document.getElementById('menuItemEmail');
-
 const btnNuevoCalendario = document.getElementById('btnNuevoCalendario');
+
 const panelCreacionCalendario = document.getElementById('panelCreacionCalendario');
 const panelControlAnual = document.getElementById('panelControlAnual');
 const confirmSobrescribir = document.getElementById('confirmSobrescribir');
@@ -545,6 +593,9 @@ const asuetoOpciones = document.getElementById('asuetoOpciones');
 const asuetoDestino = document.getElementById('asuetoDestino');
 const btnAgregarAsueto = document.getElementById('btnAgregarAsueto');
 const listaAsuetos = document.getElementById('listaAsuetos');
+
+const cintaTituloSesion = document.getElementById('cintaTituloSesion');
+const cintaSesionesWrap = document.getElementById('cintaSesionesWrap');
 
 // ========== LISTA DE DEPENDENCIAS ==========
 const TODAS_DEPENDENCIAS = [
@@ -605,6 +656,11 @@ function getInsertIndex(seccion) {
   return secciones.length;
 }
 function moverPunto(id, direccion) {
+  // === NUEVO: verificar permiso ===
+  if (!window.tieneRol('PuntosWrite') && !window.tieneRol('Admin') && !window.tieneRol('Administrador')) {
+    alert('No tienes permiso para mover puntos.');
+    return;
+  }
   const index = secciones.findIndex(s => s.id === id);
   if (index === -1) return;
   const nuevoIndex = index + direccion;
@@ -742,6 +798,8 @@ function renderPanelPrincipal() {
       const anexoChecked = (tieneArchivos || sec.anexo === true) ? 'checked' : '';
       const numeroAnexo = idx + 1;
       const dependenciaMostrada = sec.dependencia || 'Pleno';
+      const puedeSubir = idx > 0 && secciones[idx-1].seccion === sec.seccion;
+      const puedeBajar = idx < secciones.length - 1 && secciones[idx+1].seccion === sec.seccion;
 
       let archivosHtml = '';
       if (tieneArchivos) {
@@ -766,7 +824,12 @@ function renderPanelPrincipal() {
               <label for="anexo_${sec.id}">Anexo ${numeroAnexo}</label>
             </div>
             <div class="botones">
-              <span style="font-size:11px; color:#999;">${sec.seccion}</span>
+              <button class="btn-adjuntar" id="btnAdjuntar_${sec.id}" title="Adjuntar archivo"><i class="fas fa-paperclip"></i></button>
+              <button class="btn-mover" id="btnSubir_${sec.id}" ${!puedeSubir ? 'disabled' : ''}>▲</button>
+              <button class="btn-mover" id="btnBajar_${sec.id}" ${!puedeBajar ? 'disabled' : ''}>▼</button>
+              <button class="btn-eliminar" id="btnEliminar_${sec.id}" ${esFijo ? 'disabled' : ''}>
+                ${esFijo ? 'Fijo' : 'Eliminar'}
+              </button>
             </div>
           </div>
         </div>
@@ -775,9 +838,11 @@ function renderPanelPrincipal() {
     html += `</div>`;
     panelPrincipal.innerHTML = html;
 
+    // Asignar eventos en modo búsqueda
     puntosFiltrados.forEach(sec => {
       const card = document.querySelector(`.punto-card[data-id="${sec.id}"]`);
       if (!card) return;
+
       card.addEventListener('click', function(e) {
         if (e.target.closest('button') || e.target.closest('input') || e.target.closest('label') || e.target.closest('.checkbox-group') || e.target.closest('.archivo-item')) return;
         if (puntoSeleccionadoId === sec.id) return;
@@ -791,6 +856,7 @@ function renderPanelPrincipal() {
         actualizarBadgesYVisibilidad();
         actualizarEstadoBotonesYBloques();
       });
+
       const archivosItems = card.querySelectorAll('.archivo-item');
       archivosItems.forEach((item, idx) => {
         item.addEventListener('click', function(e) {
@@ -799,6 +865,7 @@ function renderPanelPrincipal() {
           if (archivo) abrirModalPrevisualizacion(archivo);
         });
       });
+
       const chk = document.getElementById('anexo_' + sec.id);
       if (chk) {
         chk.addEventListener('change', function() {
@@ -807,11 +874,51 @@ function renderPanelPrincipal() {
           renderSidebarDerecho();
         });
       }
+
+      // Botón adjuntar
+      document.getElementById('btnAdjuntar_' + sec.id)?.addEventListener('click', function(e) {
+        e.stopPropagation();
+        abrirModalAdjuntar(sec.id);
+      });
+
+      document.getElementById('btnSubir_' + sec.id)?.addEventListener('click', function() {
+        moverPunto(sec.id, -1);
+      });
+
+      document.getElementById('btnBajar_' + sec.id)?.addEventListener('click', function() {
+        moverPunto(sec.id, 1);
+      });
+
+      const btnEliminar = document.getElementById('btnEliminar_' + sec.id);
+      if (btnEliminar && !sec.fijo) {
+        btnEliminar.addEventListener('click', function() {
+          // === NUEVO: verificar permiso ===
+          if (!window.tieneRol('PuntosWrite') && !window.tieneRol('Admin') && !window.tieneRol('Administrador')) {
+            alert('No tienes permiso para eliminar puntos.');
+            return;
+          }
+          if (confirm(`¿Eliminar "${getTituloPunto(sec, secciones.indexOf(sec))}"?`)) {
+            const index = secciones.findIndex(s => s.id === sec.id);
+            if (index > 0 && !secciones[index].fijo) {
+              secciones.splice(index, 1);
+              guardarEstadoActual();
+              const ptsRestantes = secciones.filter(s => s.seccion === seccionActual);
+              puntoSeleccionadoId = ptsRestantes.length > 0 ? ptsRestantes[0].id : null;
+              renderPanelPrincipal();
+              actualizarBadgesYVisibilidad();
+              actualizarEstadoBotonesYBloques();
+              renderSidebarDerecho();
+              renderResumenClasificacion();
+              poblarFiltroDependencias();
+            }
+          }
+        });
+      }
     });
     return;
   }
 
-  // --- SIN FILTRO: comportamiento original ---
+  // ===== SIN FILTRO: comportamiento original =====
   const pts = secciones.filter(s => s.seccion === seccionActual);
   const nombreSeccion = seccionActual.charAt(0).toUpperCase() + seccionActual.slice(1);
 
@@ -863,6 +970,7 @@ function renderPanelPrincipal() {
             <label for="anexo_${sec.id}">Anexo ${numeroAnexo}</label>
           </div>
           <div class="botones">
+            <button class="btn-adjuntar" id="btnAdjuntar_${sec.id}" title="Adjuntar archivo"><i class="fas fa-paperclip"></i></button>
             <button class="btn-mover" id="btnSubir_${sec.id}" ${!puedeSubir ? 'disabled' : ''}>▲</button>
             <button class="btn-mover" id="btnBajar_${sec.id}" ${!puedeBajar ? 'disabled' : ''}>▼</button>
             <button class="btn-eliminar" id="btnEliminar_${sec.id}" ${esFijo ? 'disabled' : ''}>
@@ -876,6 +984,7 @@ function renderPanelPrincipal() {
   html += `</div>`;
   panelPrincipal.innerHTML = html;
 
+  // Asignar eventos en modo normal
   pts.forEach(sec => {
     const card = document.querySelector(`.punto-card[data-id="${sec.id}"]`);
     if (!card) return;
@@ -906,15 +1015,28 @@ function renderPanelPrincipal() {
       });
     }
 
-    document.getElementById('btnSubir_' + sec.id)?.addEventListener('click', () => {
+    // Botón adjuntar
+    document.getElementById('btnAdjuntar_' + sec.id)?.addEventListener('click', function(e) {
+      e.stopPropagation();
+      abrirModalAdjuntar(sec.id);
+    });
+
+    document.getElementById('btnSubir_' + sec.id)?.addEventListener('click', function() {
       moverPunto(sec.id, -1);
     });
-    document.getElementById('btnBajar_' + sec.id)?.addEventListener('click', () => {
+
+    document.getElementById('btnBajar_' + sec.id)?.addEventListener('click', function() {
       moverPunto(sec.id, 1);
     });
+
     const btnEliminar = document.getElementById('btnEliminar_' + sec.id);
     if (btnEliminar && !sec.fijo) {
-      btnEliminar.addEventListener('click', () => {
+      btnEliminar.addEventListener('click', function() {
+        // === NUEVO: verificar permiso ===
+        if (!window.tieneRol('PuntosWrite') && !window.tieneRol('Admin') && !window.tieneRol('Administrador')) {
+          alert('No tienes permiso para eliminar puntos.');
+          return;
+        }
         if (confirm(`¿Eliminar "${getTituloPunto(sec, secciones.indexOf(sec))}"?`)) {
           const index = secciones.findIndex(s => s.id === sec.id);
           if (index > 0 && !secciones[index].fijo) {
@@ -937,6 +1059,11 @@ function renderPanelPrincipal() {
 
 // ========== SIDEBAR TERCIARIO: CREACIÓN ==========
 function abrirCreacion() {
+  // === NUEVO: verificar permiso ===
+  if (!window.tieneRol('PuntosWrite') && !window.tieneRol('Admin') && !window.tieneRol('Administrador')) {
+    alert('No tienes permiso para crear puntos.');
+    return;
+  }
   if (secciones.length === 0) {
     alert('Primero genera un proyecto.');
     return;
@@ -970,13 +1097,37 @@ function abrirCreacion() {
   cuerpoTextarea.focus();
   btnAgregar.disabled = true;
   renderPanelPrincipal();
+
+  // Activar modo formulario en la cinta de sesiones
+  if (cintaSesionesWrap) {
+    cintaSesionesWrap.classList.add('modo-formulario');
+  }
+  if (cintaTituloSesion) {
+    const tipo = proyectoMeta.tipoSesion || 'Ordinaria';
+    const numero = proyectoMeta.numeroSesion || 1;
+    cintaTituloSesion.textContent = `Sesión ${tipo} N° ${numero}`;
+    cintaTituloSesion.style.display = 'block';
+  }
 }
 function cerrarCreacion() {
   sidebarTerciario.classList.add('hidden');
   btnAgregar.disabled = false;
   renderPanelPrincipal();
+
+  // Desactivar modo formulario en la cinta de sesiones
+  if (cintaSesionesWrap) {
+    cintaSesionesWrap.classList.remove('modo-formulario');
+  }
+  if (cintaTituloSesion) {
+    cintaTituloSesion.style.display = 'none';
+  }
 }
 function agregarPunto() {
+  // === NUEVO: verificar permiso ===
+  if (!window.tieneRol('PuntosWrite') && !window.tieneRol('Admin') && !window.tieneRol('Administrador')) {
+    alert('No tienes permiso para agregar puntos.');
+    return;
+  }
   const contenido = cuerpoTextarea.value.trim() || 'Sin resumen';
   const dependencia = dependenciaSeleccionadaValor || 'Sin dependencia';
   const asunto = asuntoSelect.value;
@@ -1083,6 +1234,11 @@ async function subirArchivosDelPuntoAOneDrive(sec, posicionGlobal) {
 
 // ========== FUNCIONES PARA ARCHIVOS ADJUNTOS ==========
 function adjuntarArchivos() {
+  // === NUEVO: verificar permiso ===
+  if (!window.tieneRol('PuntosWrite') && !window.tieneRol('Admin') && !window.tieneRol('Administrador')) {
+    alert('No tienes permiso para adjuntar archivos.');
+    return;
+  }
   const files = archivosInput.files;
   if (files.length === 0) return;
   const readerPromises = [];
@@ -1268,23 +1424,19 @@ function renderResumenClasificacion() {
 function actualizarVistaCalendarizacion() {
   if (!panelCreacionCalendario || !panelControlAnual) return;
   const haySesiones = Object.keys(sesiones).length > 0;
-  // Por defecto, si hay sesiones, mostramos control y ocultamos formulario
-  // El botón "+" alternará
-  if (haySesiones && !panelCreacionCalendario.style.display || panelCreacionCalendario.style.display === 'none') {
-    // Si hay sesiones y el formulario no está visible por defecto, mostramos control
+
+  if (haySesiones && !window.formularioActivo) {
     panelControlAnual.style.display = 'block';
-    // Pero si el formulario fue mostrado manualmente, respetamos esa decisión
-    // Para simplificar, usaremos una variable para saber si el formulario está activo
-    if (!window.formularioActivo) {
-      panelCreacionCalendario.style.display = 'none';
-    }
+    panelCreacionCalendario.style.display = 'none';
   } else if (!haySesiones) {
-    // No hay sesiones: mostrar formulario, ocultar control
     panelCreacionCalendario.style.display = 'block';
     panelControlAnual.style.display = 'none';
     window.formularioActivo = true;
+  } else {
+    panelCreacionCalendario.style.display = 'block';
+    panelControlAnual.style.display = 'none';
   }
-  // Actualizar control si está visible
+
   if (panelControlAnual.style.display !== 'none') {
     inicializarControlAnual();
   }
@@ -1293,15 +1445,12 @@ function actualizarVistaCalendarizacion() {
 function toggleFormularioCalendario() {
   if (!panelCreacionCalendario || !panelControlAnual) return;
   const haySesiones = Object.keys(sesiones).length > 0;
-  // Si el formulario está oculto, lo mostramos y ocultamos control
   if (panelCreacionCalendario.style.display === 'none' || !panelCreacionCalendario.style.display) {
     panelCreacionCalendario.style.display = 'block';
     panelControlAnual.style.display = 'none';
     window.formularioActivo = true;
-    // Marcar checkbox de sobrescribir
     if (confirmSobrescribir) confirmSobrescribir.checked = true;
   } else {
-    // Si está visible, lo ocultamos y mostramos control si hay sesiones
     panelCreacionCalendario.style.display = 'none';
     window.formularioActivo = false;
     if (haySesiones) {
@@ -1350,9 +1499,11 @@ function renderCintaSesiones(month) {
   fechas.forEach(f => {
     const sesion = sesiones[f];
     if (!sesion) return;
+
     const tieneContenido = sesion.secciones && sesion.secciones.some(s => !s.fijo);
     const totalPuntos = sesion.secciones ? sesion.secciones.length : 0;
     const puntosPropios = sesion.secciones ? sesion.secciones.filter(s => !s.fijo).length : 0;
+    const esSeleccionada = f === sesionActivaFecha;
 
     let clase = 'badge-sesion';
     let estado = '';
@@ -1366,10 +1517,18 @@ function renderCintaSesiones(month) {
       clase += ' pendiente';
       estado = 'Pendiente';
     }
+    if (esSeleccionada) clase += ' activa-seleccionada';
+    if (sesion.tipoSesion === 'Extraordinaria') clase += ' extraordinaria';
 
-    const label = formatearFechaCorta(f);
-    const tipo = sesion.tipoSesion || 'Ordinaria';
-    const tooltip = `${tipo} · ${totalPuntos} puntos (${puntosPropios} propios) · ${estado}`;
+    const diaLabel = formatearFechaCorta(f);
+    const numero = sesion.numeroSesion;
+    const numeroTexto = numero ? ('N° ' + numero) : '(no celebrada)';
+    const tipoSesionLabel = sesion.tipoSesion || 'Ordinaria';
+    const label = esSeleccionada
+      ? (diaLabel + ' - Sesión ' + tipoSesionLabel + ' ' + numeroTexto)
+      : diaLabel;
+
+    const tooltip = tipoSesionLabel + ' · ' + totalPuntos + ' puntos (' + puntosPropios + ' propios) · ' + estado;
 
     const span = document.createElement('span');
     span.className = clase;
@@ -1501,6 +1660,11 @@ function renderControlAnual(month) {
     const tieneContenido = sesion.secciones && sesion.secciones.some(s => !s.fijo);
     const totalPts = sesion.secciones ? sesion.secciones.length : 0;
     const ptsPropios = sesion.secciones ? sesion.secciones.filter(s => !s.fijo).length : 0;
+    const esSeleccionada = f === sesionActivaFecha;
+    const puedeEliminar = sesion.tipoSesion === 'Extraordinaria';
+    const numero = sesion.numeroSesion;
+    const numeroTexto = numero ? `N° ${numero}` : '(no celebrada)';
+
     let estado = '';
     let clase = 'control-item';
     if (f === proximaGlobal) {
@@ -1513,20 +1677,47 @@ function renderControlAnual(month) {
       clase += ' pendiente';
       estado = 'Pendiente';
     }
+    if (esSeleccionada) clase += ' seleccionada';
+
+    const tituloEliminar = puedeEliminar
+      ? 'Eliminar sesión'
+      : 'Las sesiones ordinarias no se pueden eliminar, solo editar';
 
     const div = document.createElement('div');
     div.className = clase;
-    div.innerHTML = `
-      <span class="control-fecha">${formatearFechaES(f)}</span>
-      <span class="control-tipo">${sesion.tipoSesion || 'Ordinaria'}</span>
-      <span class="control-puntos">${totalPts} (${ptsPropios} propios)</span>
-      <span class="control-estado">${estado}</span>
-      <button class="btn-eliminar-sesion" data-fecha="${f}" title="Eliminar sesión">✕</button>
-    `;
+
+    if (esSeleccionada) {
+      div.innerHTML = `
+        <div class="control-item-expandido">
+          <div class="control-expandido-header">
+            <span class="control-expandido-titulo">Sesión ${sesion.tipoSesion} ${numeroTexto}</span>
+            <span class="control-expandido-estado">${estado}</span>
+          </div>
+          <div class="control-expandido-fecha">${formatearFechaES(f)}</div>
+          <div class="control-expandido-detalle">
+            <span>${totalPts} puntos totales</span>
+            <span>${ptsPropios} propios</span>
+          </div>
+          <div class="control-expandido-acciones">
+            <button class="btn-eliminar-sesion" data-fecha="${f}" title="${tituloEliminar}" ${puedeEliminar ? '' : 'disabled'}>✕ Eliminar</button>
+          </div>
+        </div>
+      `;
+    } else {
+      div.innerHTML = `
+        <span class="control-fecha">Sesión ${sesion.tipoSesion} ${numeroTexto}</span>
+        <span class="control-tipo">${formatearFechaCorta(f)}</span>
+        <span class="control-puntos">${totalPts} pts</span>
+        <span class="control-estado">${estado}</span>
+        <button class="btn-eliminar-sesion" data-fecha="${f}" title="${tituloEliminar}" ${puedeEliminar ? '' : 'disabled'}>✕</button>
+      `;
+    }
+
     div.addEventListener('click', function(e) {
       if (e.target.closest('.btn-eliminar-sesion')) return;
       cargarSesion(f);
       renderCintaSesiones(f.substring(0, 7));
+      renderControlAnual(month);
       if (vistaActual === 'proyecto') mostrarProyecto();
       else if (vistaActual === 'inicio') mostrarInicio();
     });
@@ -1561,6 +1752,14 @@ function actualizarControlAnual() {
   renderControlAnual(mes);
 }
 
+// ========== BOTÓN NUEVO CALENDARIO (visibilidad) ==========
+function actualizarBotonNuevoCalendario() {
+  if (!btnNuevoCalendario || !panelCalendarizacion) return;
+  const visible = !panelCalendarizacion.classList.contains('hidden');
+  btnNuevoCalendario.style.setProperty('display', visible ? 'flex' : 'none', 'important');
+}
+window.actualizarBotonNuevoCalendario = actualizarBotonNuevoCalendario;
+
 // ========== TOGGLE NUEVO SIDEBAR ==========
 function toggleNuevoSidebar(forceState) {
   if (!sidebarNuevo) return;
@@ -1579,6 +1778,17 @@ function toggleNuevoSidebar(forceState) {
     sidebarNuevo.classList.remove('open');
     localStorage.setItem(NUEVO_SIDEBAR_KEY, 'false');
   }
+  if (newState) {
+    panelMenuNuevo.classList.remove('hidden');
+    panelCalendarizacion.classList.add('hidden');
+    panelEmailNuevo.classList.add('hidden');
+    const panelSyncEl = document.getElementById('panelSync');
+    if (panelSyncEl) panelSyncEl.classList.add('hidden');
+    sidebarNuevo.classList.remove('ancho');
+    sidebarNuevo.classList.add('open');
+    localStorage.setItem(NUEVO_SIDEBAR_KEY, 'true');
+    actualizarBotonNuevoCalendario();
+  }
 }
 
 // ========== ABRIR PANEL DE CALENDARIZACIÓN ==========
@@ -1587,6 +1797,7 @@ function abrirPanelCalendarizacion() {
   panelMenuNuevo.classList.add('hidden');
   panelCalendarizacion.classList.remove('hidden');
   sidebarNuevo.classList.add('ancho');
+  window.formularioActivo = false;
   actualizarVistaCalendarizacion();
   renderExcepciones();
   if (!sidebarNuevo.classList.contains('open')) {
@@ -1594,13 +1805,6 @@ function abrirPanelCalendarizacion() {
   }
   actualizarBotonNuevoCalendario();
 }
-
-function actualizarBotonNuevoCalendario() {
-  if (!btnNuevoCalendario || !panelCalendarizacion) return;
-  const visible = !panelCalendarizacion.classList.contains('hidden');
-  btnNuevoCalendario.style.setProperty('display', visible ? 'flex' : 'none', 'important');
-}
-window.actualizarBotonNuevoCalendario = actualizarBotonNuevoCalendario;
 
 // ========== VISTAS ==========
 function mostrarInicio() {
@@ -1831,6 +2035,11 @@ function renderDetallePrevia(id) {
 
   document.getElementById('btnEliminarPrevia')?.addEventListener('click', function() {
     if (esFijo) return;
+    // === NUEVO: verificar permiso ===
+    if (!window.tieneRol('PuntosWrite') && !window.tieneRol('Admin') && !window.tieneRol('Administrador')) {
+      alert('No tienes permiso para eliminar puntos.');
+      return;
+    }
     if (confirm(`¿Eliminar "${titulo}"?`)) {
       const index = secciones.findIndex(s => s.id === sec.id);
       if (index !== -1 && !secciones[index].fijo) {
@@ -2210,6 +2419,11 @@ function agregarActa() {
 
 // ========== MODAL NUEVO PROYECTO ==========
 function abrirModalNuevoProyecto() {
+  // === NUEVO: verificar permiso ===
+  if (!window.tieneRol('Admin') && !window.tieneRol('Administrador')) {
+    alert('No tienes permiso para crear sesiones extraordinarias.');
+    return;
+  }
   const hoy = hoyLocalISO();
   nuevoFecha.value = hoy;
   modalNuevo.classList.add('active');
@@ -2231,16 +2445,42 @@ async function confirmarNuevoProyecto() {
   modalNuevoConfirm.disabled = true;
   modalNuevoConfirm.textContent = 'Creando...';
 
-  const numero = 1;
   sesiones[fecha] = {
     tipoSesion: 'Extraordinaria',
-    numeroSesion: numero,
+    numeroSesion: 1,
     secciones: []
   };
   guardarSesiones();
+  recalcularNumerosSesion();
 
   cargarSesion(fecha);
   asegurarPuntosFijos();
+
+  // Añadir punto para el acta de esta extraordinaria
+  const contenidoActa = `Aprobación, en su caso, del acta de la sesión extraordinaria del ${formatearFechaES(fecha)}.`;
+  const yaExiste = secciones.some(s => s.contenido === contenidoActa && s.seccion === 'aprobaciones');
+  
+  if (!yaExiste) {
+    const nuevoId = 'sec_' + Date.now();
+    const nuevoPunto = {
+      id: nuevoId,
+      clasificacion: 'Pleno',
+      contenido: contenidoActa,
+      seccion: 'aprobaciones',
+      subbloque: 'Pleno',
+      fijo: false,
+      anexo: false,
+      voto: 'Pendiente',
+      anotaciones: '',
+      aprobado: false,
+      dependencia: 'Pleno',
+      asunto: 'Acta extraordinaria',
+      archivos: []
+    };
+    const insertIdx = getInsertIndex('aprobaciones');
+    secciones.splice(insertIdx, 0, nuevoPunto);
+    guardarEstadoActual();
+  }
 
   cerrarModalNuevoProyecto();
   modalNuevoConfirm.disabled = false;
@@ -2260,6 +2500,118 @@ async function confirmarNuevoProyecto() {
   }
 }
 
+// ========== MODAL ADJUNTAR (NUEVO) ==========
+// Referencias al modal adjuntar
+const modalAdjuntar = document.getElementById('modalAdjuntar');
+const adjuntarArchivoInput = document.getElementById('adjuntarArchivoInput');
+const btnAdjuntarCancel = document.getElementById('btnAdjuntarCancel');
+const btnAdjuntarConfirm = document.getElementById('btnAdjuntarConfirm');
+let puntoAdjuntarId = null;
+
+function abrirModalAdjuntar(id) {
+  // === NUEVO: verificar permiso ===
+  if (!window.tieneRol('PuntosWrite') && !window.tieneRol('Admin') && !window.tieneRol('Administrador')) {
+    alert('No tienes permiso para adjuntar archivos.');
+    return;
+  }
+  puntoAdjuntarId = id;
+  adjuntarArchivoInput.value = '';
+  modalAdjuntar.classList.add('active');
+}
+
+function cerrarModalAdjuntar() {
+  modalAdjuntar.classList.remove('active');
+  puntoAdjuntarId = null;
+}
+
+function adjuntarArchivoPunto() {
+  const file = adjuntarArchivoInput.files[0];
+  if (!file) {
+    alert('Selecciona un archivo.');
+    return;
+  }
+  if (file.size > 1024 * 1024) {
+    alert('El archivo excede 1MB.');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const archivo = {
+      nombre: file.name,
+      tipo: file.type,
+      data: e.target.result
+    };
+    const punto = secciones.find(s => s.id === puntoAdjuntarId);
+    if (punto) {
+      if (!punto.archivos) punto.archivos = [];
+      punto.archivos.push(archivo);
+      punto.anexo = true;
+      guardarEstadoActual();
+      if (vistaActual === 'proyecto') {
+        renderPanelPrincipal();
+        renderSidebarDerecho();
+        renderResumenClasificacion();
+      } else if (vistaActual === 'sesionPrevia') {
+        renderSesionPrevia();
+      } else if (vistaActual === 'actaSesion') {
+        renderActaSesion();
+      }
+      cerrarModalAdjuntar();
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+// ========== INICIALIZACIÓN CON PERMISOS ==========
+
+// === NUEVO: Mapa de permisos para elementos ===
+const PERMISOS_ELEMENTOS = {
+  'menuItemCalendarizacion': 'Calendarization',
+  'menuItemEmail': 'Email',
+  'menuItemSync': 'Admin',
+  'btnNuevoProyecto': 'Admin',
+  'btnAgregarSeccion': 'PuntosWrite',
+  'btnConfirmarCreacion': 'PuntosWrite',
+  'btnAdjuntarArchivo': 'PuntosWrite',
+  'navProyecto': 'PuntosWrite',
+  'btnGenerarPDFSidebar': null, // todos pueden generar PDF
+};
+
+// === NUEVO: Función para aplicar permisos ===
+function aplicarPermisos() {
+  const tieneRol = (rol) => window.tieneRol(rol);
+  const esAdmin = tieneRol('Admin') || tieneRol('Administrador');
+
+  // 1. Ocultar elementos según permisos
+  Object.keys(PERMISOS_ELEMENTOS).forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const rolNecesario = PERMISOS_ELEMENTOS[id];
+    if (rolNecesario && !tieneRol(rolNecesario) && !esAdmin) {
+      el.style.display = 'none';
+    } else {
+      el.style.display = ''; // restaurar si tiene permiso
+    }
+  });
+
+  // 2. Si es solo lector (ReadOnly sin otros roles de edición)
+  const esLector = tieneRol('ReadOnly') && !esAdmin && !tieneRol('PuntosWrite');
+  if (esLector) {
+    document.querySelectorAll('.btn-add, .btn-eliminar, .btn-mover, .btn-adjuntar, #btnAgregarSeccion, #btnAprobarTodos, #btnNuevoProyecto').forEach(el => {
+      el.style.display = 'none';
+    });
+    document.body.classList.add('modo-lectura');
+  } else {
+    document.body.classList.remove('modo-lectura');
+  }
+
+  // 3. Controlar visibilidad del botón "+" de calendario (está dentro del sidebar negro)
+  const btnNuevoCalendario = document.getElementById('btnNuevoCalendario');
+  if (btnNuevoCalendario) {
+    btnNuevoCalendario.style.display = (tieneRol('Calendarization') || esAdmin) ? 'flex' : 'none';
+  }
+}
+
 // ========== INICIALIZACIÓN ==========
 function init() {
   if (fechaActualEl) {
@@ -2275,6 +2627,7 @@ function init() {
   sesiones = cargarSesiones();
 
   asegurarCalendarioDisponible();
+  recalcularNumerosSesion();
 
   let fechaActiva = obtenerProximaSesion();
   if (!fechaActiva) {
@@ -2302,9 +2655,25 @@ function init() {
   actualizarBotonNuevoCalendario();
 
   // ===== EVENTOS =====
+
+  // === NUEVO: Eventos de navegación con control de permisos ===
   document.querySelectorAll('#navPrincipal .nav-item[data-vista]').forEach(el => {
     el.addEventListener('click', function() {
       const vista = this.dataset.vista;
+      const tieneRol = (rol) => window.tieneRol(rol);
+      const esAdmin = tieneRol('Admin') || tieneRol('Administrador');
+      const esLector = tieneRol('ReadOnly') && !esAdmin && !tieneRol('PuntosWrite');
+
+      if (vista === 'proyecto' && !tieneRol('PuntosWrite') && !esAdmin) {
+        alert('No tienes permiso para editar el proyecto.');
+        return;
+      }
+      if (esLector && (vista === 'inicio' || vista === 'proyecto')) {
+        alert('Tu rol solo permite visualizar la Previa de sesión y el Acta.');
+        mostrarSesionPrevia();
+        return;
+      }
+      // Ejecutar la vista correspondiente
       if (vista === 'inicio') mostrarInicio();
       else if (vista === 'proyecto') mostrarProyecto();
       else if (vista === 'sesionPrevia') mostrarSesionPrevia();
@@ -2365,10 +2734,8 @@ function init() {
 
   if (btnToggleNuevoSidebar) btnToggleNuevoSidebar.addEventListener('click', toggleNuevoSidebar);
 
-  // Botón "+" del panel de calendarización (alterna formulario)
   if (btnNuevoCalendario) {
     btnNuevoCalendario.addEventListener('click', function() {
-      // Asegurar que el panel de calendarización esté visible
       if (panelCalendarizacion.classList.contains('hidden')) {
         abrirPanelCalendarizacion();
       } else {
@@ -2391,15 +2758,14 @@ function init() {
     menuItemCalendarizacion.addEventListener('click', abrirPanelCalendarizacion);
   }
   if (btnVolverMenuCalendario) {
-  btnVolverMenuCalendario.addEventListener('click', function() {
-    panelCalendarizacion.classList.add('hidden');
-    panelMenuNuevo.classList.remove('hidden');
-    sidebarNuevo.classList.remove('ancho');
-    actualizarBotonNuevoCalendario();
-  });
-}
+    btnVolverMenuCalendario.addEventListener('click', function() {
+      panelCalendarizacion.classList.add('hidden');
+      panelMenuNuevo.classList.remove('hidden');
+      sidebarNuevo.classList.remove('ancho');
+      actualizarBotonNuevoCalendario();
+    });
+  }
 
-  // Validación de fechas para vacaciones
   if (vacacionInicio) {
     vacacionInicio.addEventListener('change', function() {
       const inicio = this.value;
@@ -2414,10 +2780,8 @@ function init() {
     });
   }
 
-  // Generar calendario (sobrescribir)
   if (btnGenerarCalendario) {
     btnGenerarCalendario.addEventListener('click', function() {
-      // Verificar checkbox de confirmación
       if (!confirmSobrescribir || !confirmSobrescribir.checked) {
         alert('Debes marcar la casilla "Sobrescribir calendario existente" para regenerar el calendario.');
         return;
@@ -2425,11 +2789,9 @@ function init() {
 
       const dia = parseInt(diaSesionSelect.value, 10);
       if (dia >= 1 && dia <= 5) {
-        // Borrar todas las sesiones existentes (sobrescribir)
         sesiones = {};
         diaSesion = dia;
         guardarDiaSesion();
-        // Generar nuevo calendario
         generarCalendarioAnual(new Date().getFullYear());
         aplicarExcepciones();
         limpiarSesionesInvalidas();
@@ -2438,7 +2800,7 @@ function init() {
         const proxima = obtenerProximaSesion();
         if (proxima) cargarSesion(proxima);
         if (vistaActual === 'proyecto') mostrarProyecto();
-        // Actualizar vistas
+        window.formularioActivo = false;
         actualizarVistaCalendarizacion();
         renderCintaSesiones();
         renderExcepciones();
@@ -2449,7 +2811,6 @@ function init() {
     });
   }
 
-  // Agregar periodo vacacional
   if (btnAgregarVacacion) {
     btnAgregarVacacion.addEventListener('click', function() {
       const inicio = vacacionInicio.value, fin = vacacionFin.value;
@@ -2457,8 +2818,6 @@ function init() {
       if (inicio > fin) { alert('La fecha de inicio debe ser anterior a la de fin.'); return; }
       excepciones.vacaciones.push({ inicio, fin });
       guardarExcepciones();
-      // Regenerar calendario aplicando nuevas excepciones
-      // No sobrescribimos, solo aplicamos excepciones
       generarCalendarioAnual(new Date().getFullYear());
       aplicarExcepciones();
       limpiarSesionesInvalidas();
@@ -2470,7 +2829,6 @@ function init() {
     });
   }
 
-  // Manejo de asuetos
   if (asuetoFecha) {
     asuetoFecha.addEventListener('change', function() {
       const fecha = this.value;
@@ -2517,8 +2875,20 @@ function init() {
     });
   }
 
+  // Eventos del modal adjuntar
+  if (btnAdjuntarCancel) btnAdjuntarCancel.addEventListener('click', cerrarModalAdjuntar);
+  if (modalAdjuntar) {
+    modalAdjuntar.addEventListener('click', function(e) {
+      if (e.target === this) cerrarModalAdjuntar();
+    });
+  }
+  if (btnAdjuntarConfirm) btnAdjuntarConfirm.addEventListener('click', adjuntarArchivoPunto);
+
   renderResumenClasificacion();
   poblarFiltroDependencias();
+
+  // === NUEVO: Aplicar permisos al iniciar ===
+  aplicarPermisos();
 }
 
 // ========== FUNCIONES DE EXCEPCIONES RENDER ==========
@@ -2554,7 +2924,6 @@ function renderExcepciones() {
     });
   });
 }
-
 function ocultarCintaSesiones() {
   const wrap = document.getElementById('cintaSesionesWrap');
   if (wrap) wrap.classList.add('hidden');

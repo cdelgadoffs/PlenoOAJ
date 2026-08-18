@@ -19,7 +19,7 @@ const listaDestinatariosFicticios = document.getElementById('listaDestinatariosF
 // ========== PERMISOS (solo Editor/Admin) ==========
 function actualizarVisibilidadMenuEmail() {
   if (!menuItemEmail) return;
-  const puedeEnviar = typeof tieneRol === 'function' && (tieneRol('Editor') || tieneRol('Admin'));
+  const puedeEnviar = typeof tieneRol === 'function' && (tieneRol('Editor') || tieneRol('Admin') || tieneRol('Administrador'));
   menuItemEmail.style.display = puedeEnviar ? '' : 'none';
 }
 
