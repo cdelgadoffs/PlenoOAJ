@@ -11,6 +11,7 @@ let proyectoMeta = {
 };
 let seccionActual = 'aprobaciones';
 let puntoSeleccionadoId = null;
+let puntoEditandoId = null;
 let puntoPreviaSeleccionadoId = null;
 let vistaActual = 'inicio';
 
@@ -36,6 +37,7 @@ const SECCIONES_DEL_DOCUMENTO = [
   'aprobaciones',
   'proyectos de acuerdo',
   'licencias',
+  'tomas de nota',
   'informes',
   'asuntos generales'
 ];
@@ -61,6 +63,14 @@ function cargarSesiones() {
   const data = localStorage.getItem(SESIONES_KEY);
   if (!data) return {};
   try { return JSON.parse(data); } catch { return {}; }
+}
+function actualizarTituloCinta() {
+  const tituloEl = document.getElementById('cintaTituloSesion');
+  if (!tituloEl) return;
+  const tipo = proyectoMeta.tipoSesion || 'Ordinaria';
+  const numero = proyectoMeta.numeroSesion || 1;
+  let fecha = proyectoMeta.fecha ? formatearFechaES(proyectoMeta.fecha) : 'Fecha no definida';
+  tituloEl.textContent = `Sesión ${tipo} N° ${numero} · ${fecha}`;
 }
 function guardarSesiones() {
   localStorage.setItem(SESIONES_KEY, JSON.stringify(sesiones));
@@ -241,11 +251,16 @@ function guardarEstadoActual() {
     sesiones[sesionActivaFecha] = {
       tipoSesion: proyectoMeta.tipoSesion || 'Ordinaria',
       numeroSesion: proyectoMeta.numeroSesion || 1,
-      secciones: []
+      secciones: [],
+      asistentes: []   // <-- AÑADIDO
     };
   }
   sesiones[sesionActivaFecha].tipoSesion = proyectoMeta.tipoSesion;
   sesiones[sesionActivaFecha].secciones = JSON.parse(JSON.stringify(secciones));
+  // Asegurar que exista el array de asistentes
+  if (!sesiones[sesionActivaFecha].asistentes) {
+    sesiones[sesionActivaFecha].asistentes = [];   // <-- AÑADIDO
+  }
   guardarSesiones();
   recalcularNumerosSesion();
   if (window.fsSync) window.fsSync.sincronizarSesion(sesionActivaFecha);
@@ -258,7 +273,8 @@ function cargarSesion(fecha) {
     sesiones[fecha] = {
       tipoSesion: esOrdinaria ? 'Ordinaria' : 'Extraordinaria',
       numeroSesion: 1,
-      secciones: []
+      secciones: [],
+      asistentes: []   // <-- AÑADIDO
     };
     guardarSesiones();
     recalcularNumerosSesion();
@@ -268,10 +284,13 @@ function cargarSesion(fecha) {
   proyectoMeta.numeroSesion = data.numeroSesion || 1;
   proyectoMeta.fecha = fecha;
   secciones = JSON.parse(JSON.stringify(data.secciones));
+  // Asegurar que exista el array de asistentes
+  if (!data.asistentes) data.asistentes = [];   // <-- AÑADIDO
   asegurarPuntosFijos();
   guardarProyectoMeta();
   guardarEnLocalStorage();
   actualizarTituloSidebar();
+  actualizarTituloCinta();
 }
 function esFechaSesionOrdinaria(fechaStr) {
   const fecha = parsearFechaLocal(fechaStr);
@@ -442,7 +461,7 @@ function asegurarPuntosFijos() {
           voto: 'Pendiente',
           anotaciones: '',
           aprobado: false,
-          dependencia: '',
+          dependencia: 'Pleno',
           asunto: '',
           archivos: []
         });
@@ -458,7 +477,7 @@ function asegurarPuntosFijos() {
           voto: 'Pendiente',
           anotaciones: '',
           aprobado: true,
-          dependencia: '',
+          dependencia: 'Pleno',
           asunto: '',
           archivos: []
         });
@@ -474,7 +493,7 @@ function asegurarPuntosFijos() {
           voto: 'Pendiente',
           anotaciones: '',
           aprobado: false,
-          dependencia: '',
+          dependencia: 'Pleno',
           asunto: '',
           archivos: []
         });
@@ -486,6 +505,7 @@ function asegurarPuntosFijos() {
         const fijo = secciones[idx];
         fijo.fijo = true;
         fijo.clasificacion = 'Pleno';
+        fijo.dependencia = 'Pleno';
         if (id === 'sec_fijo_3') {
           fijo.seccion = 'asuntos generales';
         } else {
@@ -556,8 +576,11 @@ const confirmSobrescribir = document.getElementById('confirmSobrescribir');
 
 const filtroDependencia = document.getElementById('filtroDependencia');
 const listaDependencias = document.getElementById('listaDependencias');
-const depSeleccionadaDisplay = document.getElementById('depSeleccionadaDisplay');
+const remitenteSelect = document.getElementById('remitenteSelect');
+
 const asuntoSelect = document.getElementById('asuntoSelect');
+const tipoVotacionSelect = document.getElementById('tipoVotacionSelect');
+const acuerdoSelect = document.getElementById('acuerdoSelect');
 const cuerpoTextarea = document.getElementById('cuerpoTextarea');
 const btnConfirmarCreacion = document.getElementById('btnConfirmarCreacion');
 const btnCancelarCreacion = document.getElementById('btnCancelarCreacion');
@@ -600,6 +623,24 @@ const asuetoDestino = document.getElementById('asuetoDestino');
 const btnAgregarAsueto = document.getElementById('btnAgregarAsueto');
 const listaAsuetos = document.getElementById('listaAsuetos');
 
+const modalAdjuntar = document.getElementById('modalAdjuntar');
+const adjuntarArchivoInput = document.getElementById('adjuntarArchivoInput');
+const btnAdjuntarCancel = document.getElementById('btnAdjuntarCancel');
+const btnAdjuntarConfirm = document.getElementById('btnAdjuntarConfirm');
+let puntoAdjuntarId = null;
+
+const menuItemQuorum = document.getElementById('menuItemQuorum');
+const panelQuorum = document.getElementById('panelQuorum');
+const btnVolverMenuQuorum = document.getElementById('btnVolverMenuQuorum');
+const inputAsistenteNombre = document.getElementById('inputAsistenteNombre');
+const inputAsistenteEmail = document.getElementById('inputAsistenteEmail');
+const btnAgregarAsistente = document.getElementById('btnAgregarAsistente');
+const listaAsistentesPanel = document.getElementById('listaAsistentesPanel');
+const quorumContainer = document.getElementById('quorumContainer');
+const quorumLista = document.getElementById('quorumLista');
+const inputAsistenteGenero = document.getElementById('inputAsistenteGenero');
+const inputAsistenteGrado = document.getElementById('inputAsistenteGrado');
+
 // ========== LISTA DE DEPENDENCIAS ==========
 const TODAS_DEPENDENCIAS = [
   { id: 'Pleno', categoria: 'pleno' },
@@ -618,31 +659,165 @@ const TODAS_DEPENDENCIAS = [
 
 let dependenciaSeleccionadaValor = '';
 
-function renderizarListaDependencias(filtroCategoria) {
-  const lista = listaDependencias;
-  if (!lista) return;
-  lista.innerHTML = '';
-  let dependenciasFiltradas = TODAS_DEPENDENCIAS.filter(d => d.categoria === filtroCategoria);
-  if (dependenciasFiltradas.length === 0) {
-    const empty = document.createElement('div');
-    empty.style.cssText = 'padding:8px; color:#999; font-size:12px; text-align:center;';
-    empty.textContent = 'No hay dependencias en esta categoría.';
-    lista.appendChild(empty);
+
+// ========== CRUD de asistentes para Quórum ==========
+
+function renderListaAsistentesPanel() {
+  const sesion = sesiones[sesionActivaFecha];
+  if (!sesion) { listaAsistentesPanel.innerHTML = ''; return; }
+  const asistentes = sesion.asistentes || [];
+  if (asistentes.length === 0) {
+    listaAsistentesPanel.innerHTML = '<span class="email-vacio">No hay asistentes registrados</span>';
     return;
   }
-  dependenciasFiltradas.forEach(dep => {
-    const div = document.createElement('div');
-    div.className = 'dep-item';
-    if (dep.id === dependenciaSeleccionadaValor) {
-      div.classList.add('active');
-    }
-    div.textContent = dep.id;
-    div.addEventListener('click', () => {
-      dependenciaSeleccionadaValor = dep.id;
-      depSeleccionadaDisplay.textContent = `Dependencia: ${dep.id}`;
-      renderizarListaDependencias(filtroDependencia.value);
+  // Construir una tabla o tarjetas con mejor presentación
+  let html = `<div style="display:flex; flex-direction:column; gap:6px;">`;
+  asistentes.forEach((a, idx) => {
+    const generoLabel = a.genero === 'femenino' ? 'F' : 'M';
+    const gradoAbrev = a.grado === 'Licenciatura' ? 'Lic.' : a.grado === 'Maestría' ? 'Mtra.' : a.grado === 'Doctorado' ? 'Dra.' : '';
+    // Para edición, abriremos un modal o un inline edit; por simplicidad, usaremos un prompt.
+    html += `
+      <div style="display:flex; justify-content:space-between; align-items:center; background:#2a2a2a; padding:6px 12px; border-radius:4px; border-left:3px solid #555;">
+        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+          <span style="font-weight:500; color:#ddd;">${a.nombre}</span>
+          <span style="font-size:11px; color:#aaa;">${a.email}</span>
+          <span style="font-size:11px; color:#888;">${generoLabel} · ${gradoAbrev || a.grado}</span>
+        </div>
+        <div style="display:flex; gap:6px;">
+          <button class="btn-edit-asistente" data-idx="${idx}" style="background:transparent; border:1px solid #555; color:#ccc; border-radius:3px; padding:2px 8px; font-size:11px; cursor:pointer;">✎</button>
+          <button class="btn-eliminar-asistente" data-idx="${idx}" style="background:transparent; border:none; color:#ef4444; cursor:pointer; font-size:14px;">✕</button>
+        </div>
+      </div>
+    `;
+  });
+  html += `</div>`;
+  listaAsistentesPanel.innerHTML = html;
+
+  // Eventos para eliminar
+  listaAsistentesPanel.querySelectorAll('.btn-eliminar-asistente').forEach(el => {
+    el.addEventListener('click', function() {
+      const idx = parseInt(this.dataset.idx);
+      eliminarAsistente(idx);
     });
-    lista.appendChild(div);
+  });
+
+  // Eventos para editar (abre un prompt con los datos actuales)
+  listaAsistentesPanel.querySelectorAll('.btn-edit-asistente').forEach(el => {
+    el.addEventListener('click', function() {
+      const idx = parseInt(this.dataset.idx);
+      editarAsistente(idx);
+    });
+  });
+}
+function editarAsistente(idx) {
+  const sesion = sesiones[sesionActivaFecha];
+  if (!sesion) return;
+  const asistentes = sesion.asistentes || [];
+  if (idx < 0 || idx >= asistentes.length) return;
+  const a = asistentes[idx];
+  // Pedir nuevos datos (usamos prompt, pero se puede mejorar con un modal)
+  const nuevoNombre = prompt('Nombre completo:', a.nombre);
+  if (nuevoNombre === null) return;
+  const nuevoEmail = prompt('Correo electrónico:', a.email);
+  if (nuevoEmail === null) return;
+  const nuevoGenero = confirm('¿Es femenino? (Aceptar = Femenino, Cancelar = Masculino)') ? 'femenino' : 'masculino';
+  const gradoOpciones = ['Licenciatura', 'Maestría', 'Doctorado'];
+  const gradoActual = gradoOpciones.indexOf(a.grado) !== -1 ? a.grado : 'Licenciatura';
+  const nuevoGrado = prompt('Grado académico (Licenciatura, Maestría, Doctorado):', gradoActual);
+  if (nuevoGrado === null) return;
+  if (!['Licenciatura', 'Maestría', 'Doctorado'].includes(nuevoGrado)) {
+    alert('Grado no válido. Se mantendrá el actual.');
+    return;
+  }
+  // Actualizar
+  a.nombre = nuevoNombre.trim() || a.nombre;
+  a.email = nuevoEmail.trim() || a.email;
+  a.genero = nuevoGenero;
+  a.grado = nuevoGrado;
+  guardarSesiones();
+  renderListaAsistentesPanel();
+  if (vistaActual === 'sesionPrevia') renderQuorumAsistentes();
+}
+
+function agregarAsistente() {
+  const nombre = inputAsistenteNombre.value.trim();
+  const email = inputAsistenteEmail.value.trim();
+  const genero = inputAsistenteGenero.value;
+  const grado = inputAsistenteGrado.value;
+  if (!nombre || !email) {
+    alert('Debes ingresar nombre y correo.');
+    return;
+  }
+  const sesion = sesiones[sesionActivaFecha];
+  if (!sesion) return;
+  sesion.asistentes = sesion.asistentes || [];
+  // Verificar si ya existe (por email)
+  if (sesion.asistentes.some(a => a.email === email)) {
+    alert('Ya existe un asistente con ese correo.');
+    return;
+  }
+  sesion.asistentes.push({ nombre, email, genero, grado, presente: true });
+  inputAsistenteNombre.value = '';
+  inputAsistenteEmail.value = '';
+  // Los selects se mantienen con los valores por defecto
+  guardarSesiones();
+  renderListaAsistentesPanel();
+  if (vistaActual === 'sesionPrevia') renderQuorumAsistentes();
+}
+
+function eliminarAsistente(idx) {
+  const sesion = sesiones[sesionActivaFecha];
+  if (!sesion) return;
+  sesion.asistentes = sesion.asistentes || [];
+  if (idx >= 0 && idx < sesion.asistentes.length) {
+    sesion.asistentes.splice(idx, 1);
+    guardarSesiones();
+    renderListaAsistentesPanel();
+    if (vistaActual === 'sesionPrevia') renderQuorumAsistentes();
+  }
+}
+
+function renderQuorumAsistentes() {
+  const sesion = sesiones[sesionActivaFecha];
+  if (!sesion) { quorumLista.innerHTML = ''; return; }
+  const asistentes = sesion.asistentes || [];
+  if (asistentes.length === 0) {
+    quorumLista.innerHTML = '<span style="color:#999;">No hay asistentes registrados.</span>';
+    return;
+  }
+  const presentes = asistentes.filter(a => a.presente !== false).length;
+  const total = asistentes.length;
+  // Construir tabla
+  let html = `
+    <div style="margin-bottom:8px; font-weight:500;">${presentes} de ${total} presentes</div>
+    <div style="display:flex; flex-direction:column; gap:2px;">
+  `;
+  asistentes.forEach((a, idx) => {
+    const generoAbrev = a.genero === 'femenino' ? 'F' : 'M';
+    const gradoAbrev = a.grado === 'Licenciatura' ? 'Lic.' : a.grado === 'Maestría' ? 'Mtra.' : a.grado === 'Doctorado' ? 'Dra.' : '';
+    html += `
+      <div style="display:flex; align-items:center; gap:8px; padding:2px 4px; border-bottom:1px solid #eee;">
+        <input type="checkbox" id="q_${idx}" ${a.presente !== false ? 'checked' : ''} data-idx="${idx}" />
+        <label for="q_${idx}" style="font-size:12px; cursor:pointer; flex:1;">${a.nombre}</label>
+        <span style="font-size:10px; color:#888;">${gradoAbrev} ${generoAbrev}</span>
+      </div>
+    `;
+  });
+  html += `</div>`;
+  quorumLista.innerHTML = html;
+
+  quorumLista.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.addEventListener('change', function() {
+      const idx = parseInt(this.dataset.idx);
+      const ses = sesiones[sesionActivaFecha];
+      if (!ses) return;
+      ses.asistentes = ses.asistentes || [];
+      if (idx >= 0 && idx < ses.asistentes.length) {
+        ses.asistentes[idx].presente = this.checked;
+        guardarSesiones();
+        renderQuorumAsistentes(); // actualiza contador
+      }
+    });
   });
 }
 
@@ -772,11 +947,12 @@ function renderSecciones() {
     terminoBusqueda ? `${totalFiltrados} de ${secciones.length} coinciden` : `${SECCIONES_DEL_DOCUMENTO.length} secciones`;
 }
 
-// ========== RENDER DEL PANEL PRINCIPAL ==========
+/* ========= RENDER DEL PANEL PRINCIPAL ========== */
 function renderPanelPrincipal() {
   const puntosFiltrados = obtenerPuntosFiltrados();
   const idsFiltrados = new Set(puntosFiltrados.map(p => p.id));
 
+  // ===== MODO BÚSQUEDA =====
   if (terminoBusqueda) {
     if (puntosFiltrados.length === 0) {
       panelPrincipal.innerHTML = `
@@ -796,6 +972,8 @@ function renderPanelPrincipal() {
       const anexoChecked = (tieneArchivos || sec.anexo === true) ? 'checked' : '';
       const numeroAnexo = idx + 1;
       const dependenciaMostrada = sec.dependencia || 'Pleno';
+      const puedeSubir = idx > 0 && secciones[idx-1].seccion === sec.seccion;
+      const puedeBajar = idx < secciones.length - 1 && secciones[idx+1].seccion === sec.seccion;
 
       let archivosHtml = '';
       if (tieneArchivos) {
@@ -813,6 +991,11 @@ function renderPanelPrincipal() {
             <span class="punto-card-badge">${dependenciaMostrada}</span>
           </div>
           <div class="punto-card-cuerpo">${sec.contenido || 'Sin contenido'}</div>
+          ${(sec.tipoVotacion || sec.acuerdo) ? `
+          <div class="punto-card-voto-info">
+            ${sec.tipoVotacion ? `<div class="punto-card-voto-linea"><span class="punto-card-voto-label">Votación:</span> ${sec.tipoVotacion}</div>` : ''}
+            ${sec.acuerdo ? `<div class="punto-card-voto-linea"><span class="punto-card-voto-label">Acuerdo:</span> ${sec.acuerdo}</div>` : ''}
+          </div>` : ''}
           ${archivosHtml}
           <div class="punto-card-acciones">
             <div class="checkbox-group">
@@ -820,7 +1003,13 @@ function renderPanelPrincipal() {
               <label for="anexo_${sec.id}">Anexo ${numeroAnexo}</label>
             </div>
             <div class="botones">
-              <span style="font-size:11px; color:#999;">${sec.seccion}</span>
+              <button class="btn-adjuntar" id="btnAdjuntar_${sec.id}" title="Adjuntar archivo"><i class="fas fa-paperclip"></i></button>
+              <button class="btn-mover" id="btnSubir_${sec.id}" ${!puedeSubir ? 'disabled' : ''}>▲</button>
+              <button class="btn-mover" id="btnBajar_${sec.id}" ${!puedeBajar ? 'disabled' : ''}>▼</button>
+              <button class="btn-editar" id="btnEditar_${sec.id}" ${esFijo ? 'disabled' : ''} title="Editar punto">✎ Editar</button>
+              <button class="btn-eliminar" id="btnEliminar_${sec.id}" ${esFijo ? 'disabled' : ''}>
+                ${esFijo ? 'Fijo' : 'Eliminar'}
+              </button>
             </div>
           </div>
         </div>
@@ -829,9 +1018,11 @@ function renderPanelPrincipal() {
     html += `</div>`;
     panelPrincipal.innerHTML = html;
 
+    // Asignar eventos en modo búsqueda
     puntosFiltrados.forEach(sec => {
       const card = document.querySelector(`.punto-card[data-id="${sec.id}"]`);
       if (!card) return;
+
       card.addEventListener('click', function(e) {
         if (e.target.closest('button') || e.target.closest('input') || e.target.closest('label') || e.target.closest('.checkbox-group') || e.target.closest('.archivo-item')) return;
         if (puntoSeleccionadoId === sec.id) return;
@@ -845,6 +1036,7 @@ function renderPanelPrincipal() {
         actualizarBadgesYVisibilidad();
         actualizarEstadoBotonesYBloques();
       });
+
       const archivosItems = card.querySelectorAll('.archivo-item');
       archivosItems.forEach((item, idx) => {
         item.addEventListener('click', function(e) {
@@ -853,6 +1045,7 @@ function renderPanelPrincipal() {
           if (archivo) abrirModalPrevisualizacion(archivo);
         });
       });
+
       const chk = document.getElementById('anexo_' + sec.id);
       if (chk) {
         chk.addEventListener('change', function() {
@@ -861,11 +1054,51 @@ function renderPanelPrincipal() {
           renderSidebarDerecho();
         });
       }
+
+      // Botón adjuntar
+      document.getElementById('btnAdjuntar_' + sec.id)?.addEventListener('click', function(e) {
+        e.stopPropagation();
+        abrirModalAdjuntar(sec.id);
+      });
+
+      document.getElementById('btnSubir_' + sec.id)?.addEventListener('click', function() {
+        moverPunto(sec.id, -1);
+      });
+
+      document.getElementById('btnBajar_' + sec.id)?.addEventListener('click', function() {
+        moverPunto(sec.id, 1);
+      });
+
+      document.getElementById('btnEditar_' + sec.id)?.addEventListener('click', function(e) {
+        e.stopPropagation();
+        editarPunto(sec.id);
+      });
+
+      const btnEliminar = document.getElementById('btnEliminar_' + sec.id);
+      if (btnEliminar && !sec.fijo) {
+        btnEliminar.addEventListener('click', function() {
+          if (confirm(`¿Eliminar "${getTituloPunto(sec, secciones.indexOf(sec))}"?`)) {
+            const index = secciones.findIndex(s => s.id === sec.id);
+            if (index > 0 && !secciones[index].fijo) {
+              secciones.splice(index, 1);
+              guardarEstadoActual();
+              const ptsRestantes = secciones.filter(s => s.seccion === seccionActual);
+              puntoSeleccionadoId = ptsRestantes.length > 0 ? ptsRestantes[0].id : null;
+              renderPanelPrincipal();
+              actualizarBadgesYVisibilidad();
+              actualizarEstadoBotonesYBloques();
+              renderSidebarDerecho();
+              renderResumenClasificacion();
+              poblarFiltroDependencias();
+            }
+          }
+        });
+      }
     });
     return;
   }
 
-  // --- SIN FILTRO: comportamiento original ---
+  // ===== SIN FILTRO: comportamiento original =====
   const pts = secciones.filter(s => s.seccion === seccionActual);
   const nombreSeccion = seccionActual.charAt(0).toUpperCase() + seccionActual.slice(1);
 
@@ -910,6 +1143,11 @@ function renderPanelPrincipal() {
           <span class="punto-card-badge">${dependenciaMostrada}</span>
         </div>
         <div class="punto-card-cuerpo">${sec.contenido || 'Sin contenido'}</div>
+        ${(sec.tipoVotacion || sec.acuerdo) ? `
+        <div class="punto-card-voto-info">
+          ${sec.tipoVotacion ? `<span class="punto-card-voto-tag">Votación: ${sec.tipoVotacion}</span>` : ''}
+          ${sec.acuerdo ? `<span class="punto-card-voto-tag">Acuerdo: ${sec.acuerdo}</span>` : ''}
+        </div>` : ''}
         ${archivosHtml}
         <div class="punto-card-acciones">
           <div class="checkbox-group">
@@ -917,8 +1155,10 @@ function renderPanelPrincipal() {
             <label for="anexo_${sec.id}">Anexo ${numeroAnexo}</label>
           </div>
           <div class="botones">
+            <button class="btn-adjuntar" id="btnAdjuntar_${sec.id}" title="Adjuntar archivo"><i class="fas fa-paperclip"></i></button>
             <button class="btn-mover" id="btnSubir_${sec.id}" ${!puedeSubir ? 'disabled' : ''}>▲</button>
             <button class="btn-mover" id="btnBajar_${sec.id}" ${!puedeBajar ? 'disabled' : ''}>▼</button>
+            <button class="btn-editar" id="btnEditar_${sec.id}" ${esFijo ? 'disabled' : ''} title="Editar punto">✎ Editar</button>
             <button class="btn-eliminar" id="btnEliminar_${sec.id}" ${esFijo ? 'disabled' : ''}>
               ${esFijo ? 'Fijo' : 'Eliminar'}
             </button>
@@ -930,6 +1170,7 @@ function renderPanelPrincipal() {
   html += `</div>`;
   panelPrincipal.innerHTML = html;
 
+  // Asignar eventos en modo normal
   pts.forEach(sec => {
     const card = document.querySelector(`.punto-card[data-id="${sec.id}"]`);
     if (!card) return;
@@ -960,15 +1201,28 @@ function renderPanelPrincipal() {
       });
     }
 
-    document.getElementById('btnSubir_' + sec.id)?.addEventListener('click', () => {
+    // Botón adjuntar
+    document.getElementById('btnAdjuntar_' + sec.id)?.addEventListener('click', function(e) {
+      e.stopPropagation();
+      abrirModalAdjuntar(sec.id);
+    });
+
+    document.getElementById('btnSubir_' + sec.id)?.addEventListener('click', function() {
       moverPunto(sec.id, -1);
     });
-    document.getElementById('btnBajar_' + sec.id)?.addEventListener('click', () => {
+
+    document.getElementById('btnBajar_' + sec.id)?.addEventListener('click', function() {
       moverPunto(sec.id, 1);
     });
+
+    document.getElementById('btnEditar_' + sec.id)?.addEventListener('click', function(e) {
+      e.stopPropagation();
+      editarPunto(sec.id);
+    });
+
     const btnEliminar = document.getElementById('btnEliminar_' + sec.id);
     if (btnEliminar && !sec.fijo) {
-      btnEliminar.addEventListener('click', () => {
+      btnEliminar.addEventListener('click', function() {
         if (confirm(`¿Eliminar "${getTituloPunto(sec, secciones.indexOf(sec))}"?`)) {
           const index = secciones.findIndex(s => s.id === sec.id);
           if (index > 0 && !secciones[index].fijo) {
@@ -1003,8 +1257,24 @@ function abrirCreacion() {
     abrirModalActa();
     return;
   }
+  puntoEditandoId = null;
+  if (btnConfirmarCreacion) btnConfirmarCreacion.textContent = 'Añadir';
   sidebarTerciario.classList.remove('hidden');
-  formSeccionActual.textContent = seccionActual.charAt(0).toUpperCase() + seccionActual.slice(1);
+  const wrap = document.getElementById('cintaSesionesWrap');
+  if (wrap) wrap.classList.add('modo-formulario');
+  if (formSeccionActual) {
+    formSeccionActual.textContent = seccionActual.charAt(0).toUpperCase() + seccionActual.slice(1);
+  }
+
+  if (filtroDependencia) {
+    filtroDependencia.value = 'pleno';
+    actualizarRemitentes('pleno');
+  }
+  if (remitenteSelect) {
+    remitenteSelect.value = 'Pleno';
+  }
+  if (tipoVotacionSelect) tipoVotacionSelect.selectedIndex = 0;
+  if (acuerdoSelect) acuerdoSelect.selectedIndex = 0;
 
   archivosTemporales = [];
   actualizarListaArchivosTemporales();
@@ -1012,29 +1282,93 @@ function abrirCreacion() {
     oneDriveStatus.textContent = '';
     oneDriveStatus.className = 'onedrive-status';
   }
-
-  if (!filtroDependencia.value) {
-    filtroDependencia.value = 'pleno';
-  }
-  depSeleccionadaDisplay.textContent = dependenciaSeleccionadaValor
-    ? `Dependencia: ${dependenciaSeleccionadaValor}`
-    : 'Ninguna seleccionada';
   cuerpoTextarea.value = '';
-  renderizarListaDependencias(filtroDependencia.value);
+  cuerpoTextarea.focus();
+  btnAgregar.disabled = true;
+  renderPanelPrincipal();
+}
+function editarPunto(id) {
+  const sec = secciones.find(s => s.id === id);
+  if (!sec || sec.fijo) return;
+
+  puntoEditandoId = id;
+
+  puntoEditandoId = id;
+  if (btnConfirmarCreacion) btnConfirmarCreacion.textContent = 'Guardar cambios';
+
+  sidebarTerciario.classList.remove('hidden');
+  const wrap = document.getElementById('cintaSesionesWrap');
+  if (wrap) wrap.classList.add('modo-formulario');
+  if (formSeccionActual) {
+    formSeccionActual.textContent = seccionActual.charAt(0).toUpperCase() + seccionActual.slice(1);
+  }
+
+  const dep = sec.dependencia || 'Pleno';
+  const categoria = TODAS_DEPENDENCIAS.find(d => d.id === dep)?.categoria || 'pleno';
+  if (filtroDependencia) {
+    filtroDependencia.value = categoria;
+    actualizarRemitentes(categoria);
+  }
+  if (remitenteSelect) remitenteSelect.value = dep;
+  if (tipoVotacionSelect && sec.tipoVotacion) tipoVotacionSelect.value = sec.tipoVotacion;
+  if (acuerdoSelect && sec.acuerdo) acuerdoSelect.value = sec.acuerdo;
+
+  archivosTemporales = sec.archivos ? [...sec.archivos] : [];
+  actualizarListaArchivosTemporales();
+  if (oneDriveStatus) {
+    oneDriveStatus.textContent = '';
+    oneDriveStatus.className = 'onedrive-status';
+  }
+
+  cuerpoTextarea.value = sec.contenido || '';
   cuerpoTextarea.focus();
   btnAgregar.disabled = true;
   renderPanelPrincipal();
 }
 function cerrarCreacion() {
+  puntoEditandoId = null;
+  if (btnConfirmarCreacion) btnConfirmarCreacion.textContent = 'Añadir';
   sidebarTerciario.classList.add('hidden');
+  const wrap = document.getElementById('cintaSesionesWrap');
+  if (wrap) wrap.classList.remove('modo-formulario');
   btnAgregar.disabled = false;
   renderPanelPrincipal();
 }
 function agregarPunto() {
   const contenido = cuerpoTextarea.value.trim() || 'Sin resumen';
-  const dependencia = dependenciaSeleccionadaValor || 'Sin dependencia';
-  const asunto = asuntoSelect.value;
+  const dependencia = remitenteSelect ? remitenteSelect.value : 'Pleno';
+  const asunto = asuntoSelect ? asuntoSelect.value : '';
+  const tipoVotacion = tipoVotacionSelect ? tipoVotacionSelect.value : '';
+  const acuerdo = acuerdoSelect ? acuerdoSelect.value : '';
   const seccion = seccionActual;
+
+  if (puntoEditandoId) {
+    const sec = secciones.find(s => s.id === puntoEditandoId);
+    if (sec) {
+      sec.contenido = contenido;
+      sec.dependencia = dependencia;
+      sec.asunto = asunto;
+      sec.tipoVotacion = tipoVotacion;
+      sec.acuerdo = acuerdo;
+      sec.archivos = [...archivosTemporales];
+      sec.anexo = archivosTemporales.length > 0 || sec.anexo === true;
+      guardarEstadoActual();
+      puntoSeleccionadoId = sec.id;
+    }
+    puntoEditandoId = null;
+    if (btnConfirmarCreacion) btnConfirmarCreacion.textContent = 'Añadir';
+    cuerpoTextarea.value = '';
+    archivosTemporales = [];
+    actualizarListaArchivosTemporales();
+    cuerpoTextarea.focus();
+    renderPanelPrincipal();
+    actualizarBadgesYVisibilidad();
+    renderSidebarDerecho();
+    renderResumenClasificacion();
+    poblarFiltroDependencias();
+    return;
+  }
+
   const nuevoId = 'sec_' + Date.now();
   const nuevaSec = {
     id: nuevoId,
@@ -1045,6 +1379,8 @@ function agregarPunto() {
     fijo: false,
     anexo: archivosTemporales.length > 0,
     voto: 'Pendiente',
+    tipoVotacion: tipoVotacion,
+    acuerdo: acuerdo,
     anotaciones: '',
     aprobado: false,
     dependencia: dependencia,
@@ -1135,6 +1471,25 @@ async function subirArchivosDelPuntoAOneDrive(sec, posicionGlobal) {
   }
 }
 
+// ========== ACTUALIZAR REMITENTES SEGÚN CATEGORÍA ==========
+function actualizarRemitentes(categoria) {
+  const remitentes = {
+    'pleno': ['Pleno'],
+    'direcciones': ['DGEJ', 'DEGETD', 'DGTI', 'DGJJ', 'DGIPDI', 'DGRH'],
+    'comisiones': ['Administración', 'Creación de nuevos órganos', 'Adscripción', 'Carrera judicial', 'Presupuesto']
+  };
+  const select = remitenteSelect;
+  if (!select) return;
+  const opciones = remitentes[categoria] || ['Pleno'];
+  select.innerHTML = '';
+  opciones.forEach(opt => {
+    const option = document.createElement('option');
+    option.value = opt;
+    option.textContent = opt;
+    select.appendChild(option);
+  });
+}
+
 // ========== FUNCIONES PARA ARCHIVOS ADJUNTOS ==========
 function adjuntarArchivos() {
   const files = archivosInput.files;
@@ -1187,6 +1542,57 @@ function actualizarListaArchivosTemporales() {
       eliminarArchivoTemporal(index);
     });
   });
+}
+
+/* ========= MODAL DE ADJUNTAR ARCHIVO A PUNTO ========== */
+function abrirModalAdjuntar(id) {
+  puntoAdjuntarId = id;
+  adjuntarArchivoInput.value = '';
+  modalAdjuntar.classList.add('active');
+}
+
+function cerrarModalAdjuntar() {
+  modalAdjuntar.classList.remove('active');
+  puntoAdjuntarId = null;
+}
+
+function adjuntarArchivoPunto() {
+  const file = adjuntarArchivoInput.files[0];
+  if (!file) {
+    alert('Selecciona un archivo.');
+    return;
+  }
+  if (file.size > 1024 * 1024) {
+    alert('El archivo excede 1MB.');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const archivo = {
+      nombre: file.name,
+      tipo: file.type,
+      data: e.target.result
+    };
+    const punto = secciones.find(s => s.id === puntoAdjuntarId);
+    if (punto) {
+      if (!punto.archivos) punto.archivos = [];
+      punto.archivos.push(archivo);
+      punto.anexo = true; // marcamos como anexo
+      guardarEstadoActual();
+      // Actualizar todas las vistas que muestran el punto
+      if (vistaActual === 'proyecto') {
+        renderPanelPrincipal();
+        renderSidebarDerecho();
+        renderResumenClasificacion();
+      } else if (vistaActual === 'sesionPrevia') {
+        renderSesionPrevia();
+      } else if (vistaActual === 'actaSesion') {
+        renderActaSesion();
+      }
+      cerrarModalAdjuntar();
+    }
+  };
+  reader.readAsDataURL(file);
 }
 
 // ========== PREVISUALIZACIÓN DE ARCHIVOS ==========
@@ -1720,6 +2126,10 @@ function mostrarInicio() {
   document.getElementById('btnGenerarPDFSidebar').style.display = 'none';
   ocultarCintaSesiones();
 
+  // Mostrar clasificaciones, ocultar quórum
+  document.getElementById('resumenClasificacion').style.display = 'block';
+  quorumContainer.style.display = 'none';
+
   panelPrincipal.innerHTML = `
     <div class="doc-header">
       <div class="doc-type">Inicio</div>
@@ -1754,7 +2164,7 @@ function mostrarProyecto() {
     if (proxima) cargarSesion(proxima);
     else {
       const fecha = siguienteFechaSesion(hoyLocalISO());
-      sesiones[fecha] = { tipoSesion: 'Ordinaria', numeroSesion: 1, secciones: [] };
+      sesiones[fecha] = { tipoSesion: 'Ordinaria', numeroSesion: 1, secciones: [], asistentes: [] };
       guardarSesiones();
       cargarSesion(fecha);
     }
@@ -1773,6 +2183,10 @@ function mostrarProyecto() {
   actualizarTituloSidebar();
   renderCintaSesiones();
   inicializarControlAnual();
+
+  // Mostrar clasificaciones, ocultar quórum
+  document.getElementById('resumenClasificacion').style.display = 'block';
+  quorumContainer.style.display = 'none';
 
   if (secciones.length === 0) {
     asegurarPuntosFijos();
@@ -1812,6 +2226,11 @@ function mostrarSesionPrevia() {
   document.getElementById('btnGenerarPDFSidebar').style.display = 'none';
   actualizarTituloSidebar();
   ocultarCintaSesiones();
+
+  // Ocultar clasificaciones, mostrar quórum
+  document.getElementById('resumenClasificacion').style.display = 'none';
+  quorumContainer.style.display = 'block';
+  renderQuorumAsistentes();
 
   if (!puntoPreviaSeleccionadoId || !secciones.some(s => s.id === puntoPreviaSeleccionadoId)) {
     puntoPreviaSeleccionadoId = secciones.length > 0 ? secciones[0].id : null;
@@ -1910,15 +2329,35 @@ function renderDetallePrevia(id) {
         <div class="ter-field">
           <label class="ter-label">Tipo de votación</label>
           <select id="previaVotoSelect" class="ter-select">
-            <option value="Pendiente" ${votoActual === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
-            <option value="Aprobado" ${votoActual === 'Aprobado' ? 'selected' : ''}>Aprobado</option>
-            <option value="Rechazado" ${votoActual === 'Rechazado' ? 'selected' : ''}>Rechazado</option>
-            <option value="Abstención" ${votoActual === 'Abstención' ? 'selected' : ''}>Abstención</option>
+            <option value="El Pleno, en votación económica, por unanimidad, aprueba el orden del día." 
+                    ${votoActual === 'El Pleno, en votación económica, por unanimidad, aprueba el orden del día.' ? 'selected' : ''}>
+              El Pleno, en votación económica, por unanimidad, aprueba el orden del día.
+            </option>
+            <option value="El Pleno, en votación económica, por unanimidad, aprueba el acta e instruye la elaboración y publicación de la versión pública." 
+                    ${votoActual === 'El Pleno, en votación económica, por unanimidad, aprueba el acta e instruye la elaboración y publicación de la versión pública.' ? 'selected' : ''}>
+              El Pleno, en votación económica, por unanimidad, aprueba el acta e instruye la elaboración y publicación de la versión pública.
+            </option>
+            <option value="El Pleno, en votación económica, por unanimidad, acuerda:" 
+                    ${votoActual === 'El Pleno, en votación económica, por unanimidad, acuerda:' ? 'selected' : ''}>
+              El Pleno, en votación económica, por unanimidad, acuerda:
+            </option>
+            <option value="El Pleno, en votación económica, por unanimidad, aprueba…" 
+                    ${votoActual === 'El Pleno, en votación económica, por unanimidad, aprueba…' ? 'selected' : ''}>
+              El Pleno, en votación económica, por unanimidad, aprueba…
+            </option>
+            <option value="El Pleno toma conocimiento del informe presentado." 
+                    ${votoActual === 'El Pleno toma conocimiento del informe presentado.' ? 'selected' : ''}>
+              El Pleno toma conocimiento del informe presentado.
+            </option>
+            <option value="El Pleno toma conocimiento de la suspensión de labores decretada." 
+                    ${votoActual === 'El Pleno toma conocimiento de la suspensión de labores decretada.' ? 'selected' : ''}>
+              El Pleno toma conocimiento de la suspensión de labores decretada.
+            </option>
           </select>
         </div>
         <div class="ter-field">
-          <label class="ter-label">Anotaciones (opcional)</label>
-          <textarea id="previaAnotaciones" class="ter-textarea" placeholder="Observaciones...">${anotacionesActual}</textarea>
+          <label class="ter-label">Acuerdos</label>
+          <textarea id="previaAnotaciones" class="ter-textarea" placeholder="">${anotacionesActual}</textarea>
         </div>
       </div>
       <div class="previa-footer">
@@ -1975,7 +2414,16 @@ function renderDetallePrevia(id) {
     }
   });
 }
-
+function getTratamiento(asistente) {
+  const art = asistente.genero === 'femenino' ? 'La' : 'El';
+  let titulo = '';
+  switch (asistente.grado) {
+    case 'Licenciatura': titulo = asistente.genero === 'femenino' ? 'Licenciada' : 'Licenciado'; break;
+    case 'Maestría': titulo = asistente.genero === 'femenino' ? 'Maestra' : 'Maestro'; break;
+    case 'Doctorado': titulo = asistente.genero === 'femenino' ? 'Doctora' : 'Doctor'; break;
+  }
+  return `${art} ${titulo} ${asistente.nombre}`;
+}
 // ========== VISTA: ACTA DE SESIÓN ==========
 function mostrarActaSesion() {
   if (secciones.length === 0) {
@@ -1994,6 +2442,11 @@ function mostrarActaSesion() {
   document.getElementById('btnGenerarPDFSidebar').style.display = 'block';
   actualizarTituloSidebar();
   ocultarCintaSesiones();
+
+  // Mostrar clasificaciones, ocultar quórum
+  document.getElementById('resumenClasificacion').style.display = 'block';
+  quorumContainer.style.display = 'none';
+
   renderActaSesion();
 }
 function renderActaSesion() {
@@ -2170,6 +2623,7 @@ function actualizarTituloSidebar() {
   } else {
     docSubSidebar.textContent = 'Fecha no definida';
   }
+  actualizarTituloCinta();
 }
 
 // ========== GENERACIÓN DE PDF ==========
@@ -2290,6 +2744,7 @@ function agregarActa() {
     voto: 'Pendiente',
     anotaciones: '',
     aprobado: false,
+    dependencia: 'Pleno',
     archivos: []
   };
   const insertIdx = getInsertIndex('aprobaciones');
@@ -2333,6 +2788,7 @@ async function confirmarNuevoProyecto() {
   modalNuevoConfirm.disabled = true;
   modalNuevoConfirm.textContent = 'Creando...';
 
+  // Crear la sesión extraordinaria
   sesiones[fecha] = {
     tipoSesion: 'Extraordinaria',
     numeroSesion: 1,
@@ -2341,13 +2797,41 @@ async function confirmarNuevoProyecto() {
   guardarSesiones();
   recalcularNumerosSesion();
 
+  // Cargar la sesión (esto asigna secciones vacías y asegura puntos fijos)
   cargarSesion(fecha);
-  asegurarPuntosFijos();
+  asegurarPuntosFijos(); // Esto crea los puntos fijos 1, 2, 3 si no existen
+
+  const contenidoActa = `Aprobación, en su caso, del acta de la sesión extraordinaria del ${formatearFechaES(fecha)}.`;
+  const yaExiste = secciones.some(s => s.contenido === contenidoActa && s.seccion === 'aprobaciones');
+  
+  if (!yaExiste) {
+    const nuevoId = 'sec_' + Date.now();
+    const nuevoPunto = {
+      id: nuevoId,
+      clasificacion: 'Pleno',
+      contenido: contenidoActa,
+      seccion: 'aprobaciones',
+      subbloque: 'Pleno',
+      fijo: false,
+      anexo: false,
+      voto: 'Pendiente',
+      anotaciones: '',
+      aprobado: false,
+      dependencia: 'Pleno',
+      asunto: 'Acta extraordinaria',
+      archivos: []
+    };
+    // Insertar en la posición adecuada dentro de la sección "aprobaciones"
+    const insertIdx = getInsertIndex('aprobaciones');
+    secciones.splice(insertIdx, 0, nuevoPunto);
+    guardarEstadoActual();
+  }
 
   cerrarModalNuevoProyecto();
   modalNuevoConfirm.disabled = false;
   modalNuevoConfirm.textContent = 'Crear';
 
+  // Actualizar la vista
   if (vistaActual !== 'proyecto') {
     mostrarProyecto();
   } else {
@@ -2609,9 +3093,79 @@ function init() {
     });
   }
 
-  renderResumenClasificacion();
-  poblarFiltroDependencias();
-}
+  if (btnAdjuntarCancel) btnAdjuntarCancel.addEventListener('click', cerrarModalAdjuntar);
+  if (modalAdjuntar) {
+    modalAdjuntar.addEventListener('click', function(e) {
+      if (e.target === this) cerrarModalAdjuntar();
+    });
+  }
+  if (btnAdjuntarConfirm) btnAdjuntarConfirm.addEventListener('click', adjuntarArchivoPunto);
+
+  // Quórum panel
+  if (menuItemQuorum) {
+    menuItemQuorum.addEventListener('click', function() {
+      // Si no hay sesión activa, cargar la primera disponible o crear una
+      if (!sesionActivaFecha || !sesiones[sesionActivaFecha]) {
+        const proxima = obtenerProximaSesion();
+        if (proxima) cargarSesion(proxima);
+        else {
+          // Crear una sesión ordinaria por defecto
+          const fecha = siguienteFechaSesion(hoyLocalISO());
+          sesiones[fecha] = { tipoSesion: 'Ordinaria', numeroSesion: 1, secciones: [], asistentes: [] };
+          guardarSesiones();
+          cargarSesion(fecha);
+        }
+      }
+      panelMenuNuevo.classList.add('hidden');
+      panelQuorum.classList.remove('hidden');
+      sidebarNuevo.classList.add('ancho');
+      if (!sidebarNuevo.classList.contains('open')) toggleNuevoSidebar(true);
+      renderListaAsistentesPanel();
+    });
+  } 
+  if (btnVolverMenuQuorum) {
+    btnVolverMenuQuorum.addEventListener('click', function() {
+      panelQuorum.classList.add('hidden');
+      panelMenuNuevo.classList.remove('hidden');
+      sidebarNuevo.classList.remove('ancho');
+    });
+  }
+  if (btnAgregarAsistente) {
+    btnAgregarAsistente.addEventListener('click', agregarAsistente);
+  }
+  if (inputAsistenteNombre) {
+    inputAsistenteNombre.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); agregarAsistente(); }
+    });
+  }
+  if (inputAsistenteEmail) {
+    inputAsistenteEmail.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); agregarAsistente(); }
+    });
+  }
+  // ---- Eventos para el sidebar terciario ----
+  if (filtroDependencia) {
+    filtroDependencia.addEventListener('change', function() {
+      actualizarRemitentes(this.value);
+    });
+  }
+
+  if (btnConfirmarCreacion) {
+    btnConfirmarCreacion.addEventListener('click', agregarPunto);
+  }
+
+  if (btnCancelarCreacion) {
+    btnCancelarCreacion.addEventListener('click', cerrarCreacion);
+  }
+
+  if (btnAdjuntarArchivo) {
+    btnAdjuntarArchivo.addEventListener('click', adjuntarArchivos);
+  }
+
+    renderResumenClasificacion();
+    poblarFiltroDependencias();
+    aplicarPermisos();
+  }
 
 // ========== FUNCIONES DE EXCEPCIONES RENDER ==========
 function renderExcepciones() {
@@ -2657,5 +3211,70 @@ function iniciarApp() {
   if (appYaIniciada) return;
   appYaIniciada = true;
   init();
+}
+function aplicarPermisos() {
+  const tieneRol = (rol) => window.tieneRol(rol);
+  const esAdmin = tieneRol('Admin') || tieneRol('Administrador');
+
+  // ===== 1. OCULTAR/MOSTRAR ELEMENTOS DEL MENÚ LATERAL =====
+  // Elementos que dependen de un rol específico
+  const elementosPorPermiso = {
+    'menuItemCalendarizacion': 'Calendarization',
+    'menuItemEmail': 'Email',
+    'menuItemSync': 'Admin', // sincronización local solo para administradores
+    'btnNuevoProyecto': 'Admin', // crear sesión extraordinaria
+    'btnAgregarSeccion': 'PuntosWrite',
+    'btnConfirmarCreacion': 'PuntosWrite',
+    'btnAdjuntarArchivo': 'PuntosWrite',
+    'navProyecto': 'PuntosWrite' // ocultar pestaña de proyecto si no tiene permiso
+  };
+
+  Object.keys(elementosPorPermiso).forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const rolNecesario = elementosPorPermiso[id];
+    if (rolNecesario && !tieneRol(rolNecesario) && !esAdmin) {
+      el.style.display = 'none';
+    } else {
+      el.style.display = ''; // restaurar si tiene permiso
+    }
+  });
+
+  // ===== 2. CASO ESPECIAL: LECTOR (ReadOnly) =====
+  const esLector = tieneRol('ReadOnly') && !esAdmin && !tieneRol('PuntosWrite');
+  if (esLector) {
+    // Ocultar todos los botones de edición
+    document.querySelectorAll('.btn-add, .btn-eliminar, .btn-mover, .btn-adjuntar, #btnAgregarSeccion, #btnAprobarTodos, #btnNuevoProyecto, #btnGenerarPDFSidebar').forEach(el => {
+      if (el) el.style.display = 'none';
+    });
+    // Ocultar también el botón de adjuntar archivos en la vista de proyecto
+    document.body.classList.add('modo-lectura');
+  } else {
+    document.body.classList.remove('modo-lectura');
+  }
+
+  // ===== 3. BOTÓN DE CALENDARIO (dentro del sidebar negro) =====
+  const btnNuevoCalendario = document.getElementById('btnNuevoCalendario');
+  if (btnNuevoCalendario) {
+    btnNuevoCalendario.style.display = (tieneRol('Calendarization') || esAdmin) ? 'flex' : 'none';
+  }
+
+  // ===== 4. SI ES LECTOR, FORZAR VISTA A PREVIA O ACTA =====
+  if (esLector) {
+    const vistaActual = document.querySelector('#navPrincipal .nav-item.active')?.dataset.vista;
+    if (vistaActual === 'inicio' || vistaActual === 'proyecto') {
+      // Redirigir a sesión previa si está en inicio o proyecto
+      mostrarSesionPrevia();
+    }
+    // Ocultar las pestañas de inicio y proyecto
+    document.querySelectorAll('#navPrincipal .nav-item[data-vista="inicio"], #navPrincipal .nav-item[data-vista="proyecto"]').forEach(el => {
+      el.style.display = 'none';
+    });
+  } else {
+    // Restaurar pestañas si no es lector
+    document.querySelectorAll('#navPrincipal .nav-item[data-vista="inicio"], #navPrincipal .nav-item[data-vista="proyecto"]').forEach(el => {
+      el.style.display = '';
+    });
+  }
 }
 window.iniciarApp = iniciarApp;
