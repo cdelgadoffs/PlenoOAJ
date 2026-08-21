@@ -11,6 +11,7 @@ let proyectoMeta = {
 };
 let seccionActual = 'aprobaciones';
 let puntoSeleccionadoId = null;
+let puntoEditandoId = null;
 let puntoPreviaSeleccionadoId = null;
 let vistaActual = 'inicio';
 
@@ -575,8 +576,11 @@ const confirmSobrescribir = document.getElementById('confirmSobrescribir');
 
 const filtroDependencia = document.getElementById('filtroDependencia');
 const listaDependencias = document.getElementById('listaDependencias');
-const depSeleccionadaDisplay = document.getElementById('depSeleccionadaDisplay');
+const remitenteSelect = document.getElementById('remitenteSelect');
+
 const asuntoSelect = document.getElementById('asuntoSelect');
+const tipoVotacionSelect = document.getElementById('tipoVotacionSelect');
+const acuerdoSelect = document.getElementById('acuerdoSelect');
 const cuerpoTextarea = document.getElementById('cuerpoTextarea');
 const btnConfirmarCreacion = document.getElementById('btnConfirmarCreacion');
 const btnCancelarCreacion = document.getElementById('btnCancelarCreacion');
@@ -655,33 +659,6 @@ const TODAS_DEPENDENCIAS = [
 
 let dependenciaSeleccionadaValor = '';
 
-function renderizarListaDependencias(filtroCategoria) {
-  const lista = listaDependencias;
-  if (!lista) return;
-  lista.innerHTML = '';
-  let dependenciasFiltradas = TODAS_DEPENDENCIAS.filter(d => d.categoria === filtroCategoria);
-  if (dependenciasFiltradas.length === 0) {
-    const empty = document.createElement('div');
-    empty.style.cssText = 'padding:8px; color:#999; font-size:12px; text-align:center;';
-    empty.textContent = 'No hay dependencias en esta categoría.';
-    lista.appendChild(empty);
-    return;
-  }
-  dependenciasFiltradas.forEach(dep => {
-    const div = document.createElement('div');
-    div.className = 'dep-item';
-    if (dep.id === dependenciaSeleccionadaValor) {
-      div.classList.add('active');
-    }
-    div.textContent = dep.id;
-    div.addEventListener('click', () => {
-      dependenciaSeleccionadaValor = dep.id;
-      depSeleccionadaDisplay.textContent = `Dependencia: ${dep.id}`;
-      renderizarListaDependencias(filtroDependencia.value);
-    });
-    lista.appendChild(div);
-  });
-}
 
 // ========== CRUD de asistentes para Quórum ==========
 
@@ -1014,6 +991,11 @@ function renderPanelPrincipal() {
             <span class="punto-card-badge">${dependenciaMostrada}</span>
           </div>
           <div class="punto-card-cuerpo">${sec.contenido || 'Sin contenido'}</div>
+          ${(sec.tipoVotacion || sec.acuerdo) ? `
+          <div class="punto-card-voto-info">
+            ${sec.tipoVotacion ? `<div class="punto-card-voto-linea"><span class="punto-card-voto-label">Votación:</span> ${sec.tipoVotacion}</div>` : ''}
+            ${sec.acuerdo ? `<div class="punto-card-voto-linea"><span class="punto-card-voto-label">Acuerdo:</span> ${sec.acuerdo}</div>` : ''}
+          </div>` : ''}
           ${archivosHtml}
           <div class="punto-card-acciones">
             <div class="checkbox-group">
@@ -1024,6 +1006,7 @@ function renderPanelPrincipal() {
               <button class="btn-adjuntar" id="btnAdjuntar_${sec.id}" title="Adjuntar archivo"><i class="fas fa-paperclip"></i></button>
               <button class="btn-mover" id="btnSubir_${sec.id}" ${!puedeSubir ? 'disabled' : ''}>▲</button>
               <button class="btn-mover" id="btnBajar_${sec.id}" ${!puedeBajar ? 'disabled' : ''}>▼</button>
+              <button class="btn-editar" id="btnEditar_${sec.id}" ${esFijo ? 'disabled' : ''} title="Editar punto">✎ Editar</button>
               <button class="btn-eliminar" id="btnEliminar_${sec.id}" ${esFijo ? 'disabled' : ''}>
                 ${esFijo ? 'Fijo' : 'Eliminar'}
               </button>
@@ -1084,6 +1067,11 @@ function renderPanelPrincipal() {
 
       document.getElementById('btnBajar_' + sec.id)?.addEventListener('click', function() {
         moverPunto(sec.id, 1);
+      });
+
+      document.getElementById('btnEditar_' + sec.id)?.addEventListener('click', function(e) {
+        e.stopPropagation();
+        editarPunto(sec.id);
       });
 
       const btnEliminar = document.getElementById('btnEliminar_' + sec.id);
@@ -1155,6 +1143,11 @@ function renderPanelPrincipal() {
           <span class="punto-card-badge">${dependenciaMostrada}</span>
         </div>
         <div class="punto-card-cuerpo">${sec.contenido || 'Sin contenido'}</div>
+        ${(sec.tipoVotacion || sec.acuerdo) ? `
+        <div class="punto-card-voto-info">
+          ${sec.tipoVotacion ? `<span class="punto-card-voto-tag">Votación: ${sec.tipoVotacion}</span>` : ''}
+          ${sec.acuerdo ? `<span class="punto-card-voto-tag">Acuerdo: ${sec.acuerdo}</span>` : ''}
+        </div>` : ''}
         ${archivosHtml}
         <div class="punto-card-acciones">
           <div class="checkbox-group">
@@ -1165,6 +1158,7 @@ function renderPanelPrincipal() {
             <button class="btn-adjuntar" id="btnAdjuntar_${sec.id}" title="Adjuntar archivo"><i class="fas fa-paperclip"></i></button>
             <button class="btn-mover" id="btnSubir_${sec.id}" ${!puedeSubir ? 'disabled' : ''}>▲</button>
             <button class="btn-mover" id="btnBajar_${sec.id}" ${!puedeBajar ? 'disabled' : ''}>▼</button>
+            <button class="btn-editar" id="btnEditar_${sec.id}" ${esFijo ? 'disabled' : ''} title="Editar punto">✎ Editar</button>
             <button class="btn-eliminar" id="btnEliminar_${sec.id}" ${esFijo ? 'disabled' : ''}>
               ${esFijo ? 'Fijo' : 'Eliminar'}
             </button>
@@ -1221,6 +1215,11 @@ function renderPanelPrincipal() {
       moverPunto(sec.id, 1);
     });
 
+    document.getElementById('btnEditar_' + sec.id)?.addEventListener('click', function(e) {
+      e.stopPropagation();
+      editarPunto(sec.id);
+    });
+
     const btnEliminar = document.getElementById('btnEliminar_' + sec.id);
     if (btnEliminar && !sec.fijo) {
       btnEliminar.addEventListener('click', function() {
@@ -1258,10 +1257,24 @@ function abrirCreacion() {
     abrirModalActa();
     return;
   }
+  puntoEditandoId = null;
+  if (btnConfirmarCreacion) btnConfirmarCreacion.textContent = 'Añadir';
   sidebarTerciario.classList.remove('hidden');
   const wrap = document.getElementById('cintaSesionesWrap');
   if (wrap) wrap.classList.add('modo-formulario');
-  formSeccionActual.textContent = seccionActual.charAt(0).toUpperCase() + seccionActual.slice(1);
+  if (formSeccionActual) {
+    formSeccionActual.textContent = seccionActual.charAt(0).toUpperCase() + seccionActual.slice(1);
+  }
+
+  if (filtroDependencia) {
+    filtroDependencia.value = 'pleno';
+    actualizarRemitentes('pleno');
+  }
+  if (remitenteSelect) {
+    remitenteSelect.value = 'Pleno';
+  }
+  if (tipoVotacionSelect) tipoVotacionSelect.selectedIndex = 0;
+  if (acuerdoSelect) acuerdoSelect.selectedIndex = 0;
 
   archivosTemporales = [];
   actualizarListaArchivosTemporales();
@@ -1269,20 +1282,52 @@ function abrirCreacion() {
     oneDriveStatus.textContent = '';
     oneDriveStatus.className = 'onedrive-status';
   }
-
-  // ===== FIX: establecer dependencia "Pleno" por defecto =====
-  if (!filtroDependencia.value) {
-    filtroDependencia.value = 'pleno';
-  }
-  dependenciaSeleccionadaValor = 'Pleno';
-  depSeleccionadaDisplay.textContent = `Dependencia: ${dependenciaSeleccionadaValor}`;
   cuerpoTextarea.value = '';
-  renderizarListaDependencias(filtroDependencia.value);
+  cuerpoTextarea.focus();
+  btnAgregar.disabled = true;
+  renderPanelPrincipal();
+}
+function editarPunto(id) {
+  const sec = secciones.find(s => s.id === id);
+  if (!sec || sec.fijo) return;
+
+  puntoEditandoId = id;
+
+  puntoEditandoId = id;
+  if (btnConfirmarCreacion) btnConfirmarCreacion.textContent = 'Guardar cambios';
+
+  sidebarTerciario.classList.remove('hidden');
+  const wrap = document.getElementById('cintaSesionesWrap');
+  if (wrap) wrap.classList.add('modo-formulario');
+  if (formSeccionActual) {
+    formSeccionActual.textContent = seccionActual.charAt(0).toUpperCase() + seccionActual.slice(1);
+  }
+
+  const dep = sec.dependencia || 'Pleno';
+  const categoria = TODAS_DEPENDENCIAS.find(d => d.id === dep)?.categoria || 'pleno';
+  if (filtroDependencia) {
+    filtroDependencia.value = categoria;
+    actualizarRemitentes(categoria);
+  }
+  if (remitenteSelect) remitenteSelect.value = dep;
+  if (tipoVotacionSelect && sec.tipoVotacion) tipoVotacionSelect.value = sec.tipoVotacion;
+  if (acuerdoSelect && sec.acuerdo) acuerdoSelect.value = sec.acuerdo;
+
+  archivosTemporales = sec.archivos ? [...sec.archivos] : [];
+  actualizarListaArchivosTemporales();
+  if (oneDriveStatus) {
+    oneDriveStatus.textContent = '';
+    oneDriveStatus.className = 'onedrive-status';
+  }
+
+  cuerpoTextarea.value = sec.contenido || '';
   cuerpoTextarea.focus();
   btnAgregar.disabled = true;
   renderPanelPrincipal();
 }
 function cerrarCreacion() {
+  puntoEditandoId = null;
+  if (btnConfirmarCreacion) btnConfirmarCreacion.textContent = 'Añadir';
   sidebarTerciario.classList.add('hidden');
   const wrap = document.getElementById('cintaSesionesWrap');
   if (wrap) wrap.classList.remove('modo-formulario');
@@ -1291,9 +1336,39 @@ function cerrarCreacion() {
 }
 function agregarPunto() {
   const contenido = cuerpoTextarea.value.trim() || 'Sin resumen';
-  const dependencia = dependenciaSeleccionadaValor || 'Sin dependencia';
-  const asunto = asuntoSelect.value;
+  const dependencia = remitenteSelect ? remitenteSelect.value : 'Pleno';
+  const asunto = asuntoSelect ? asuntoSelect.value : '';
+  const tipoVotacion = tipoVotacionSelect ? tipoVotacionSelect.value : '';
+  const acuerdo = acuerdoSelect ? acuerdoSelect.value : '';
   const seccion = seccionActual;
+
+  if (puntoEditandoId) {
+    const sec = secciones.find(s => s.id === puntoEditandoId);
+    if (sec) {
+      sec.contenido = contenido;
+      sec.dependencia = dependencia;
+      sec.asunto = asunto;
+      sec.tipoVotacion = tipoVotacion;
+      sec.acuerdo = acuerdo;
+      sec.archivos = [...archivosTemporales];
+      sec.anexo = archivosTemporales.length > 0 || sec.anexo === true;
+      guardarEstadoActual();
+      puntoSeleccionadoId = sec.id;
+    }
+    puntoEditandoId = null;
+    if (btnConfirmarCreacion) btnConfirmarCreacion.textContent = 'Añadir';
+    cuerpoTextarea.value = '';
+    archivosTemporales = [];
+    actualizarListaArchivosTemporales();
+    cuerpoTextarea.focus();
+    renderPanelPrincipal();
+    actualizarBadgesYVisibilidad();
+    renderSidebarDerecho();
+    renderResumenClasificacion();
+    poblarFiltroDependencias();
+    return;
+  }
+
   const nuevoId = 'sec_' + Date.now();
   const nuevaSec = {
     id: nuevoId,
@@ -1304,6 +1379,8 @@ function agregarPunto() {
     fijo: false,
     anexo: archivosTemporales.length > 0,
     voto: 'Pendiente',
+    tipoVotacion: tipoVotacion,
+    acuerdo: acuerdo,
     anotaciones: '',
     aprobado: false,
     dependencia: dependencia,
@@ -1392,6 +1469,25 @@ async function subirArchivosDelPuntoAOneDrive(sec, posicionGlobal) {
       oneDriveStatus.className = 'onedrive-status error';
     }
   }
+}
+
+// ========== ACTUALIZAR REMITENTES SEGÚN CATEGORÍA ==========
+function actualizarRemitentes(categoria) {
+  const remitentes = {
+    'pleno': ['Pleno'],
+    'direcciones': ['DGEJ', 'DEGETD', 'DGTI', 'DGJJ', 'DGIPDI', 'DGRH'],
+    'comisiones': ['Administración', 'Creación de nuevos órganos', 'Adscripción', 'Carrera judicial', 'Presupuesto']
+  };
+  const select = remitenteSelect;
+  if (!select) return;
+  const opciones = remitentes[categoria] || ['Pleno'];
+  select.innerHTML = '';
+  opciones.forEach(opt => {
+    const option = document.createElement('option');
+    option.value = opt;
+    option.textContent = opt;
+    select.appendChild(option);
+  });
 }
 
 // ========== FUNCIONES PARA ARCHIVOS ADJUNTOS ==========
@@ -3046,6 +3142,24 @@ function init() {
     inputAsistenteEmail.addEventListener('keydown', function(e) {
       if (e.key === 'Enter') { e.preventDefault(); agregarAsistente(); }
     });
+  }
+  // ---- Eventos para el sidebar terciario ----
+  if (filtroDependencia) {
+    filtroDependencia.addEventListener('change', function() {
+      actualizarRemitentes(this.value);
+    });
+  }
+
+  if (btnConfirmarCreacion) {
+    btnConfirmarCreacion.addEventListener('click', agregarPunto);
+  }
+
+  if (btnCancelarCreacion) {
+    btnCancelarCreacion.addEventListener('click', cerrarCreacion);
+  }
+
+  if (btnAdjuntarArchivo) {
+    btnAdjuntarArchivo.addEventListener('click', adjuntarArchivos);
   }
 
     renderResumenClasificacion();
