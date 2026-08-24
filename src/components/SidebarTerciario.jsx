@@ -4,6 +4,7 @@ import { useProyecto } from '../context/ProyectoContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { formatearFechaES } from '../utils/fechas.js';
 import { crearCarpetaProyecto, crearCarpetaPunto, subirArchivoAOneDrive } from '../services/onedrive.js';
+import { guardarArchivo, eliminarArchivo } from '../utils/archivosDB.js';
 
 const REMITENTES_POR_CATEGORIA = {
   pleno: ['Pleno'],
@@ -37,7 +38,6 @@ export default function SidebarTerciario() {
   const [form, setForm] = useState(estadoVacio);
   const [oneDriveStatus, setOneDriveStatus] = useState('');
 
-  // Precarga datos al entrar en modo edición (igual que editarPunto()).
   useEffect(() => {
     if (!sidebarTerciarioAbierto) return;
     if (puntoEditandoId) {
@@ -57,7 +57,6 @@ export default function SidebarTerciario() {
       setForm(estadoVacio);
     }
     setOneDriveStatus('');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sidebarTerciarioAbierto, puntoEditandoId]);
 
   if (!sidebarTerciarioAbierto) {
@@ -74,25 +73,31 @@ export default function SidebarTerciario() {
   function adjuntarArchivos(e) {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-    const lecturas = [];
+    const procesos = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      if (file.size > 1024 * 1024) {
-        alert(`El archivo ${file.name} excede 1MB y no será adjuntado.`);
+      if (file.size > 15 * 1024 * 1024) {
+        alert(`El archivo ${file.name} excede 15MB y no será adjuntado.`);
         continue;
       }
-      lecturas.push(new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (ev) => resolve({ nombre: file.name, tipo: file.type, data: ev.target.result });
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      }));
+      const id = 'arch_' + Date.now() + '_' + i;
+      procesos.push(
+        guardarArchivo(id, file).then(() => ({ id, nombre: file.name, tipo: file.type }))
+      );
     }
-    if (lecturas.length === 0) return;
-    Promise.all(lecturas).then(resultados => {
+    if (procesos.length === 0) return;
+    Promise.all(procesos).then(resultados => {
       setForm(f => ({ ...f, archivos: [...f.archivos, ...resultados] }));
       e.target.value = '';
-    }).catch(err => alert('Error al leer archivos: ' + err.message));
+    }).catch(err => alert('Error al guardar archivos: ' + err.message));
+  }
+
+  function eliminarArchivoTemporal(idx) {
+    setForm(f => {
+      const archivo = f.archivos[idx];
+      if (archivo) eliminarArchivo(archivo.id).catch(() => {});
+      return { ...f, archivos: f.archivos.filter((_, i) => i !== idx) };
+    });
   }
 
   function eliminarArchivoTemporal(idx) {
@@ -132,11 +137,9 @@ export default function SidebarTerciario() {
     if (form.archivos.length > 0) {
       subirArchivosAOneDrive(nuevoId, form.archivos);
     }
-    setForm(estadoVacio);
-    setSidebarTerciarioAbierto(false);
+    setForm(f => ({ ...f, contenido: '', archivos: [] }));
   }
 
-  // Migrado de subirArchivosDelPuntoAOneDrive() en app.js.
   async function subirArchivosAOneDrive(puntoId, archivos) {
     setOneDriveStatus('Vinculando carpeta del proyecto en OneDrive...');
     try {
@@ -149,14 +152,22 @@ export default function SidebarTerciario() {
         folderId = carpetaProyecto.id;
         setOneDriveFolder({ oneDriveFolderId: carpetaProyecto.id, oneDriveFolderNombre: nombreCarpetaProyecto, oneDriveFolderUrl: carpetaProyecto.webUrl || '' });
       }
-      const posicion = secciones.length + 1; // posición aproximada del nuevo punto
+      const posicion = secciones.length + 1;
       const nombreCarpetaPunto = `Punto de acuerdo ${posicion}`;
       setOneDriveStatus(`Subiendo archivos a OneDrive (${nombreCarpetaPunto})...`);
       const carpetaPunto = await crearCarpetaPunto(obtenerAccessToken, folderId, nombreCarpetaPunto);
       let errores = 0;
       for (const archivo of archivos) {
         try {
-          await subirArchivoAOneDrive(obtenerAccessToken, carpetaPunto.id, archivo.nombre, archivo.data, archivo.tipo);
+          const blob = await obtenerArchivo(archivo.id);
+          if (!blob) { errores++; continue; }
+          const dataUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (ev) => resolve(ev.target.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+          await subirArchivoAOneDrive(obtenerAccessToken, carpetaPunto.id, archivo.nombre, dataUrl, archivo.tipo);
         } catch (errArchivo) {
           errores++;
           console.error(`No se pudo subir "${archivo.nombre}" a OneDrive:`, errArchivo);
@@ -218,10 +229,7 @@ export default function SidebarTerciario() {
           </select>
         </div>
         <div className="ter-field">
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <input type="file" id="archivosInput" multiple style={{ flex: '1', padding: '4px', border: '1px solid #ccc', borderRadius: '4px', background: '#fff', fontSize: '12px' }} onChange={adjuntarArchivos} />
-            <button id="btnAdjuntarArchivo" className="btn-confirm" style={{ padding: '4px 12px', fontSize: '12px' }} onClick={(e) => e.preventDefault()}>Adjuntar</button>
-          </div>
+          <input type="file" id="archivosInput" multiple style={{ width: '100%', padding: '4px', border: '1px solid #ccc', borderRadius: '4px', background: '#fff', fontSize: '12px' }} onChange={adjuntarArchivos} />
           <div id="listaArchivosTemporales" style={{ marginTop: '6px', fontSize: '12px', color: '#555', maxHeight: '60px', overflowY: 'auto' }}>
             {form.archivos.length === 0
               ? <span style={{ color: '#aaa' }}>Ningún archivo adjunto</span>

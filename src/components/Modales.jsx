@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useUI } from '../context/UIContext.jsx';
 import { useProyecto } from '../context/ProyectoContext.jsx';
 import { hoyLocalISO, calcularFechaAnterior } from '../utils/fechas.js';
+import { guardarArchivo, obtenerURLArchivo } from '../utils/archivosDB.js';
 
 function ModalActa() {
   const { modalActivo, setModalActivo } = useUI();
@@ -93,19 +94,34 @@ function ModalPrevisualizacion() {
   const archivo = previewArchivo;
   const activo = modalActivo === 'preview' && archivo;
   const tieneVistaPrevia = archivo && (archivo.tipo.startsWith('image/') || archivo.tipo === 'application/pdf' || archivo.tipo.startsWith('text/'));
+  const [url, setUrl] = useState(null);
+  const [textoPlano, setTextoPlano] = useState('');
+
+  useEffect(() => {
+    let urlActual = null;
+    if (activo && archivo) {
+      obtenerURLArchivo(archivo.id).then(u => {
+        urlActual = u;
+        setUrl(u);
+        if (archivo.tipo.startsWith('text/') && u) {
+          fetch(u).then(r => r.text()).then(setTextoPlano).catch(() => setTextoPlano('No se pudo leer el texto.'));
+        }
+      });
+    } else {
+      setUrl(null);
+      setTextoPlano('');
+    }
+    return () => { if (urlActual) URL.revokeObjectURL(urlActual); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activo, archivo?.id]);
 
   let contenido = null;
-  let textoPlano = '';
-  if (archivo) {
+  if (archivo && url) {
     if (archivo.tipo.startsWith('image/')) {
-      contenido = <img src={archivo.data} style={{ maxWidth: '100%', maxHeight: '80vh' }} alt={archivo.nombre} />;
+      contenido = <img src={url} style={{ maxWidth: '100%', maxHeight: '80vh' }} alt={archivo.nombre} />;
     } else if (archivo.tipo === 'application/pdf') {
-      contenido = <embed src={archivo.data} type="application/pdf" style={{ width: '100%', height: '80vh' }} />;
+      contenido = <embed src={url} type="application/pdf" style={{ width: '100%', height: '80vh' }} />;
     } else if (archivo.tipo.startsWith('text/')) {
-      try {
-        const base64 = archivo.data.split(',')[1];
-        textoPlano = atob(base64);
-      } catch (e) { textoPlano = 'No se pudo decodificar el texto.'; }
       contenido = <pre style={{ textAlign: 'left', whiteSpace: 'pre-wrap', maxHeight: '70vh', overflow: 'auto', background: '#f5f5f5', padding: '10px' }}>{textoPlano}</pre>;
     } else {
       contenido = (
@@ -113,7 +129,7 @@ function ModalPrevisualizacion() {
           <p style={{ marginBottom: '16px' }}>No se puede mostrar vista previa de este tipo de archivo ({archivo.tipo}).</p>
           <button className="btn-confirm" style={{ padding: '8px 24px', fontSize: '14px' }} onClick={() => {
             const link = document.createElement('a');
-            link.href = archivo.data; link.download = archivo.nombre;
+            link.href = url; link.download = archivo.nombre;
             document.body.appendChild(link); link.click(); document.body.removeChild(link);
           }}>Descargar archivo</button>
         </>
@@ -144,23 +160,25 @@ function ModalAdjuntar() {
 
   useEffect(() => { if (modalActivo !== 'adjuntar') setArchivo(null); }, [modalActivo]);
 
-  function confirmar() {
+  async function confirmar() {
     if (!archivo) { alert('Selecciona un archivo.'); return; }
-    if (archivo.size > 1024 * 1024) { alert('El archivo excede 1MB.'); return; }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      adjuntarArchivoAPunto(puntoAdjuntarId, { nombre: archivo.name, tipo: archivo.type, data: e.target.result });
+    if (archivo.size > 15 * 1024 * 1024) { alert('El archivo excede 15MB.'); return; }
+    const id = 'arch_' + Date.now();
+    try {
+      await guardarArchivo(id, archivo);
+      adjuntarArchivoAPunto(puntoAdjuntarId, { id, nombre: archivo.name, tipo: archivo.type });
       setModalActivo(null);
       setArchivo(null);
-    };
-    reader.readAsDataURL(archivo);
+    } catch (err) {
+      alert('No se pudo guardar el archivo: ' + err.message);
+    }
   }
 
   return (
     <div className={'modal-overlay' + (modalActivo === 'adjuntar' ? ' active' : '')} id="modalAdjuntar">
       <div className="modal-content" style={{ maxWidth: '400px' }}>
         <h3><i className="fas fa-paperclip"></i> Adjuntar archivo</h3>
-        <p style={{ fontSize: '13px', color: '#555', marginBottom: '12px' }}>Selecciona un archivo (máx 1MB) para adjuntar al punto seleccionado.</p>
+        <p style={{ fontSize: '13px', color: '#555', marginBottom: '12px' }}>Selecciona un archivo (máx 15MB) para adjuntar al punto seleccionado.</p>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '16px' }}>
           <input
             type="file" id="adjuntarArchivoInput"
