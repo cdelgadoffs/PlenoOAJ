@@ -1,0 +1,224 @@
+:root {
+  --lg-azul: #1a56db;
+}
+
+.lg-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  background: #fff;
+}
+
+/* ===== PANEL OSCURO (izquierda) ===== */
+.lg-panel-oscuro {
+  position: relative;
+  background: #0a0a0a;
+  color: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 48px;
+}
+
+.lg-ledger {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 40px 56px;
+  pointer-events: none;
+  user-select: none;
+}
+.lg-ledger span {
+  font-family: 'DM Mono', monospace;
+  font-weight: 500;
+  font-size: clamp(90px, 14vw, 190px);
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.035);
+  letter-spacing: -0.02em;
+}
+.lg-ledger span:nth-child(2) { align-self: center; }
+.lg-ledger span:nth-child(3) { align-self: flex-end; }
+
+.lg-oscuro-contenido {
+  position: relative;
+  z-index: 1;
+  max-width: 460px;
+  animation: lg-fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.lg-logo {
+  height: 44px;
+  width: auto;
+  margin-bottom: 28px;
+  filter: brightness(0) invert(1);
+  opacity: 0.92;
+}
+
+.lg-eyebrow {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  color: rgba(240, 240, 240, 0.55);
+  margin-bottom: 18px;
+}
+
+.lg-titulo {
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  font-size: clamp(32px, 3.6vw, 44px);
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  color: #fff;
+  margin-bottom: 20px;
+}
+
+.lg-descripcion {
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: rgba(240, 240, 240, 0.68);
+  max-width: 380px;
+  margin-bottom: 40px;
+}
+
+.lg-fecha {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: rgba(240, 240, 240, 0.4);
+  text-transform: capitalize;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding-top: 16px;
+  display: inline-block;
+}
+
+/* ===== PANEL CLARO (derecha) ===== */
+.lg-panel-claro {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  background: #fff;
+}
+
+.lg-box {
+  width: 100%;
+  max-width: 360px;
+  animation: lg-fade-up 0.6s 0.1s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.lg-box-eyebrow {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  color: #999;
+  margin-bottom: 10px;
+}
+
+.lg-box-titulo {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0a0a0a;
+  margin-bottom: 8px;
+}
+
+.lg-box-sub {
+  font-size: 13px;
+  line-height: 1.55;
+  color: #777;
+  margin-bottom: 32px;
+}
+
+.lg-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #0a0a0a;
+  color: #fff;
+  border: none;
+  padding: 13px 18px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.lg-btn:hover:not(:disabled) { background: #262626; }
+.lg-btn:active:not(:disabled) { transform: scale(0.99); }
+.lg-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.lg-btn:focus-visible {
+  outline: 2px solid var(--lg-azul);
+  outline-offset: 2px;
+}
+
+.lg-spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  animation: lg-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+.lg-error {
+  color: #b91c1c;
+  font-size: 12.5px;
+  margin-top: 16px;
+  min-height: 14px;
+}
+
+.lg-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #777;
+  font-size: 12.5px;
+  margin-top: 16px;
+}
+.lg-loading .lg-spinner {
+  border-color: rgba(0, 0, 0, 0.15);
+  border-top-color: #777;
+}
+.lg-hidden { display: none; }
+
+.lg-box-footer {
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid #ececec;
+  font-size: 11.5px;
+  color: #aaa;
+  letter-spacing: 0.02em;
+}
+
+@keyframes lg-fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes lg-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lg-oscuro-contenido, .lg-box { animation: none; }
+  .lg-spinner { animation: none; }
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 860px) {
+  .lg-gate { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  .lg-panel-oscuro { padding: 32px 28px; min-height: 260px; }
+  .lg-ledger { display: none; }
+  .lg-titulo { font-size: 26px; }
+  .lg-descripcion { display: none; }
+  .lg-fecha { display: none; }
+  .lg-panel-claro { padding: 32px 28px; }
+}
