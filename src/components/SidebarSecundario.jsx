@@ -10,7 +10,7 @@ export default function SidebarSecundario({ onAbrirCreacion }) {
     puntoPreviaSeleccionadoId, setPuntoPreviaSeleccionadoId, actualizarPunto
   } = useProyecto();
 
-  if (vistaActual !== 'proyecto' && vistaActual !== 'sesionPrevia') {
+  if (vistaActual !== 'sesionPrevia') {
     return <aside className="sidebar-secundario hidden" id="sidebarSecundario"></aside>;
   }
 
