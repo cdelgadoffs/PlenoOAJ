@@ -55,3 +55,36 @@ export function getTituloPunto(sec, idx) {
   const codigo = 'PLE/' + padNumber(num, 3);
   return roman + '. ' + codigo;
 }
+const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+export function obtenerFechasDisponiblesExtraordinaria(sesiones) {
+  const hoy = hoyLocalISO();
+  const ordinarias = Object.entries(sesiones)
+    .filter(([, s]) => s.tipoSesion === 'Ordinaria')
+    .map(([fecha]) => fecha)
+    .sort();
+
+  let anterior = null;
+  let siguiente = null;
+  for (const f of ordinarias) {
+    if (f <= hoy) anterior = f;
+    if (f > hoy && !siguiente) siguiente = f;
+  }
+
+  const inicio = anterior && sumarDias(anterior, 1) > hoy ? sumarDias(anterior, 1) : hoy;
+  const fin = siguiente ? sumarDias(siguiente, -1) : sumarDias(hoy, 60);
+
+  const disponibles = [];
+  let cursor = inicio;
+  while (cursor <= fin) {
+    const diaSemana = parsearFechaLocal(cursor).getDay();
+    if (diaSemana !== 0 && diaSemana !== 3 && diaSemana !== 6) {
+      disponibles.push({
+        fecha: cursor,
+        etiqueta: `${DIAS_SEMANA[diaSemana]} ${formatearFechaES(cursor)}`
+      });
+    }
+    cursor = sumarDias(cursor, 1);
+  }
+  return disponibles;
+}

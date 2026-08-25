@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useUI } from '../context/UIContext.jsx';
 import { useProyecto } from '../context/ProyectoContext.jsx';
-import { hoyLocalISO, calcularFechaAnterior } from '../utils/fechas.js';
+//import { hoyLocalISO, calcularFechaAnterior } from '../utils/fechas.js';
 import { guardarArchivo, obtenerURLArchivo } from '../utils/archivosDB.js';
+import { hoyLocalISO, calcularFechaAnterior, obtenerFechasDisponiblesExtraordinaria } from '../utils/fechas.js';
 
 function ModalActa() {
   const { modalActivo, setModalActivo } = useUI();
@@ -45,20 +46,25 @@ function ModalActa() {
 function ModalNuevoProyecto() {
   const { modalActivo, setModalActivo, setVistaActual } = useUI();
   const { sesiones, crearSesionExtraordinaria } = useProyecto();
-  const [fecha, setFecha] = useState(hoyLocalISO());
+  const [fechasDisponibles, setFechasDisponibles] = useState([]);
+  const [fecha, setFecha] = useState('');
   const [confirmado, setConfirmado] = useState(false);
   const [creando, setCreando] = useState(false);
 
   useEffect(() => {
     if (modalActivo !== 'nuevoProyecto') return;
-    setFecha(hoyLocalISO());
+    const disponibles = obtenerFechasDisponiblesExtraordinaria(sesiones);
+    setFechasDisponibles(disponibles);
+    const hoy = hoyLocalISO();
+    const existeHoy = disponibles.some(d => d.fecha === hoy);
+    setFecha(existeHoy ? hoy : (disponibles[0]?.fecha || ''));
     setConfirmado(false);
     setCreando(false);
   }, [modalActivo]);
 
   async function confirmar() {
     if (!confirmado) return;
-    if (!fecha) { alert('Selecciona una fecha.'); return; }
+    if (!fecha) { alert('No hay fechas disponibles para una sesión extraordinaria.'); return; }
     if (sesiones[fecha] && !confirm(`Ya existe una sesión en ${fecha}. ¿Sobrescribir?`)) return;
     setCreando(true);
     crearSesionExtraordinaria(fecha);
@@ -72,7 +78,12 @@ function ModalNuevoProyecto() {
       <div className="modal-content">
         <h3>Nueva sesión extraordinaria</h3>
         <label>Fecha de la sesión</label>
-        <input type="date" id="nuevoFecha" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+        <select id="nuevoFecha" value={fecha} onChange={(e) => setFecha(e.target.value)}>
+          {fechasDisponibles.length === 0 && <option value="">No hay fechas disponibles</option>}
+          {fechasDisponibles.map(d => (
+            <option key={d.fecha} value={d.fecha}>{d.etiqueta}</option>
+          ))}
+        </select>
         <div className="checkbox-group">
           <input type="checkbox" id="confirmNewProject" checked={confirmado} onChange={(e) => setConfirmado(e.target.checked)} />
           <label htmlFor="confirmNewProject" style={{ display: 'inline', textTransform: 'none', fontWeight: '400' }}>
@@ -81,7 +92,7 @@ function ModalNuevoProyecto() {
         </div>
         <div className="modal-actions">
           <button className="btn-cancel" id="modalNuevoCancel" onClick={() => setModalActivo(null)}>Cancelar</button>
-          <button className="btn-confirm" id="modalNuevoConfirm" disabled={!confirmado || creando} onClick={confirmar}>Crear</button>
+          <button className="btn-confirm" id="modalNuevoConfirm" disabled={!confirmado || creando || !fecha} onClick={confirmar}>Crear</button>
         </div>
       </div>
     </div>
