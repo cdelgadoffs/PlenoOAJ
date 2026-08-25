@@ -7,6 +7,7 @@ import { crearCarpetaProyecto, crearCarpetaPunto, subirArchivoAOneDrive } from '
 import { guardarArchivo, obtenerArchivo, eliminarArchivo } from '../utils/archivosDB.js';
 import mammoth from 'mammoth';
 import { normalizarTexto } from '../utils/texto.js';
+import EditorOcultable from './EditorOcultable.jsx';
 
 const REMITENTES_POR_CATEGORIA = {
   pleno: ['Pleno'],
@@ -76,22 +77,83 @@ function esArchivoWord(file) {
   return file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
          /\.docx$/i.test(file.name);
 }
+function esLineaTitulo(linea) {
+  return /^[A-ZÁÉÍÓÚÑ\s]{4,}:?\s*$/.test(linea) && linea === linea.toUpperCase();
+}
+
+function extraerSeccionPorTitulo(textoCompleto, patronTitulo, patronTituloConTexto, cortarEnBlanco, separador) {
+  const lineas = textoCompleto.split('\n').map(l => l.trim());
+
+  let idxTitulo = -1;
+  let textoEnMismaLinea = '';
+
+  for (let i = 0; i < lineas.length; i++) {
+    const linea = lineas[i];
+    if (!linea) continue;
+    const matchConTexto = linea.match(patronTituloConTexto);
+    if (matchConTexto) {
+      idxTitulo = i;
+      textoEnMismaLinea = matchConTexto[2].trim();
+      break;
+    }
+    if (patronTitulo.test(linea)) {
+      idxTitulo = i;
+      break;
+    }
+  }
+
+  if (idxTitulo === -1) return '';
+
+  const parrafos = [];
+  if (textoEnMismaLinea) parrafos.push(textoEnMismaLinea);
+
+  let actual = [];
+  for (let i = idxTitulo + 1; i < lineas.length; i++) {
+    const linea = lineas[i];
+    if (!linea) {
+      if (actual.length > 0) { parrafos.push(actual.join(' ')); actual = []; }
+      if (cortarEnBlanco && parrafos.length > 0) break;
+      continue;
+    }
+    if (esLineaTitulo(linea) && (parrafos.length > 0 || actual.length > 0)) break;
+    actual.push(linea);
+  }
+  if (actual.length > 0) parrafos.push(actual.join(' '));
+
+  return parrafos.join(separador).trim();
+}
+
 function extraerParrafoAcuerdo(textoCompleto) {
-  const parrafos = textoCompleto.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
-  const idxAcuerdo = parrafos.findIndex(p => /^ACUERDO\b/i.test(p));
-  if (idxAcuerdo === -1) return '';
-  return parrafos[idxAcuerdo].replace(/^ACUERDO\s*:?\s*/i, '').trim();
+  return extraerSeccionPorTitulo(
+    textoCompleto,
+    /^(PUNTO\s+DE\s+ACUERDO|ACUERDO)\s*:?\s*$/i,
+    /^(PUNTO\s+DE\s+ACUERDO|ACUERDO)\s*:\s*(.+)$/i,
+    true,
+    ' '
+  );
+}
+
+function extraerTextoAcuerdos(textoCompleto) {
+  return extraerSeccionPorTitulo(
+    textoCompleto,
+    /^ACUERDOS\s*:?\s*$/i,
+    /^ACUERDOS\s*:\s*(.+)$/i,
+    false,
+    '\n\n'
+  );
 }
 
 async function extraerTextoWord(file) {
   try {
     const arrayBuffer = await file.arrayBuffer();
     const resultado = await mammoth.extractRawText({ arrayBuffer });
-    const parrafo = extraerParrafoAcuerdo(resultado.value || '');
-    return normalizarTexto(parrafo);
+    const texto = resultado.value || '';
+    const puntoAcuerdo = normalizarTexto(extraerParrafoAcuerdo(texto));
+    const acuerdos = extraerTextoAcuerdos(texto);
+    return { puntoAcuerdo, acuerdos };
   } catch (err) {
     console.error('Error al extraer texto del Word:', err);
-    return '';
+    return { puntoAcuerdo: '', acuerdos: '' };
   }
 }
 
@@ -117,14 +179,18 @@ async function extraerTextoWord(file) {
 
       const wordFile = resultados.find(r => esArchivoWord(r._file));
         if (!wordFile) return;
-        if (form.contenido.trim() !== '') {
-          if (!confirm('Se detectó un documento Word. ¿Extraer el punto de acuerdo y reemplazar el contenido actual?')) return;
+        if (form.contenido.trim() !== '' || form.acuerdo.trim() !== '') {
+          if (!confirm('Se detectó un documento Word. ¿Extraer el punto de acuerdo y los acuerdos, reemplazando el contenido actual?')) return;
         }
-        const texto = await extraerTextoWord(wordFile._file);
-        if (texto) {
-          setForm(f => ({ ...f, contenido: texto }));
+        const { puntoAcuerdo, acuerdos } = await extraerTextoWord(wordFile._file);
+        if (puntoAcuerdo || acuerdos) {
+          setForm(f => ({
+            ...f,
+            contenido: puntoAcuerdo || f.contenido,
+            acuerdo: acuerdos || f.acuerdo
+          }));
         } else {
-          alert('No se encontró un párrafo "ACUERDO" en el documento.');
+          alert('No se encontró un párrafo "ACUERDO" ni una sección "ACUERDOS" en el documento.');
         }
     }).catch(err => alert('Error al guardar archivos: ' + err.message));
   }
@@ -174,7 +240,7 @@ async function extraerTextoWord(file) {
     if (form.archivos.length > 0) {
       subirArchivosAOneDrive(nuevoId, form.archivos);
     }
-    setForm(f => ({ ...f, contenido: '', archivos: [] }));
+    setForm(f => ({ ...f, contenido: '', acuerdo: '', archivos: [] }));
   }
 
   async function subirArchivosAOneDrive(puntoId, archivos) {
@@ -223,7 +289,7 @@ async function extraerTextoWord(file) {
         <div className="sb-badge">{puntoEditandoId ? 'Editar punto' : 'Nuevo punto'}</div>
       </div>
       <div className="ter-form">
-        <div className="ter-field" style={{ display: 'flex', gap: '10px' }}>
+                <div className="ter-field" style={{ display: 'flex', gap: '10px' }}>
           <div style={{ flex: '1' }}>
             <label className="ter-label">Categoría</label>
             <select id="filtroDependencia" className="ter-select" value={form.categoria} onChange={(e) => cambiarCategoria(e.target.value)}>
@@ -239,33 +305,6 @@ async function extraerTextoWord(file) {
             </select>
           </div>
         </div>
-        <div className="ter-field ter-field-grow">
-          <textarea
-            id="cuerpoTextarea"
-            className="ter-textarea"
-            placeholder="Punto de acuerdo"
-            value={form.contenido}
-            onChange={(e) => setForm(f => ({ ...f, contenido: e.target.value }))}
-          ></textarea>
-        </div>
-        <div className="ter-field">
-          <label className="ter-label">Tipo de votación</label>
-          <select id="tipoVotacionSelect" className="ter-select" value={form.tipoVotacion} onChange={(e) => setForm(f => ({ ...f, tipoVotacion: e.target.value }))}>
-            <option value="Económica">Económica</option>
-            <option value="Nominal">Nominal</option>
-            <option value="Cédula">Cédula</option>
-          </select>
-        </div>
-        <div className="ter-field">
-          <label className="ter-label">Acuerdo</label>
-          <textarea
-            id="acuerdoSelect"
-            className="ter-textarea"
-            placeholder=""
-            value={form.acuerdo}
-            onChange={(e) => setForm(f => ({ ...f, acuerdo: e.target.value }))}
-          ></textarea>
-        </div>
         <div className="ter-field">
           <input type="file" id="archivosInput" multiple style={{ width: '100%', padding: '4px', border: '1px solid #ccc', borderRadius: '4px', background: '#fff', fontSize: '12px' }} onChange={adjuntarArchivos} />
           <div id="listaArchivosTemporales" style={{ marginTop: '6px', fontSize: '12px', color: '#555', maxHeight: '60px', overflowY: 'auto' }}>
@@ -279,6 +318,32 @@ async function extraerTextoWord(file) {
           </div>
           <div id="oneDriveStatus" className="onedrive-status">{oneDriveStatus}</div>
         </div>
+        <div className="ter-field ter-field-grow">
+          <EditorOcultable
+            id="cuerpoTextarea"
+            value={form.contenido}
+            onChange={(v) => setForm(f => ({ ...f, contenido: v }))}
+            placeholder="Punto de acuerdo"
+          />
+        </div>
+        <div className="ter-field">
+          <label className="ter-label">Tipo de votación</label>
+          <select id="tipoVotacionSelect" className="ter-select" value={form.tipoVotacion} onChange={(e) => setForm(f => ({ ...f, tipoVotacion: e.target.value }))}>
+            <option value="Económica">Económica</option>
+            <option value="Nominal">Nominal</option>
+            <option value="Cédula">Cédula</option>
+          </select>
+        </div>
+        <div className="ter-field">
+          <label className="ter-label">Acuerdo</label>
+          <EditorOcultable
+            id="acuerdoSelect"
+            value={form.acuerdo}
+            onChange={(v) => setForm(f => ({ ...f, acuerdo: v }))}
+            placeholder="Acuerdos"
+          />
+        </div>
+        
         <div className="ter-acciones">
           <button className="btn-cancel" id="btnCancelarCreacion" onClick={cerrar}>Cancelar</button>
           <button className="btn-confirm" id="btnConfirmarCreacion" onClick={confirmar}>{puntoEditandoId ? 'Guardar cambios' : 'Añadir'}</button>

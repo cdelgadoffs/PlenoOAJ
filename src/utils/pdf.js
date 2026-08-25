@@ -1,5 +1,15 @@
 import { parsearFechaLocal, getTituloPunto } from './fechas.js';
+import { ocultarParaActa } from './texto.js';
+function escaparHtml(texto) {
+  return (texto || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
 
+function contenidoParaActa(texto) {
+  return ocultarParaActa(escaparHtml(texto || ''));
+}
 export function generarPDFConPrint(secciones, proyectoMeta) {
   if (secciones.length === 0) {
     alert('No hay puntos para generar el PDF.');
@@ -49,7 +59,7 @@ export function generarPDFConPrint(secciones, proyectoMeta) {
       <div class="punto-print">
         <div class="numero">${titulo}</div>
         <div class="meta">${metaPartes.join(' · ')}</div>
-        <div class="contenido">${sec.contenido || 'Sin contenido'}</div>
+        <div class="contenido">${sec.contenido ? contenidoParaActa(sec.contenido) : 'Sin contenido'}</div>
       </div>
     `;
   });
