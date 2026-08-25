@@ -11,7 +11,6 @@
   background: #fff;
 }
 
-/* ===== PANEL OSCURO (izquierda) ===== */
 .lg-panel-oscuro {
   position: relative;
   background: #0a0a0a;
@@ -96,7 +95,6 @@
   display: inline-block;
 }
 
-/* ===== PANEL CLARO (derecha) ===== */
 .lg-panel-claro {
   display: flex;
   align-items: center;
@@ -212,7 +210,6 @@
   .lg-spinner { animation: none; }
 }
 
-/* ===== RESPONSIVE ===== */
 @media (max-width: 860px) {
   .lg-gate { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
   .lg-panel-oscuro { padding: 32px 28px; min-height: 260px; }

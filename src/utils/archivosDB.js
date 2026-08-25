@@ -1,5 +1,3 @@
-import { guardarArchivo, obtenerArchivo, eliminarArchivo } from '../utils/archivosDB.js';
-
 const DB_NAME = 'plenoOAJ_archivos';
 const DB_VERSION = 1;
 const STORE_NAME = 'archivos';
@@ -48,8 +46,6 @@ export async function eliminarArchivo(id) {
   });
 }
 
-// Devuelve una URL temporal (createObjectURL) lista para usar en <img>/<embed>.
-// Quien la use debe revocarla con URL.revokeObjectURL cuando ya no la necesite.
 export async function obtenerURLArchivo(id) {
   const blob = await obtenerArchivo(id);
   if (!blob) return null;

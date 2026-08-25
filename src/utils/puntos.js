@@ -51,8 +51,7 @@ function puntoFijoBase(id) {
   };
 }
 
-// Extraído literalmente de asegurarPuntosFijos() en app.js (solo la parte
-// de creación/normalización; el guardado se orquesta desde el Context).
+
 export function conPuntosFijosAsegurados(seccionesEntrada) {
   let secciones = [...seccionesEntrada];
   const idsFijos = ['sec_fijo_1', 'sec_fijo_2', 'sec_fijo_3'];
@@ -108,7 +107,6 @@ export function reordenarAsuntosGenerales(secciones) {
   return [...otros, ...generales];
 }
 
-// Extraído literalmente de actualizarPunto2() en app.js.
 export function conPunto2Actualizado(secciones, proyectoMeta, sesiones, calcularFechaAnterior, formatearFechaES) {
   const idx = secciones.findIndex(s => s.id === 'sec_fijo_2');
   if (idx === -1 || !proyectoMeta.fecha) return secciones;

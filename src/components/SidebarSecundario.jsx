@@ -17,7 +17,6 @@ export default function SidebarSecundario({ onAbrirCreacion }) {
   const puntosFiltrados = obtenerPuntosFiltrados(secciones, terminoBusqueda);
   const idsFiltrados = new Set(puntosFiltrados.map(p => p.id));
 
-  // ===== VISTA: SESIÓN PREVIA (checklist) =====
   if (vistaActual === 'sesionPrevia') {
     if (secciones.length === 0) {
       return (
@@ -77,7 +76,6 @@ export default function SidebarSecundario({ onAbrirCreacion }) {
     );
   }
 
-  // ===== VISTA: PROYECTO (secciones) =====
   const totalFiltrados = puntosFiltrados.length;
   function seleccionarSeccion(sec, conteo) {
     if (conteo === 0 && terminoBusqueda) return;

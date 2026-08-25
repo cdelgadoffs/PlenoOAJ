@@ -11,9 +11,6 @@ export default function CintaSesiones() {
   const { sesiones, sesionActivaFecha, proyectoMeta, cargarSesion } = useProyecto();
   const [mes, setMes] = useState(() => (sesionActivaFecha || hoyLocalISO()).substring(0, 7));
 
-  // Cuando cambia la sesión activa (p. ej. al seleccionarla desde el
-  // control anual), la cinta salta a ese mes. La navegación manual con
-  // ◀ ▶ solo toca el estado local `mes`, sin depender de la sesión activa.
   useEffect(() => {
     if (sesionActivaFecha) setMes(sesionActivaFecha.substring(0, 7));
   }, [sesionActivaFecha]);

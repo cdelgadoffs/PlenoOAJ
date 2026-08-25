@@ -37,7 +37,7 @@ function TarjetaPunto({ sec, idx, puedeSubir, puedeBajar, esSeleccionada, onSele
           <button className="btn-adjuntar" title="Adjuntar archivo" onClick={(e) => { e.stopPropagation(); onAdjuntar(sec.id); }}><i className="fas fa-paperclip"></i></button>
           <button className="btn-mover" disabled={!puedeSubir} onClick={(e) => { e.stopPropagation(); onMover(sec.id, -1); }}>▲</button>
           <button className="btn-mover" disabled={!puedeBajar} onClick={(e) => { e.stopPropagation(); onMover(sec.id, 1); }}>▼</button>
-          <button className="btn-editar" disabled={esFijo} title="Editar punto" onClick={(e) => { e.stopPropagation(); onEditar(sec.id); }}>✎ Editar</button>
+          <button className="btn-editar" disabled={esFijo} title="Editar punto" onClick={(e) => { e.stopPropagation(); onEditar(sec.id); }}>Editar</button>
           <button className="btn-eliminar" disabled={esFijo} onClick={(e) => { e.stopPropagation(); onEliminar(sec); }}>{esFijo ? 'Fijo' : 'Eliminar'}</button>
         </div>
       </div>

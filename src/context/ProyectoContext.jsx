@@ -28,20 +28,17 @@ export function ProyectoProvider({ children }) {
   const [puntoEditandoId, setPuntoEditandoId] = useState(null);
   const [puntoPreviaSeleccionadoId, setPuntoPreviaSeleccionadoId] = useState(null);
 
-  // Persiste secciones en localStorage cada vez que cambian (igual que
-  // guardarEnLocalStorage() del original, llamado desde guardarEstadoActual).
+  
   useEffect(() => {
     guardarEnLocalStorage(secciones);
   }, [secciones]);
 
-  // Persiste sesiones/proyectoMeta/diaSesion/excepciones cada vez que cambian.
   useEffect(() => { persistirSesiones(sesiones); }, [sesiones]);
   useEffect(() => { persistirProyectoMeta(proyectoMeta); }, [proyectoMeta]);
   useEffect(() => { persistirDiaSesion(diaSesion); }, [diaSesion]);
   useEffect(() => { persistirExcepciones(excepciones); }, [excepciones]);
 
-  // Sincroniza `secciones` (estado de trabajo) hacia sesiones[fecha activa],
-  // igual que hacía guardarEstadoActual() en el original.
+
   const primeraVezRef = useRef(true);
   useEffect(() => {
     if (!sesionActivaFecha) return;
@@ -58,21 +55,17 @@ export function ProyectoProvider({ children }) {
         }
       };
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [secciones]);
 
-  // Renumera sesiones cada vez que cambia el mapa de sesiones o el día de
-  // sesión configurado (igual que recalcularNumerosSesion()).
   useEffect(() => {
     setSesiones(prev => recalcularNumerosSesion(prev));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [diaSesion]);
 
-  // Carga una sesión por fecha: crea el registro si no existe, sincroniza
-  // proyectoMeta y secciones. Migrado literalmente de cargarSesion().
+
   function cargarSesion(fecha) {
     if (!fecha) return;
-    primeraVezRef.current = true; // evita re-sincronizar la sesión recién cargada sobre sí misma
+    primeraVezRef.current = true; 
     setSesionActivaFecha(fecha);
     setSesiones(prev => {
       let nuevas = prev;
@@ -89,8 +82,6 @@ export function ProyectoProvider({ children }) {
     });
   }
 
-  // Garantiza que exista calendario para el año actual y una sesión activa
-  // cargada. Migrado de asegurarCalendarioDisponible() + el bloque de init().
   const inicializadoRef = useRef(false);
   useEffect(() => {
     if (inicializadoRef.current) return;
@@ -113,11 +104,9 @@ export function ProyectoProvider({ children }) {
       fechaActiva = todas.length > 0 ? todas[0] : siguienteFechaSesion(hoyLocalISO(), diaSesion, excepciones);
     }
     cargarSesion(fechaActiva);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, []);
 
-  // Regenera el calendario con un nuevo día de sesión (botón "Generar
-  // calendario anual" del panel de calendarización).
   function regenerarCalendario(nuevoDia) {
     setDiaSesion(nuevoDia);
     let base = generarCalendarioAnual({}, nuevoDia, excepciones, new Date().getFullYear());
@@ -159,7 +148,6 @@ export function ProyectoProvider({ children }) {
     setSesiones(recalcularNumerosSesion(base));
   }
 
-  // Migrado literalmente de eliminarSesion().
   function eliminarSesion(fecha) {
     if (!fecha || !sesiones[fecha]) return;
     if (fecha === sesionActivaFecha) {
@@ -248,7 +236,7 @@ export function ProyectoProvider({ children }) {
     } : s));
   }
 
-  // Migrado de agregarAsistente/eliminarAsistente/editarAsistente (Quórum).
+  
   function agregarAsistente(datos) {
     if (!sesionActivaFecha) return;
     setSesiones(prev => {
@@ -294,7 +282,7 @@ export function ProyectoProvider({ children }) {
     setSecciones(prev => prev.map(s => s.id === id ? { ...s, ...cambios } : s));
   }
 
-  // Migrado de agregarActa() (modal "Aprobación del acta anterior").
+  
   function agregarActa(tipo, fecha) {
     const contenido = `Aprobación, en su caso, del acta de la sesión ${tipo.toLowerCase()} del ${formatearFechaES(fecha)}.`;
     const nuevoId = 'sec_' + Date.now();
@@ -312,7 +300,7 @@ export function ProyectoProvider({ children }) {
     setPuntoSeleccionadoId(nuevoId);
   }
 
-  // Migrado de confirmarNuevoProyecto() (modal "Nueva sesión extraordinaria").
+  
   function crearSesionExtraordinaria(fecha) {
     setSesiones(prev => {
       const nuevas = { ...prev, [fecha]: { tipoSesion: 'Extraordinaria', numeroSesion: 1, secciones: [], asistentes: [] } };
@@ -337,13 +325,11 @@ export function ProyectoProvider({ children }) {
     }, 0);
   }
 
-  // Migrado de adjuntarArchivoPunto() (modal "Adjuntar archivo").
+
   function adjuntarArchivoAPunto(id, archivo) {
     setSecciones(prev => prev.map(s => s.id === id ? { ...s, anexo: true, archivos: [...(s.archivos || []), archivo] } : s));
   }
 
-  // Migrado de subirArchivosDelPuntoAOneDrive(): guarda referencia a la
-  // carpeta del proyecto en OneDrive una vez creada, para reutilizarla.
   function setOneDriveFolder(datos) {
     setProyectoMeta(prev => ({ ...prev, ...datos }));
   }

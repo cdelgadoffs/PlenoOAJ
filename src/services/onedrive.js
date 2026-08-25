@@ -1,7 +1,3 @@
-// services/onedrive.js
-// Migrado literalmente de onedrive.js. Única diferencia estructural: en vez
-// de depender de la función global obtenerAccessToken(), la recibe como
-// parámetro (viene de useAuth() en el componente que lo use).
 const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
 
 function codificarRutaGraph(ruta) {

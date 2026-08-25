@@ -4,7 +4,9 @@ import { useProyecto } from '../context/ProyectoContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { formatearFechaES } from '../utils/fechas.js';
 import { crearCarpetaProyecto, crearCarpetaPunto, subirArchivoAOneDrive } from '../services/onedrive.js';
-import { guardarArchivo, eliminarArchivo } from '../utils/archivosDB.js';
+import { guardarArchivo, obtenerArchivo, eliminarArchivo } from '../utils/archivosDB.js';
+import mammoth from 'mammoth';
+import { normalizarTexto } from '../utils/texto.js';
 
 const REMITENTES_POR_CATEGORIA = {
   pleno: ['Pleno'],
@@ -27,7 +29,7 @@ const estadoVacio = {
   remitente: 'Pleno',
   contenido: '',
   tipoVotacion: 'Económica',
-  acuerdo: 'Se aprueba por unanimidad',
+  acuerdo: '',
   archivos: []
 };
 
@@ -70,9 +72,32 @@ export default function SidebarTerciario() {
     setForm(f => ({ ...f, categoria, remitente: opciones[0] }));
   }
 
+function esArchivoWord(file) {
+  return file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+         /\.docx$/i.test(file.name);
+}
+function extraerParrafoAcuerdo(textoCompleto) {
+  const parrafos = textoCompleto.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+  const idxAcuerdo = parrafos.findIndex(p => /^ACUERDO\b/i.test(p));
+  if (idxAcuerdo === -1) return '';
+  return parrafos[idxAcuerdo].replace(/^ACUERDO\s*:?\s*/i, '').trim();
+}
+
+async function extraerTextoWord(file) {
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const resultado = await mammoth.extractRawText({ arrayBuffer });
+    const parrafo = extraerParrafoAcuerdo(resultado.value || '');
+    return normalizarTexto(parrafo);
+  } catch (err) {
+    console.error('Error al extraer texto del Word:', err);
+    return '';
+  }
+}
+
   function adjuntarArchivos(e) {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
     const procesos = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -82,13 +107,25 @@ export default function SidebarTerciario() {
       }
       const id = 'arch_' + Date.now() + '_' + i;
       procesos.push(
-        guardarArchivo(id, file).then(() => ({ id, nombre: file.name, tipo: file.type }))
+        guardarArchivo(id, file).then(() => ({ id, nombre: file.name, tipo: file.type, _file: file }))
       );
     }
     if (procesos.length === 0) return;
-    Promise.all(procesos).then(resultados => {
-      setForm(f => ({ ...f, archivos: [...f.archivos, ...resultados] }));
+    Promise.all(procesos).then(async (resultados) => {
+      setForm(f => ({ ...f, archivos: [...f.archivos, ...resultados.map(({ _file, ...r }) => r)] }));
       e.target.value = '';
+
+      const wordFile = resultados.find(r => esArchivoWord(r._file));
+        if (!wordFile) return;
+        if (form.contenido.trim() !== '') {
+          if (!confirm('Se detectó un documento Word. ¿Extraer el punto de acuerdo y reemplazar el contenido actual?')) return;
+        }
+        const texto = await extraerTextoWord(wordFile._file);
+        if (texto) {
+          setForm(f => ({ ...f, contenido: texto }));
+        } else {
+          alert('No se encontró un párrafo "ACUERDO" en el documento.');
+        }
     }).catch(err => alert('Error al guardar archivos: ' + err.message));
   }
 
@@ -206,7 +243,7 @@ export default function SidebarTerciario() {
           <textarea
             id="cuerpoTextarea"
             className="ter-textarea"
-            placeholder="Descripción"
+            placeholder="Punto de acuerdo"
             value={form.contenido}
             onChange={(e) => setForm(f => ({ ...f, contenido: e.target.value }))}
           ></textarea>
@@ -221,12 +258,13 @@ export default function SidebarTerciario() {
         </div>
         <div className="ter-field">
           <label className="ter-label">Acuerdo</label>
-          <select id="acuerdoSelect" className="ter-select" value={form.acuerdo} onChange={(e) => setForm(f => ({ ...f, acuerdo: e.target.value }))}>
-            <option value="Se aprueba por unanimidad">Se aprueba por unanimidad</option>
-            <option value="Se aprueba por mayoría">Se aprueba por mayoría</option>
-            <option value="Se toma nota">Se toma nota</option>
-            <option value="Se turna a comisión">Se turna a comisión</option>
-          </select>
+          <textarea
+            id="acuerdoSelect"
+            className="ter-textarea"
+            placeholder=""
+            value={form.acuerdo}
+            onChange={(e) => setForm(f => ({ ...f, acuerdo: e.target.value }))}
+          ></textarea>
         </div>
         <div className="ter-field">
           <input type="file" id="archivosInput" multiple style={{ width: '100%', padding: '4px', border: '1px solid #ccc', borderRadius: '4px', background: '#fff', fontSize: '12px' }} onChange={adjuntarArchivos} />

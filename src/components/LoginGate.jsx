@@ -19,7 +19,6 @@ export default function LoginGate() {
     try {
       await iniciarSesion();
     } catch {
-      // el error ya se refleja vía AuthContext
     } finally {
       setAutenticando(false);
     }

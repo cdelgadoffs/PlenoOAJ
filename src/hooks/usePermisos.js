@@ -12,8 +12,8 @@ export function usePermisos() {
     esLector,
     puedeCalendarizacion: puede('Calendarization'),
     puedeEmail: puede('Email'),
-    puedeSync: esAdmin, // sincronización local solo para administradores
-    puedeNuevoProyecto: esAdmin, // crear sesión extraordinaria
+    puedeSync: esAdmin, 
+    puedeNuevoProyecto: esAdmin, 
     puedeEditarPuntos: puede('PuntosWrite')
   };
 }

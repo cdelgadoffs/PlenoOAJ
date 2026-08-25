@@ -67,7 +67,7 @@ async function fsEliminarArchivo(handle, nombre) {
     const ok = await fsVerificarPermiso(handle, 'readwrite');
     if (!ok) return;
     await handle.removeEntry(nombre);
-  } catch (err) { /* puede no existir; se ignora */ }
+  } catch (err) { }
 }
 
 export default function Sync({ onVolver }) {
@@ -79,7 +79,7 @@ export default function Sync({ onVolver }) {
   const soportado = typeof window !== 'undefined' && 'showDirectoryPicker' in window;
   const claveUsuario = 'carpeta_' + (cuentaActiva?.username || 'default');
 
-  // Restaurar carpeta vinculada previamente (igual que fsRestaurarCarpeta()).
+  // Restaurar carpeta 
   useEffect(() => {
     if (!soportado) return;
     (async () => {
@@ -96,12 +96,8 @@ export default function Sync({ onVolver }) {
         }
       } catch (err) { console.error('No se pudo restaurar la carpeta local:', err); }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [claveUsuario]);
 
-  // Sincroniza automáticamente la sesión activa cada vez que cambia
-  // (equivalente a fsSync.sincronizarSesion() llamado desde
-  // guardarEstadoActual() en el original).
   const primeraSincRef = useRef(true);
   useEffect(() => {
     if (!handle || !sesionActivaFecha || !sesiones[sesionActivaFecha]) return;
@@ -114,7 +110,6 @@ export default function Sync({ onVolver }) {
       numeroSesion: sesion.numeroSesion,
       secciones: sesion.secciones
     }).catch(err => console.error(`No se pudo escribir el archivo ${nombre}:`, err));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [handle, sesiones, sesionActivaFecha]);
 
   async function vincularCarpeta() {
@@ -127,7 +122,7 @@ export default function Sync({ onVolver }) {
       setNombreCarpeta(h.name);
       setNecesitaReconectar(false);
       await fsGuardarHandle(claveUsuario, h);
-      // Sincroniza todas las sesiones existentes al vincular.
+      
       for (const fecha of Object.keys(sesiones)) {
         const sesion = sesiones[fecha];
         const nombre = fsNombreArchivo(fecha, sesion.tipoSesion);

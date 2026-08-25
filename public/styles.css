@@ -1206,7 +1206,7 @@ input[type="checkbox"] {
   border-top: 1px solid #eee;
   padding-top: 10px;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 48px;
 }
 
 .punto-card-voto-info {

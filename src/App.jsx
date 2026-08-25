@@ -1,4 +1,3 @@
-// App.jsx
 import { useEffect, useState } from 'react';
 import { useAuth } from './context/AuthContext.jsx';
 import { useUI } from './context/UIContext.jsx';
@@ -31,7 +30,6 @@ export default function App() {
     if (esLector && (vistaActual === 'inicio' || vistaActual === 'proyecto')) {
       setVistaActual('sesionPrevia');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [esLector]);
 
   useEffect(() => {

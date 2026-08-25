@@ -24,8 +24,6 @@ export function siguienteFechaSesion(desdeStr, diaSesion, excepciones) {
   return desdeStr;
 }
 
-// Genera (o completa) el calendario anual de sesiones ordinarias para un año.
-// Devuelve un nuevo objeto `sesiones`.
 export function generarCalendarioAnual(sesiones, diaSesion, excepciones, anioParam) {
   const anio = anioParam || new Date().getFullYear();
   const fechaInicio = new Date(anio, 0, 1);
@@ -58,8 +56,7 @@ export function generarCalendarioAnual(sesiones, diaSesion, excepciones, anioPar
   return nuevasSesiones;
 }
 
-// Aplica vacaciones/asuetos, eliminando u opcionalmente reprogramando
-// sesiones vacías. No toca la sesión activa.
+
 export function aplicarExcepciones(sesiones, excepciones, sesionActivaFecha) {
   let nuevas = { ...sesiones };
   excepciones.vacaciones.forEach(v => {
@@ -83,8 +80,7 @@ export function aplicarExcepciones(sesiones, excepciones, sesionActivaFecha) {
   return nuevas;
 }
 
-// Elimina sesiones ordinarias huérfanas (sin contenido y fuera del día de
-// sesión configurado) y extraordinarias vacías nunca abiertas.
+
 export function limpiarSesionesInvalidas(sesiones, diaSesion, sesionActivaFecha) {
   const nuevas = { ...sesiones };
   Object.keys(nuevas).forEach(fecha => {
@@ -104,8 +100,7 @@ export function limpiarSesionesInvalidas(sesiones, diaSesion, sesionActivaFecha)
   return nuevas;
 }
 
-// Renumera sesiones consecutivas por año+tipo, dejando huecos en sesiones
-// ordinarias pasadas sin contenido (no celebradas).
+
 export function recalcularNumerosSesion(sesiones) {
   const hoy = hoyLocalISO();
   const porAnioTipo = {};

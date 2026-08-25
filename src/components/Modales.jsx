@@ -14,7 +14,6 @@ function ModalActa() {
     if (modalActivo !== 'acta') return;
     setTipo(proyectoMeta.tipoSesion || 'Ordinaria');
     setFecha(proyectoMeta.fecha ? (calcularFechaAnterior(proyectoMeta.fecha, 7) || '') : '');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modalActivo]);
 
   function confirmar() {
@@ -112,7 +111,6 @@ function ModalPrevisualizacion() {
       setTextoPlano('');
     }
     return () => { if (urlActual) URL.revokeObjectURL(urlActual); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activo, archivo?.id]);
 
   let contenido = null;
