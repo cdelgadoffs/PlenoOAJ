@@ -1734,7 +1734,7 @@ input[type="checkbox"] {
 }
 .ter-textarea {
   width: 100%;
-  min-height: 80px;
+  min-height: 90px;
   max-height: 140px;
   padding: 8px 10px;
   border: 1px solid #ccc;
@@ -1960,4 +1960,34 @@ input[type="checkbox"] {
 .btn-edit-asistente:hover {
   background: #3a3a3a;
   border-color: #777;
+}
+.ter-textarea-editable {
+  overflow-y: auto;
+  white-space: pre-wrap;
+  outline: none;
+  cursor: text;
+  background: #fff;
+}
+.ter-textarea-editable:empty:before {
+  content: attr(data-placeholder);
+  color: #aaa;
+}
+.ter-textarea-editable strong,
+.ter-textarea-editable b {
+  font-weight: 700;
+  color: #d32f2f;
+}
+.btn-ocultar-flotante {
+  background: #b20101;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  z-index: 10;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+.btn-ocultar-flotante:hover {
+  background: #111;
 }

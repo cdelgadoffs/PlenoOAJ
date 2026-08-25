@@ -17,7 +17,6 @@ function restaurarNombresPropios(texto) {
   });
   return resultado;
 }
-
 export function normalizarTexto(textoOriginal) {
   if (!textoOriginal) return '';
   const oraciones = textoOriginal
@@ -25,4 +24,8 @@ export function normalizarTexto(textoOriginal) {
     .map(capitalizarOracion)
     .join(' ');
   return restaurarNombresPropios(oraciones);
+}
+export function ocultarParaActa(texto) {
+  if (!texto) return texto;
+  return texto.replace(/\*\*(.+?)\*\*/g, (_, contenido) => contenido.replace(/\S/g, '*'));
 }

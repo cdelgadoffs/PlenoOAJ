@@ -1,0 +1,46 @@
+{
+  "hash": "6121c597",
+  "configHash": "81ca76a8",
+  "lockfileHash": "4c3911c1",
+  "browserHash": "9fe359c2",
+  "optimized": {
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "9ca07fb0",
+      "needsInterop": true
+    },
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "eb427b15",
+      "needsInterop": true
+    },
+    "@azure/msal-browser": {
+      "src": "../../node_modules/@azure/msal-browser/dist/index.mjs",
+      "file": "@azure_msal-browser.js",
+      "fileHash": "36712de2",
+      "needsInterop": false
+    },
+    "mammoth": {
+      "src": "../../node_modules/mammoth/lib/index.js",
+      "file": "mammoth.js",
+      "fileHash": "f9287eab",
+      "needsInterop": true
+    }
+  },
+  "chunks": {
+    "chunk-M7LXH26G": {
+      "file": "chunk-M7LXH26G.js"
+    },
+    "BrowserPerformanceMeasurement-HPDO2G6E": {
+      "file": "BrowserPerformanceMeasurement-HPDO2G6E.js"
+    },
+    "chunk-KTLROSOM": {
+      "file": "chunk-KTLROSOM.js"
+    },
+    "chunk-UP2VWCW5": {
+      "file": "chunk-UP2VWCW5.js"
+    }
+  }
+}
