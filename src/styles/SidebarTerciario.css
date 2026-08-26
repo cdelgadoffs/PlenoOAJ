@@ -1,0 +1,222 @@
+.sidebar-terciario {
+  width: 500px;
+  min-width: 500px;
+  border-right: 1px solid #d0d0d0;
+  background: #eaeaea;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  transition: width 0.2s ease, min-width 0.2s ease, opacity 0.2s ease;
+  overflow: hidden;
+}
+.sidebar-terciario.hidden {
+  width: 0;
+  min-width: 0;
+  border: none;
+  padding: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sidebar-terciario .btn-cancel,
+.sidebar-terciario .btn-confirm {
+  padding: 4px 16px;
+  border-radius: 4px;
+  border: none;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.sidebar-terciario .btn-cancel {
+  background: #f0f0f0;
+  color: #555;
+}
+.sidebar-terciario .btn-cancel:hover {
+  background: #e0e0e0;
+}
+.sidebar-terciario .btn-confirm {
+  background: #1a1a1a;
+  color: #fff;
+}
+.sidebar-terciario .btn-confirm:hover {
+  background: #333;
+}
+
+/* ===== Formulario de creación ===== */
+.ter-form {
+  padding: 14px 18px 18px;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+}
+.ter-field {
+  flex-shrink: 0;
+}
+.ter-field-grow {
+  flex-shrink: 0;
+}
+.ter-label {
+  font-weight: 600;
+  font-size: 11px;
+  color: #777;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  display: block;
+  margin-bottom: 6px;
+}
+.ter-select {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-family: inherit;
+  font-size: 13px;
+  background: #fff;
+}
+.ter-lista-dep {
+  flex: 0 0 110px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  background: #fff;
+  padding: 4px 0;
+}
+.ter-lista-dep::-webkit-scrollbar {
+  width: 4px;
+}
+.ter-lista-dep::-webkit-scrollbar-track {
+  background: transparent;
+}
+.ter-lista-dep::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 4px;
+}
+.ter-lista-dep::-webkit-scrollbar-thumb:hover {
+  background: #aaa;
+}
+.ter-dep-actual {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: #1a56db;
+  font-weight: 600;
+  text-align: center;
+  padding: 6px 8px;
+  background: #eaf1fd;
+  border-radius: 5px;
+}
+.ter-textarea {
+  width: 100%;
+  min-height: 90px;
+  max-height: 140px;
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-family: inherit;
+  font-size: 13px;
+  resize: vertical;
+}
+.ter-acciones {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+#listaDependencias {
+  flex: 0 0 100px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #fff;
+  padding: 2px 0;
+}
+.dep-item {
+  padding: 4px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #1a1a1a;
+  transition: background 0.15s, color 0.15s;
+  border-left: 2px solid transparent;
+}
+.dep-item:hover {
+  background: #e8f0fe;
+  color: #1a56db;
+}
+.dep-item.active {
+  background: #e8f0fe;
+  color: #1a56db;
+  font-weight: 500;
+  border-left-color: #1a56db;
+}
+
+.sidebar-terciario input[type="text"],
+.sidebar-terciario select,
+.sidebar-terciario textarea {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 13px;
+  background: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.sidebar-terciario input[type="text"]:focus,
+.sidebar-terciario select:focus,
+.sidebar-terciario textarea:focus {
+  border-color: #1a56db;
+  box-shadow: 0 0 0 2px rgba(26, 86, 219, 0.15);
+  outline: none;
+}
+
+/* ===== Editor ocultable (EditorOcultable.jsx vive dentro de este sidebar) ===== */
+.ter-textarea-editable {
+  overflow-y: auto;
+  white-space: pre-wrap;
+  outline: none;
+  cursor: text;
+  background: #fff;
+}
+.ter-textarea-editable:empty:before {
+  content: attr(data-placeholder);
+  color: #aaa;
+}
+.ter-textarea-editable strong,
+.ter-textarea-editable b {
+  font-weight: 700;
+  color: #d32f2f;
+}
+.btn-ocultar-flotante {
+  background: #b20101;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  z-index: 10;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+.btn-ocultar-flotante:hover {
+  background: #111;
+}
+
+@media (max-width: 1100px) {
+  .sidebar-terciario { width: 400px; min-width: 400px; }
+}
+@media (max-width: 900px) {
+  .sidebar-terciario { width: 300px; min-width: 300px; }
+}
+@media (max-width: 640px) {
+  .sidebar-terciario.hidden { display: none; }
+}
+@keyframes ter-cambio-seccion {
+  0% { opacity: 0.4; transform: translateX(-6px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+.ter-form {
+  animation: ter-cambio-seccion 0.25s ease;
+}

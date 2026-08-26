@@ -5,6 +5,7 @@ import Calendarizacion from './Calendarizacion.jsx';
 import Email from './Email.jsx';
 import Quorum from './Quorum.jsx';
 import Sync from './Sync.jsx';
+import '../styles/SidebarNuevo.css';
 
 export default function SidebarNuevo() {
   const { sidebarNuevoAbierto, sidebarNuevoAncho, setSidebarNuevoAncho, panelNuevoActivo, setPanelNuevoActivo } = useUI();

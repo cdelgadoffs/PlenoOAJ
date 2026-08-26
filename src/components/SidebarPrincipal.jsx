@@ -4,6 +4,7 @@ import { useProyecto } from '../context/ProyectoContext.jsx';
 import { usePermisos } from '../hooks/usePermisos.js';
 import { parsearFechaLocal } from '../utils/fechas.js';
 import { SECCIONES_DEL_DOCUMENTO, obtenerPuntosFiltrados } from '../utils/puntos.js';
+import '../styles/SidebarPrincipal.css';
 
 const VISTAS = [
   { id: 'inicio', label: 'Inicio' },
@@ -99,7 +100,6 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
                         data-seccion={sec}
                         onClick={(e) => { e.stopPropagation(); seleccionarSeccion(sec, conteo); }}
                       >
-                        <span className="nav-dot"></span>
                         <span className="sec-nombre">{nombre}</span>
                         <span className="sec-badge">{conteo}</span>
                         {puedeAgregar && (
@@ -108,10 +108,9 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
                             title={`Agregar punto a ${nombre}`}
                             onClick={(e) => {
                               e.stopPropagation();
-                              setSeccionActual(sec);
                               const pts = secciones.filter(s => s.seccion === sec);
                               setPuntoSeleccionadoId(pts.length > 0 ? pts[0].id : null);
-                              onAbrirCreacion();
+                              onAbrirCreacion(sec);
                             }}
                           >+</button>
                         )}

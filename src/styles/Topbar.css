@@ -1,0 +1,148 @@
+.topbar {
+  height: 52px;
+  min-height: 48px;
+  background: #1a1a1a;
+  color: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  flex-shrink: 0;
+  z-index: 1000;
+  border-bottom: 2px solid #2a2a2a;
+}
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.logo {
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: 0.5px;
+  color: #fff;
+}
+.btn-hamburguesa {
+  background: transparent;
+  border: none;
+  color: #f0f0f0;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+.btn-hamburguesa:hover {
+  background: rgba(255,255,255,0.1);
+}
+.topbar-right {
+  font-size: 14px;
+  color: #ccc;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.topbar-right span {
+  font-weight: 400;
+}
+.topbar-search {
+  width: 200px;
+  padding: 6px 12px;
+  padding-right: 30px;
+  border-radius: 6px;
+  border: 1px solid #3a3a3a;
+  background: #2a2a2a;
+  color: #f0f0f0;
+  font-size: 13px;
+  font-family: inherit;
+  transition: border-color 0.2s, width 0.2s;
+}
+.topbar-search::placeholder {
+  color: #888;
+}
+.topbar-search:focus {
+  outline: none;
+  border-color: #666;
+  width: 240px;
+}
+.btn-nuevo-proyecto-top {
+  display: flex;
+  align-items: center;
+  background: #2a2a2a;
+  color: #fff;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn-nuevo-proyecto-top:hover {
+  background: #3a3a3a;
+}
+.btn-nuevo-proyecto-top .btn-np-icon {
+  line-height: 1;
+}
+.btn-nuevo-proyecto-top .btn-np-label {
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  margin-left: 0;
+  transition: max-width 0.25s ease, opacity 0.2s ease, margin-left 0.25s ease;
+}
+.btn-nuevo-proyecto-top:hover .btn-np-label {
+  max-width: 160px;
+  opacity: 1;
+  margin-left: 6px;
+}
+.user-session {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 12px;
+  border-left: 1px solid #3a3a3a;
+}
+.user-nombre {
+  font-size: 13px;
+  color: #ddd;
+  font-weight: 500;
+}
+.btn-logout {
+  background: transparent;
+  border: 1px solid #3a3a3a;
+  color: #ccc;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-logout:hover {
+  background: rgba(255,255,255,0.1);
+}
+
+/* Buscador con botón de limpiar */
+.search-wrapper {
+  position: relative;
+  display: inline-block;
+}
+.clear-search-btn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #aaa;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 4px;
+  border-radius: 50%;
+  transition: color 0.2s, background 0.2s;
+}
+.clear-search-btn:hover {
+  color: #f0f0f0;
+  background: rgba(255,255,255,0.1);
+}

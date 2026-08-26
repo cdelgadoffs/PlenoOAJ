@@ -8,6 +8,7 @@ import { guardarArchivo, obtenerArchivo, eliminarArchivo } from '../utils/archiv
 import mammoth from 'mammoth';
 import { normalizarTexto } from '../utils/texto.js';
 import EditorOcultable from './EditorOcultable.jsx';
+import '../styles/SidebarTerciario.css';
 
 const REMITENTES_POR_CATEGORIA = {
   pleno: ['Pleno'],
@@ -68,6 +69,13 @@ export default function SidebarTerciario() {
       setPuntoEditandoId(null);
     }
   }, [vistaActual]);
+
+  useEffect(() => {
+    if (sidebarTerciarioAbierto && (seccionActual === 'aprobaciones' || seccionActual === 'asuntos generales')) {
+      setSidebarTerciarioAbierto(false);
+      setPuntoEditandoId(null);
+    }
+  }, [seccionActual]);
 
   if (!sidebarTerciarioAbierto) {
     return <aside className="sidebar-terciario hidden" id="sidebarTerciario"></aside>;
@@ -295,7 +303,7 @@ async function extraerTextoWord(file) {
       <div className="sb-header">
         <div className="sb-badge">{puntoEditandoId ? 'Editar punto' : 'Nuevo punto'}</div>
       </div>
-      <div className="ter-form">
+      <div className="ter-form" key={seccionActual}>
                 <div className="ter-field" style={{ display: 'flex', gap: '10px' }}>
           <div style={{ flex: '1' }}>
             <label className="ter-label">Categoría</label>

@@ -2,6 +2,7 @@ import { useUI } from '../context/UIContext.jsx';
 import { useProyecto } from '../context/ProyectoContext.jsx';
 import { getTituloPunto, formatearFechaES } from '../utils/fechas.js';
 import { SECCIONES_DEL_DOCUMENTO, obtenerPuntosFiltrados } from '../utils/puntos.js';
+import '../styles/PanelPrincipal.css';
 
 function TarjetaPunto({ sec, idx, puedeSubir, puedeBajar, esSeleccionada, onSeleccionar, onMover, onEditar, onEliminar, onToggleAnexo, onPreviewArchivo, onAdjuntar }) {
   const titulo = getTituloPunto(sec, idx);

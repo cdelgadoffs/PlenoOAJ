@@ -1,0 +1,117 @@
+.cinta-sesiones-wrap {
+  background: #fafafa;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 10px 24px;
+  flex-shrink: 0;
+  overflow-x: auto;
+}
+.cinta-sesiones-wrap.hidden {
+  display: none;
+}
+.cinta-sesiones {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cinta-nav {
+  background: transparent;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 2px 10px;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1.4;
+  color: #555;
+  transition: background 0.2s;
+}
+.cinta-nav:hover {
+  background: #e8e8e8;
+}
+.cinta-nav-group {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.cinta-mes {
+  font-weight: 600;
+  font-size: 14px;
+  color: #1a1a1a;
+  min-width: 100px;
+  text-align: center;
+}
+.cinta-fechas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.badge-sesion {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 11.5px;
+  font-weight: 500;
+  background: #e8e8e8;
+  color: #555;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+  font-family: 'DM Mono', monospace;
+}
+.badge-sesion:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+.badge-sesion.celebrada {
+  background: #c8e6c9;
+  color: #2e7d32;
+  border-color: #a5d6a7;
+}
+.badge-sesion.proxima {
+  background: #bbdefb;
+  color: #1565c0;
+  border-color: #64b5f6;
+  font-weight: 700;
+}
+.badge-sesion.no-celebrada {
+  background: #ffcdd2;
+  color: #c62828;
+  border-color: #ef9a9a;
+}
+.badge-sesion.pendiente {
+  background: #e0e0e0;
+  color: #666;
+  border-color: #ccc;
+}
+.badge-sesion.activa-seleccionada {
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 5px 14px;
+  margin: 0 6px;
+  transform: scale(1.05);
+}
+.badge-sesion.activa-seleccionada:hover {
+  transform: scale(1.08);
+}
+.badge-sesion.extraordinaria {
+  border-radius: 999px;
+}
+
+/* Modo formulario: ocultar navegación y badges, mostrar título */
+.cinta-sesiones-wrap.modo-formulario .cinta-nav-group,
+.cinta-sesiones-wrap.modo-formulario .cinta-mes,
+.cinta-sesiones-wrap.modo-formulario .cinta-fechas {
+  display: none;
+}
+.cinta-sesiones-wrap.modo-formulario .cinta-titulo-sesion {
+  display: block !important;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1a1a;
+  text-align: center;
+  flex: 1;
+}
+.cinta-sesiones-wrap.modo-formulario {
+  padding: 10px 24px;
+  background: #fafafa;
+}
