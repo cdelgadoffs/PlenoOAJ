@@ -1991,3 +1991,81 @@ input[type="checkbox"] {
 .btn-ocultar-flotante:hover {
   background: #111;
 }
+.nav-chevron {
+  margin-left: auto;
+  transform: rotate(90deg);
+  transition: transform 0.15s ease;
+  font-size: 14px;
+  color: #888;
+}
+.nav-chevron.expanded {
+  transform: rotate(-90deg);
+}
+.nav-acordeon {
+  padding-left: 20px;
+  border-left: 2px solid #eee;
+  margin: 2px 0 6px 16px;
+}
+.nav-acordeon-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+}
+.nav-acordeon-titulo {
+  font-size: 11px;
+  font-weight: 600;
+  color: #888;
+  text-transform: uppercase;
+}
+.nav-acordeon-subtitle {
+  font-size: 11px;
+  color: #999;
+  padding: 4px 8px;
+}
+.nav-subitem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  cursor: pointer;
+  
+  font-size: 13px;
+}
+.nav-subitem:hover {
+  background: #f2f2f2;
+}
+.nav-subitem.active {
+  background: #e8e8e8;
+  font-weight: 600;
+}
+.nav-subitem {
+  position: relative;
+}
+.btn-add-subitem {
+  display: none;
+  margin-left: 4px;
+  width: 18px;
+  height: 18px;
+  line-height: 16px;
+  text-align: center;
+  border: none;
+  border-radius: 20%;
+  background: #333;
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+.nav-subitem:hover .btn-add-subitem {
+  display: inline-block;
+}
+.btn-add-subitem:hover {
+  background: #111;
+}
+@media (hover: none) {
+  .btn-add-subitem {
+    display: inline-block;
+  }
+}

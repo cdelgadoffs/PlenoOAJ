@@ -35,7 +35,7 @@ const estadoVacio = {
 };
 
 export default function SidebarTerciario() {
-  const { sidebarTerciarioAbierto, setSidebarTerciarioAbierto } = useUI();
+  const { sidebarTerciarioAbierto, setSidebarTerciarioAbierto, vistaActual } = useUI();
   const { secciones, seccionActual, puntoEditandoId, setPuntoEditandoId, agregarPunto, editarPuntoExistente, setPuntoSeleccionadoId, proyectoMeta, setOneDriveFolder } = useProyecto();
   const { obtenerAccessToken } = useAuth();
   const [form, setForm] = useState(estadoVacio);
@@ -61,6 +61,13 @@ export default function SidebarTerciario() {
     }
     setOneDriveStatus('');
   }, [sidebarTerciarioAbierto, puntoEditandoId]);
+
+  useEffect(() => {
+    if (vistaActual !== 'proyecto' && sidebarTerciarioAbierto) {
+      setSidebarTerciarioAbierto(false);
+      setPuntoEditandoId(null);
+    }
+  }, [vistaActual]);
 
   if (!sidebarTerciarioAbierto) {
     return <aside className="sidebar-terciario hidden" id="sidebarTerciario"></aside>;

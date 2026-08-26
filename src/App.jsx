@@ -50,7 +50,17 @@ export default function App() {
         <CintaSesiones />
         <div className="shell">
           <SidebarNuevo />
-          <SidebarPrincipal totalPuntos={secciones.length} onGenerarPDF={() => generarPDFConPrint(secciones, proyectoMeta)} />
+          <SidebarPrincipal
+            totalPuntos={secciones.length}
+            onGenerarPDF={() => generarPDFConPrint(secciones, proyectoMeta)}
+            onAbrirCreacion={() => {
+              if (secciones.length === 0) { alert('Primero genera un proyecto.'); return; }
+              if (seccionActual === 'asuntos generales') { alert('No se pueden agregar puntos a Asuntos generales.'); return; }
+              if (seccionActual === 'aprobaciones') { setModalActivo('acta'); return; }
+              setPuntoEditandoId(null);
+              setSidebarTerciarioAbierto(true);
+            }}
+          />
           <SidebarSecundario onAbrirCreacion={() => {
             if (secciones.length === 0) { alert('Primero genera un proyecto.'); return; }
             if (seccionActual === 'asuntos generales') { alert('No se pueden agregar puntos a Asuntos generales.'); return; }

@@ -44,7 +44,7 @@ export default function SidebarDerecho() {
         <nav className="sb-nav" id="navEsquema">
           {puntosBase.length === 0 && (
             <div style={{ padding: '20px', color: '#999', fontSize: '13px' }}>
-              {filtroActual ? 'No hay puntos con esa dependencia.' : 'No hay puntos para mostrar.'}
+              {filtroDependencia ? 'No hay puntos con esa dependencia.' : 'No hay puntos para mostrar.'}
             </div>
           )}
           {puntosBase.map(sec => {
