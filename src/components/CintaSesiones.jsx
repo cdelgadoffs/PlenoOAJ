@@ -3,6 +3,7 @@ import { useUI } from '../context/UIContext.jsx';
 import { useProyecto } from '../context/ProyectoContext.jsx';
 import { formatearFechaCorta, hoyLocalISO, formatearFechaES } from '../utils/fechas.js';
 import { obtenerSesionesDelMes } from '../utils/calendario.js';
+import '../styles/CintaSesiones.css';
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 

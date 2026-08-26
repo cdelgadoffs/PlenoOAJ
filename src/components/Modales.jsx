@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useUI } from '../context/UIContext.jsx';
 import { useProyecto } from '../context/ProyectoContext.jsx';
-//import { hoyLocalISO, calcularFechaAnterior } from '../utils/fechas.js';
 import { guardarArchivo, obtenerURLArchivo } from '../utils/archivosDB.js';
-import { hoyLocalISO, calcularFechaAnterior, obtenerFechasDisponiblesExtraordinaria } from '../utils/fechas.js';
+import { obtenerFechasDisponiblesExtraordinaria, hoyLocalISO } from '../utils/fechas.js';
+/*import { hoyLocalISO, calcularFechaAnterior, obtenerFechasDisponiblesExtraordinaria } from '../utils/fechas.js';*/
 
-function ModalActa() {
+/*function ModalActa() {
   const { modalActivo, setModalActivo } = useUI();
   const { proyectoMeta, agregarActa } = useProyecto();
   const [tipo, setTipo] = useState('Ordinaria');
@@ -41,7 +41,7 @@ function ModalActa() {
       </div>
     </div>
   );
-}
+}*/
 
 function ModalNuevoProyecto() {
   const { modalActivo, setModalActivo, setVistaActual } = useUI();
@@ -207,7 +207,6 @@ function ModalAdjuntar() {
 export default function Modales() {
   return (
     <>
-      <ModalActa />
       <ModalNuevoProyecto />
       <ModalPrevisualizacion />
       <ModalAdjuntar />

@@ -1,0 +1,235 @@
+.sidebar-nuevo {
+  position: fixed;
+  left: 0;
+  top: 52px;
+  width: 300px;
+  height: calc(100vh - 52px);
+  background: #1a1a1a;
+  color: #f0f0f0;
+  z-index: 999;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease, width 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 2px 0 12px rgba(0,0,0,0.3);
+  border-right: 1px solid #333;
+}
+.sidebar-nuevo.ancho {
+  width: 420px;
+}
+.sidebar-nuevo.open {
+  transform: translateX(0);
+}
+.sidebar-nuevo .sb-header {
+  border-bottom: 1px solid #333;
+  padding: 16px 20px;
+}
+.sidebar-nuevo .sb-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #fff;
+}
+.sidebar-nuevo .sb-subtitle {
+  font-size: 13px;
+  color: #aaa;
+}
+.sidebar-nuevo .sb-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+.sidebar-nuevo .sb-nav ul {
+  list-style: none;
+  padding: 0;
+}
+.sidebar-nuevo .sb-nav li {
+  padding: 10px 0;
+  border-bottom: 1px solid #333;
+  color: #ddd;
+  font-size: 14px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.sidebar-nuevo .sb-nav li:hover {
+  color: #fff;
+}
+.sidebar-nuevo .sb-header .btn-add {
+  background: transparent;
+  border: 1px solid #444;
+  color: #ccc;
+  font-size: 18px;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.sidebar-nuevo .sb-header .btn-add:hover {
+  background: #333;
+  border-color: #666;
+  color: #fff;
+}
+.sidebar-nuevo .sb-header .btn-add.oculto {
+  display: none !important;
+}
+
+.btn-volver-nuevo {
+  background: none;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #ccc;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 12px;
+  transition: all 0.15s;
+  margin-bottom: 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-volver-nuevo:hover {
+  background: #333;
+  border-color: #666;
+  color: #fff;
+}
+
+.sb-header-nuevo {
+  border-bottom-color: #333;
+}
+.sb-title-nuevo {
+  color: #fff;
+}
+.sb-subtitle-nuevo {
+  color: #aaa;
+  word-break: break-word;
+}
+.nuevo-panel {
+  padding: 20px;
+  color: #ccc;
+}
+.nuevo-panel.hidden {
+  display: none;
+}
+.nuevo-menu-list {
+  list-style: none;
+}
+.nuevo-menu-item {
+  padding: 10px 0;
+  border-bottom: 1px solid #333;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.nuevo-menu-item:hover {
+  color: #fff;
+}
+
+/* ===== Panel Calendarización: control anual ===== */
+.control-anual-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.control-item {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 0.5fr auto;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: #2a2a2a;
+  font-size: 12px;
+  color: #ddd;
+  border-left: 3px solid #555;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.control-item:hover {
+  background: #3a3a3a;
+}
+.control-item.celebrada { border-left-color: #4caf50; }
+.control-item.no-celebrada { border-left-color: #f44336; }
+.control-item.proxima { border-left-color: #ffc107; font-weight: 600; background: #3a3a3a; }
+.control-item.pendiente { border-left-color: #888; }
+.control-item .control-fecha { font-weight: 500; }
+.control-item .control-tipo { color: #aaa; font-size: 11px; }
+.control-item .control-puntos { text-align: right; }
+.control-item .control-estado { text-align: right; font-size: 11px; }
+.btn-eliminar-sesion {
+  background: transparent;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  padding: 0 4px;
+  transition: color 0.15s;
+}
+.btn-eliminar-sesion:hover {
+  color: #b91c1c;
+}
+.control-resumen {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: #aaa;
+  margin: 8px 0 4px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.control-resumen span { font-weight: 600; color: #fff; }
+
+/* ===== Panel Email: estado de subida a OneDrive (reutilizado por SidebarTerciario) ===== */
+.onedrive-status {
+  font-size: 11.5px;
+  margin-top: 6px;
+  min-height: 14px;
+}
+.onedrive-status.subiendo {
+  color: #1a56db;
+}
+.onedrive-status.ok {
+  color: #2e7d32;
+}
+.onedrive-status.error {
+  color: #b91c1c;
+}
+
+/* ===== Panel Quórum ===== */
+#panelQuorum .email-invitado-input {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+#panelQuorum .email-invitado-input input {
+  flex: 1 1 100px;
+  min-width: 80px;
+}
+#panelQuorum .email-invitado-input .btn-add-invitado {
+  flex: 0 0 auto;
+}
+#panelQuorum .email-invitados-lista {
+  margin-top: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+#panelQuorum input, #panelQuorum select {
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  color: #f0f0f0;
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 12.5px;
+}
+#panelQuorum input::placeholder {
+  color: #777;
+}
+.btn-edit-asistente:hover {
+  background: #3a3a3a;
+  border-color: #777;
+}

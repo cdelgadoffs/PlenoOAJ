@@ -1,6 +1,7 @@
 import { useAuth } from '../context/AuthContext.jsx';
 import { useUI } from '../context/UIContext.jsx';
 import { usePermisos } from '../hooks/usePermisos.js';
+import '../styles/Topbar.css';
 
 export default function Topbar({ fechaActualTexto, onToggleSidebarNuevo, onNuevoProyecto }) {
   const { cuentaActiva, cerrarSesion } = useAuth();

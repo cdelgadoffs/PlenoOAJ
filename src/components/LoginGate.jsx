@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
-import './LoginGate.css';
+import '../styles/LoginGate.css';
 
 export default function LoginGate() {
   const { cuentaActiva, cargando, error, msalListo, iniciarSesion } = useAuth();

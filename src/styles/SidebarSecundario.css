@@ -1,0 +1,29 @@
+.sidebar-secundario {
+  width: 220px;
+  min-width: 220px;
+  border-right: 1px solid #e8e8e8;
+  background: #fafafa;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  transition: width 0.2s ease, min-width 0.2s ease, opacity 0.2s ease;
+  overflow: hidden;
+}
+.sidebar-secundario.hidden {
+  width: 0;
+  min-width: 0;
+  border: none;
+  padding: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (max-width: 900px) {
+  .sidebar-secundario { width: 180px; min-width: 180px; }
+}
+@media (max-width: 640px) {
+  .sidebar-secundario {
+    width: 100%; min-width: unset; border-right: none; border-bottom: 1px solid #d0d0d0; max-height: 200px; overflow-y: auto;
+  }
+}

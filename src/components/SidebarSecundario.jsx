@@ -2,6 +2,7 @@ import { useUI } from '../context/UIContext.jsx';
 import { useProyecto } from '../context/ProyectoContext.jsx';
 import { SECCIONES_DEL_DOCUMENTO, obtenerPuntosFiltrados } from '../utils/puntos.js';
 import { getTituloPunto } from '../utils/fechas.js';
+import '../styles/SidebarSecundario.css';
 
 export default function SidebarSecundario({ onAbrirCreacion }) {
   const { vistaActual, terminoBusqueda } = useUI();

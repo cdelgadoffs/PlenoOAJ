@@ -3,6 +3,7 @@ import { useUI } from '../context/UIContext.jsx';
 import { useProyecto } from '../context/ProyectoContext.jsx';
 import { getTituloPunto } from '../utils/fechas.js';
 import { obtenerPuntosFiltrados } from '../utils/puntos.js';
+import '../styles/SidebarDerecho.css';
 
 export default function SidebarDerecho() {
   const { vistaActual, terminoBusqueda, sidebarDerechoAbierto, setSidebarDerechoAbierto } = useUI();

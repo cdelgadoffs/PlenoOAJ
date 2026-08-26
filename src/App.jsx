@@ -18,7 +18,7 @@ import Modales from './components/Modales.jsx';
 export default function App() {
   const { cuentaActiva } = useAuth();
   const { sidebarNuevoAbierto, setSidebarNuevoAbierto, setSidebarTerciarioAbierto, setModalActivo, vistaActual, setVistaActual } = useUI();
-  const { secciones, seccionActual, proyectoMeta, setPuntoEditandoId } = useProyecto();
+  const { secciones, seccionActual, setSeccionActual, proyectoMeta, setPuntoEditandoId } = useProyecto();
   const { esLector } = usePermisos();
   const [fechaActualTexto, setFechaActualTexto] = useState('');
 
@@ -38,6 +38,15 @@ export default function App() {
     setFechaActualTexto(ahora.toLocaleDateString('es-ES', opciones));
   }, []);
 
+  function crearPuntoValidado(sec) {
+    const destino = sec || seccionActual;
+    if (secciones.length === 0) { alert('Primero genera un proyecto.'); return; }
+    if (destino === 'asuntos generales' || destino === 'aprobaciones') { alert('No se pueden agregar puntos a esta sección.'); return; }
+    setSeccionActual(destino);
+    setPuntoEditandoId(null);
+    setSidebarTerciarioAbierto(true);
+  }
+
   return (
     <>
       <LoginGate />
@@ -53,21 +62,9 @@ export default function App() {
           <SidebarPrincipal
             totalPuntos={secciones.length}
             onGenerarPDF={() => generarPDFConPrint(secciones, proyectoMeta)}
-            onAbrirCreacion={() => {
-              if (secciones.length === 0) { alert('Primero genera un proyecto.'); return; }
-              if (seccionActual === 'asuntos generales') { alert('No se pueden agregar puntos a Asuntos generales.'); return; }
-              if (seccionActual === 'aprobaciones') { setModalActivo('acta'); return; }
-              setPuntoEditandoId(null);
-              setSidebarTerciarioAbierto(true);
-            }}
+            onAbrirCreacion={crearPuntoValidado}
           />
-          <SidebarSecundario onAbrirCreacion={() => {
-            if (secciones.length === 0) { alert('Primero genera un proyecto.'); return; }
-            if (seccionActual === 'asuntos generales') { alert('No se pueden agregar puntos a Asuntos generales.'); return; }
-            if (seccionActual === 'aprobaciones') { setModalActivo('acta'); return; }
-            setPuntoEditandoId(null);
-            setSidebarTerciarioAbierto(true);
-          }} />
+          <SidebarSecundario onAbrirCreacion={crearPuntoValidado} />
           <SidebarTerciario />
           <PanelPrincipal onEditarPunto={(id) => { setPuntoEditandoId(id); setSidebarTerciarioAbierto(true); }} />
           <SidebarDerecho />
