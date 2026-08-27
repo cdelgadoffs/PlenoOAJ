@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useUI } from '../context/UIContext.jsx';
 import { useProyecto } from '../context/ProyectoContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -9,6 +9,12 @@ import mammoth from 'mammoth';
 import { normalizarTexto } from '../utils/texto.js';
 import EditorOcultable from './EditorOcultable.jsx';
 import '../styles/SidebarTerciario.css';
+
+const CATEGORIAS = [
+  { id: 'pleno', label: 'Pleno' },
+  { id: 'direcciones', label: 'Direcciones generales' },
+  { id: 'comisiones', label: 'Comisiones' }
+];
 
 const REMITENTES_POR_CATEGORIA = {
   pleno: ['Pleno'],
@@ -34,6 +40,76 @@ const estadoVacio = {
   acuerdo: '',
   archivos: []
 };
+
+function DropdownSelect({ valorActual, etiquetaActual, opciones, onSeleccionar }) {
+  const [abierto, setAbierto] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
+  const botonRef = useRef(null);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    function manejarClickFuera(e) {
+      if (
+        menuRef.current && !menuRef.current.contains(e.target) &&
+        botonRef.current && !botonRef.current.contains(e.target)
+      ) setAbierto(false);
+    }
+    document.addEventListener('mousedown', manejarClickFuera);
+    return () => document.removeEventListener('mousedown', manejarClickFuera);
+  }, []);
+
+  useEffect(() => {
+    if (!abierto) return;
+    function cerrarPorScrollOResize(e) {
+      if (menuRef.current && menuRef.current.contains(e.target)) return;
+      setAbierto(false);
+    }
+    window.addEventListener('scroll', cerrarPorScrollOResize, true);
+    window.addEventListener('resize', cerrarPorScrollOResize);
+    return () => {
+      window.removeEventListener('scroll', cerrarPorScrollOResize, true);
+      window.removeEventListener('resize', cerrarPorScrollOResize);
+    };
+  }, [abierto]);
+
+  function toggle() {
+    if (!abierto && botonRef.current) {
+      const rect = botonRef.current.getBoundingClientRect();
+      setPos({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+    }
+    setAbierto(v => !v);
+  }
+
+  return (
+    <>
+      <div
+        ref={botonRef}
+        className={'ter-select dropdown-toggle' + (abierto ? ' abierto' : '')}
+        onClick={toggle}
+      >
+        {etiquetaActual}
+        <span className="dropdown-chevron">▾</span>
+      </div>
+      {abierto && (
+        <div
+          ref={menuRef}
+          className="dropdown-menu"
+          style={{ top: pos.top, left: pos.left, minWidth: pos.width }}
+        >
+          {opciones.map(op => (
+            <div
+              key={op.id}
+              className={'dropdown-item' + (op.id === valorActual ? ' activo' : '')}
+              onClick={() => { onSeleccionar(op.id); setAbierto(false); }}
+            >
+              {op.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
 
 export default function SidebarTerciario() {
   const { sidebarTerciarioAbierto, setSidebarTerciarioAbierto, vistaActual } = useUI();
@@ -81,7 +157,8 @@ export default function SidebarTerciario() {
     return <aside className="sidebar-terciario hidden" id="sidebarTerciario"></aside>;
   }
 
-  const opcionesRemitente = REMITENTES_POR_CATEGORIA[form.categoria] || ['Pleno'];
+  const opcionesRemitente = (REMITENTES_POR_CATEGORIA[form.categoria] || ['Pleno']).map(id => ({ id, label: id }));
+  const categoriaActual = CATEGORIAS.find(c => c.id === form.categoria) || CATEGORIAS[0];
 
   function cambiarCategoria(categoria) {
     const opciones = REMITENTES_POR_CATEGORIA[categoria] || ['Pleno'];
@@ -211,14 +288,6 @@ async function extraerTextoWord(file) {
   }
 
   function eliminarArchivoTemporal(idx) {
-    setForm(f => {
-      const archivo = f.archivos[idx];
-      if (archivo) eliminarArchivo(archivo.id).catch(() => {});
-      return { ...f, archivos: f.archivos.filter((_, i) => i !== idx) };
-    });
-  }
-
-  function eliminarArchivoTemporal(idx) {
     setForm(f => ({ ...f, archivos: f.archivos.filter((_, i) => i !== idx) }));
   }
 
@@ -304,20 +373,24 @@ async function extraerTextoWord(file) {
         <div className="sb-badge">{puntoEditandoId ? 'Editar punto' : 'Nuevo punto'}</div>
       </div>
       <div className="ter-form" key={seccionActual}>
-                <div className="ter-field" style={{ display: 'flex', gap: '10px' }}>
+        <div className="ter-field" style={{ display: 'flex', gap: '10px' }}>
           <div style={{ flex: '1' }}>
             <label className="ter-label">Categoría</label>
-            <select id="filtroDependencia" className="ter-select" value={form.categoria} onChange={(e) => cambiarCategoria(e.target.value)}>
-              <option value="pleno">Pleno</option>
-              <option value="direcciones">Direcciones generales</option>
-              <option value="comisiones">Comisiones</option>
-            </select>
+            <DropdownSelect
+              valorActual={categoriaActual.id}
+              etiquetaActual={categoriaActual.label}
+              opciones={CATEGORIAS}
+              onSeleccionar={cambiarCategoria}
+            />
           </div>
           <div style={{ flex: '1' }}>
             <label className="ter-label">Remitente</label>
-            <select id="remitenteSelect" className="ter-select" value={form.remitente} onChange={(e) => setForm(f => ({ ...f, remitente: e.target.value }))}>
-              {opcionesRemitente.map(op => <option key={op} value={op}>{op}</option>)}
-            </select>
+            <DropdownSelect
+              valorActual={form.remitente}
+              etiquetaActual={form.remitente}
+              opciones={opcionesRemitente}
+              onSeleccionar={(id) => setForm(f => ({ ...f, remitente: id }))}
+            />
           </div>
         </div>
         <div className="ter-field">
@@ -358,7 +431,7 @@ async function extraerTextoWord(file) {
             placeholder="Acuerdos"
           />
         </div>
-        
+
         <div className="ter-acciones">
           <button className="btn-cancel" id="btnCancelarCreacion" onClick={cerrar}>Cancelar</button>
           <button className="btn-confirm" id="btnConfirmarCreacion" onClick={confirmar}>{puntoEditandoId ? 'Guardar cambios' : 'Añadir'}</button>
