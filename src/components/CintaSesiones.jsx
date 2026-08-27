@@ -97,12 +97,12 @@ export default function CintaSesiones() {
         </div>
         <div
           ref={botonRef}
-          className={'cinta-mes cinta-mes-desplegable' + (menuAbierto ? ' abierto' : '')}
+          className={'cinta-mes dropdown-toggle' + (menuAbierto ? ' abierto' : '')}
           id="cintaMesLabel"
           onClick={toggleMenu}
         >
           {mesLabel}
-          <span className="cinta-mes-chevron">▾</span>
+          <span className="dropdown-chevron">▾</span>
         </div>
         <div
           className="cinta-titulo-sesion"
@@ -153,7 +153,7 @@ export default function CintaSesiones() {
       {menuAbierto && (
         <div
           ref={menuRef}
-          className="cinta-mes-menu"
+          className="dropdown-menu"
           style={{ top: menuPos.top, left: menuPos.left }}
         >
           {mesesDisponibles.map(m => {
@@ -162,7 +162,7 @@ export default function CintaSesiones() {
             return (
               <div
                 key={m}
-                className={'cinta-mes-item' + (activo ? ' activo' : '')}
+                className={'dropdown-item' + (activo ? ' activo' : '')}
                 onClick={() => seleccionarMes(m)}
               >
                 {MESES[parseInt(me, 10) - 1]} {a}
