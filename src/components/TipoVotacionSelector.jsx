@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import DropdownSelect from './DropdownSelect.jsx';
+import '../styles/TipoVotacionSelector.css';
 
 const CATALOGO = {
   voto: [
@@ -17,126 +19,149 @@ const CATALOGO = {
   ]
 };
 
-// Mapeo de valores antiguos a los nuevos (para compatibilidad)
 const MAPEO_ANTIGUO = {
-  'Económica': { voto: 0, votacion: 0, estado: true },
-  'Nominal': { voto: 0, votacion: 1, estado: true },
-  'Cédula': { voto: 0, votacion: 1, estado: true }
+  'Económica': { voto: 0, votacion: 0, estado: true, quorum: [] },
+  'Nominal': { voto: 0, votacion: 1, estado: true, quorum: [] },
+  'Cédula': { voto: 0, votacion: 1, estado: true, quorum: [] }
 };
 
+const NOMBRES_FICTICIOS = ['Persona 1', 'Persona 2', 'Persona 3', 'Persona 4', 'Persona 5'];
+
 function TipoVotacionSelector({ value, onChange }) {
-  // Parsear el value (string JSON) o usar defaults
   const parseValue = (val) => {
-    if (!val) return { voto: 0, votacion: 0, estado: true };
+    if (!val) return { voto: 0, votacion: 0, estado: true, quorum: [] };
     try {
       const parsed = JSON.parse(val);
-      if (parsed && typeof parsed.voto === 'number' && typeof parsed.votacion === 'number' && typeof parsed.estado === 'boolean') {
-        return parsed;
-      }
-      // Si falta estado, lo añadimos por defecto
       if (parsed && typeof parsed.voto === 'number' && typeof parsed.votacion === 'number') {
-        return { ...parsed, estado: true };
+        return {
+          voto: parsed.voto,
+          votacion: parsed.votacion,
+          estado: typeof parsed.estado === 'boolean' ? parsed.estado : true,
+          quorum: Array.isArray(parsed.quorum) ? parsed.quorum : []
+        };
       }
     } catch (e) {
-      // Si no es JSON, puede ser un valor antiguo
-      if (MAPEO_ANTIGUO[val]) {
-        return MAPEO_ANTIGUO[val];
-      }
+      if (MAPEO_ANTIGUO[val]) return MAPEO_ANTIGUO[val];
     }
-    return { voto: 0, votacion: 0, estado: true };
+    return { voto: 0, votacion: 0, estado: true, quorum: [] };
   };
 
   const [estado, setEstado] = useState(() => parseValue(value));
 
-  // Actualizar estado interno si el value externo cambia
   useEffect(() => {
     const nuevo = parseValue(value);
-    if (nuevo.voto !== estado.voto || nuevo.votacion !== estado.votacion || nuevo.estado !== estado.estado) {
+    if (
+      nuevo.voto !== estado.voto ||
+      nuevo.votacion !== estado.votacion ||
+      nuevo.estado !== estado.estado ||
+      JSON.stringify(nuevo.quorum) !== JSON.stringify(estado.quorum)
+    ) {
       setEstado(nuevo);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
-  const handleVotoChange = (e) => {
-    const voto = parseInt(e.target.value, 10);
-    const nuevoEstado = { ...estado, voto };
+  function emitir(nuevoEstado) {
     setEstado(nuevoEstado);
     onChange(JSON.stringify(nuevoEstado));
-  };
+  }
 
-  const handleVotacionChange = (e) => {
-    const votacion = parseInt(e.target.value, 10);
-    const nuevoEstado = { ...estado, votacion };
-    setEstado(nuevoEstado);
-    onChange(JSON.stringify(nuevoEstado));
-  };
+  function handleVotoSeleccionado(valor) {
+    // al cambiar el tipo de voto, reiniciamos el quórum seleccionado
+    emitir({ ...estado, voto: valor, quorum: [] });
+  }
 
-  const toggleEstado = () => {
-    const nuevoEstado = { ...estado, estado: !estado.estado };
-    setEstado(nuevoEstado);
-    onChange(JSON.stringify(nuevoEstado));
-  };
+  function toggleVotacion() {
+    if (esRetirar) return;
+    const nuevaVotacion = estado.votacion === 0 ? 1 : 0;
+    emitir({ ...estado, votacion: nuevaVotacion });
+  }
+
+  function toggleEstado() {
+    emitir({ ...estado, estado: !estado.estado });
+  }
+
+  function toggleQuorum(nombre) {
+    const yaSeleccionado = estado.quorum.includes(nombre);
+    if (yaSeleccionado) {
+      emitir({ ...estado, quorum: estado.quorum.filter(n => n !== nombre) });
+      return;
+    }
+    if (estado.quorum.length >= maxQuorum) return;
+    emitir({ ...estado, quorum: [...estado.quorum, nombre] });
+  }
 
   const opcionVoto = CATALOGO.voto.find(v => v.valor === estado.voto) || CATALOGO.voto[0];
   const requiereQuorum = opcionVoto.requiereQuorum || false;
   const esRetirar = estado.voto === 3;
-
-  // Colores para el botón de estado
-  const botonColor = estado.estado ? '#a5d6a7' : '#90caf9'; // verde suave / azul
+  const maxQuorum = estado.voto === 1 ? 1 : (estado.voto === 2 ? 2 : 0);
 
   return (
-    <div className="ter-field" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-      <div style={{ flex: '1 1 30%' }}>
+    <div className="ter-field votacion-selector">
+      <div className="campo-voto">
         <label className="ter-label">Voto</label>
-        <select className="ter-select" value={estado.voto} onChange={handleVotoChange}>
-          {CATALOGO.voto.map(op => (
-            <option key={op.valor} value={op.valor}>
-              {op.etiqueta}
-            </option>
-          ))}
-        </select>
-        {requiereQuorum && (
-          <div style={{ fontSize: '12px', color: '#d32f2f', marginTop: '4px' }}>
-            ⚠️ Requiere quórum
-          </div>
-        )}
-        {esRetirar && (
-          <div style={{ fontSize: '12px', color: '#1976d2', marginTop: '4px' }}>
-            No aplica votación
-          </div>
+        <DropdownSelect
+          valorActual={estado.voto}
+          etiquetaActual={opcionVoto.etiqueta}
+          opciones={CATALOGO.voto.map(op => ({ id: op.valor, label: op.etiqueta }))}
+          onSeleccionar={handleVotoSeleccionado}
+        />
+      </div>
+
+      <div className="campo-voto">
+        <label className="ter-label ter-label-invisible">Votación</label>
+        {requiereQuorum ? (
+          <span className={'badge-quorum-requerido' + (estado.quorum.length >= maxQuorum ? ' completo' : '')}>
+            {estado.quorum.length >= maxQuorum
+              ? estado.quorum.join(', ')
+              : `Requiere ${maxQuorum} voto${maxQuorum === 1 ? '' : 's'}`}
+          </span>
+        ) : (
+          <button
+            type="button"
+            className={'btn-votacion' + (esRetirar ? ' disabled' : (estado.votacion === 0 ? ' votacion-economica' : ' votacion-concurrente'))}
+            disabled={esRetirar}
+            onClick={toggleVotacion}
+          >
+            {esRetirar ? 'No aplica votación' : CATALOGO.votacion.find(v => v.valor === estado.votacion)?.etiqueta}
+          </button>
         )}
       </div>
-      <div style={{ flex: '1 1 30%' }}>
-        <label className="ter-label">Votación</label>
-        <select className="ter-select" value={estado.votacion} onChange={handleVotacionChange} disabled={esRetirar}>
-          {CATALOGO.votacion.map(op => (
-            <option key={op.valor} value={op.valor}>
-              {op.etiqueta}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div style={{ flex: '0 0 auto' }}>
-        <label className="ter-label">Estado</label>
+
+      <div className="campo-estado">
+        <label className="ter-label ter-label-invisible">Estado</label>
         <button
-          className="btn-estado"
-          style={{
-            backgroundColor: botonColor,
-            fontWeight: 'bold',
-            border: 'none',
-            padding: '6px 12px',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            transition: 'background-color 0.2s, transform 0.1s',
-            display: 'block',
-            marginTop: '2px'
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
-          onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+          className={'btn-estado ' + (estado.estado ? 'estado-aprueba' : 'estado-acuerda')}
           onClick={toggleEstado}
         >
           {estado.estado ? 'aprueba' : 'acuerda'}
         </button>
       </div>
+
+      {requiereQuorum && (
+        <div className="quorum-lista-wrap">
+          <label className="ter-label">
+            Quórum ({estado.quorum.length}/{maxQuorum})
+          </label>
+          <div className="quorum-lista">
+            {NOMBRES_FICTICIOS.map(nombre => {
+              const marcado = estado.quorum.includes(nombre);
+              const bloqueado = !marcado && estado.quorum.length >= maxQuorum;
+              return (
+                <label key={nombre} className={'quorum-item' + (bloqueado ? ' bloqueado' : '')}>
+                  <input
+                    type="checkbox"
+                    checked={marcado}
+                    disabled={bloqueado}
+                    onChange={() => toggleQuorum(nombre)}
+                  />
+                  {nombre}
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

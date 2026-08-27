@@ -1,0 +1,147 @@
+.votacion-selector {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+.votacion-selector .campo-voto {
+  flex: 1 1 30%;
+  min-width: 160px;
+}
+.votacion-selector .campo-estado {
+  flex: 0 0 auto;
+}
+
+.votacion-selector .aviso-quorum {
+  font-size: 11.5px;
+  color: #d32f2f;
+  margin-top: 6px;
+  font-weight: 500;
+}
+.votacion-selector .aviso-retirar {
+  font-size: 11.5px;
+  color: #1a56db;
+  margin-top: 6px;
+  font-weight: 500;
+}
+
+.btn-votacion,
+.btn-estado {
+  display: inline-block;
+  width: 100%;
+  margin-top: 2px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 7px 10px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: 'DM Mono', monospace;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  box-sizing: border-box;
+  font-weight: bold;
+}
+.btn-votacion:hover:not(:disabled),
+.btn-estado:hover {
+  transform: scale(1.02);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+.btn-votacion:active:not(:disabled),
+.btn-estado:active {
+  transform: scale(0.99);
+}
+
+.btn-votacion.votacion-economica {
+  background: #c8e6c9;
+  color: #2e7d32;
+  border-color: #a5d6a7;
+}
+.btn-votacion.votacion-concurrente {
+  background: #ffcdd2;
+  color: #c62828;
+  border-color: #ef9a9a;
+}
+.btn-votacion:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-estado.estado-aprueba {
+  background: #c8e6c9;
+  color: #2e7d32;
+  border-color: #a5d6a7;
+}
+.btn-estado.estado-acuerda {
+  background: #bbdefb;
+  color: #1565c0;
+  border-color: #64b5f6;
+}
+.ter-label-invisible {
+  visibility: hidden;
+}
+
+
+.badge-quorum-requerido {
+  display: inline-block;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 1px;
+  padding: 7px 10px;
+  border-radius: 4px;
+  border: 1px solid #ef9a9a;
+  background: #ffcdd2;
+  color: #c62828;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: 'DM Mono', monospace;
+  text-align: center;
+  cursor: default;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+.badge-quorum-requerido.completo {
+  background: #c8e6c9;
+  border-color: #a5d6a7;
+  color: #2e7d32;
+}
+.btn-votacion.disabled {
+  background: #e0e0e0;
+  color: #888;
+  border-color: #ccc;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.quorum-lista-wrap {
+  flex: 1 1 100%;
+  margin-top: 4px;
+}
+.quorum-lista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 8px 10px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  background: #fafafa;
+}
+.quorum-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: #333;
+  cursor: pointer;
+}
+.quorum-item.bloqueado {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.quorum-item input[type="checkbox"] {
+  cursor: pointer;
+}
+.quorum-item.bloqueado input[type="checkbox"] {
+  cursor: not-allowed;
+}
