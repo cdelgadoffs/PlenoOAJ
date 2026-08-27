@@ -2,6 +2,8 @@ import { useUI } from '../context/UIContext.jsx';
 import { useProyecto } from '../context/ProyectoContext.jsx';
 import { getTituloPunto, formatearFechaES } from '../utils/fechas.js';
 import { SECCIONES_DEL_DOCUMENTO, obtenerPuntosFiltrados } from '../utils/puntos.js';
+import { useState } from 'react';
+import { generarWordOrdenDia } from '../utils/word.js';
 import '../styles/PanelPrincipal.css';
 
 function TarjetaPunto({ sec, idx, puedeSubir, puedeBajar, esSeleccionada, onSeleccionar, onMover, onEditar, onEliminar, onToggleAnexo, onPreviewArchivo, onAdjuntar }) {
@@ -76,12 +78,25 @@ function VistaInicio() {
 
 function VistaProyecto({ onEditar }) {
   const { terminoBusqueda, sidebarTerciarioAbierto, setModalActivo, setPreviewArchivo, setPuntoAdjuntarId } = useUI();
-  const { secciones, seccionActual, puntoSeleccionadoId, setPuntoSeleccionadoId, moverPunto, eliminarPunto, toggleAnexo } = useProyecto();
+  const { secciones, seccionActual, proyectoMeta, puntoSeleccionadoId, setPuntoSeleccionadoId, moverPunto, eliminarPunto, toggleAnexo } = useProyecto();
+  const [generandoWord, setGenerandoWord] = useState(false);
 
   const puntosFiltrados = obtenerPuntosFiltrados(secciones, terminoBusqueda);
   const modoBusqueda = !!terminoBusqueda;
   const listaBase = modoBusqueda ? puntosFiltrados : secciones.filter(s => s.seccion === seccionActual);
   const pts = modoBusqueda ? listaBase : (sidebarTerciarioAbierto ? [...listaBase].reverse() : listaBase);
+
+  async function generarWord() {
+    if (secciones.length === 0) { alert('Primero genera un proyecto.'); return; }
+    setGenerandoWord(true);
+    try {
+      await generarWordOrdenDia(secciones, proyectoMeta);
+    } catch (err) {
+      alert('No se pudo generar el documento Word: ' + err.message);
+    } finally {
+      setGenerandoWord(false);
+    }
+  }
 
   function confirmarEliminar(sec) {
     const idx = secciones.indexOf(sec);
@@ -91,39 +106,56 @@ function VistaProyecto({ onEditar }) {
     }
   }
 
-  if (pts.length === 0) {
-    if (modoBusqueda) {
-      return <div className="placeholder-msg" style={{ marginTop: '60px' }}><strong>No se encontraron coincidencias</strong><br />Prueba con otro término.</div>;
-    }
-    const nombreSeccion = seccionActual.charAt(0).toUpperCase() + seccionActual.slice(1);
-    return <div className="placeholder-msg" style={{ marginTop: '60px' }}><strong>No hay puntos en {nombreSeccion}</strong><br />Haz clic en el botón + para crear uno.</div>;
-  }
-
   return (
-    <div className="lista-puntos-expandida">
-      {pts.map(sec => {
-        const idx = secciones.indexOf(sec);
-        const puedeSubir = idx > 0 && secciones[idx - 1].seccion === sec.seccion;
-        const puedeBajar = idx < secciones.length - 1 && secciones[idx + 1].seccion === sec.seccion;
-        return (
-          <TarjetaPunto
-            key={sec.id}
-            sec={sec}
-            idx={idx}
-            puedeSubir={puedeSubir}
-            puedeBajar={puedeBajar}
-            esSeleccionada={sec.id === puntoSeleccionadoId}
-            onSeleccionar={() => setPuntoSeleccionadoId(sec.id)}
-            onMover={moverPunto}
-            onEditar={onEditar}
-            onEliminar={confirmarEliminar}
-            onToggleAnexo={toggleAnexo}
-            onPreviewArchivo={(a) => { setPreviewArchivo(a); setModalActivo('preview'); }}
-            onAdjuntar={(id) => { setPuntoAdjuntarId(id); setModalActivo('adjuntar'); }}
-          />
-        );
-      })}
-    </div>
+    <>
+      {secciones.length > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+          <button
+            className="btn-nuevo-proyecto"
+            style={{ margin: 0, width: 'auto', padding: '8px 18px' }}
+            disabled={generandoWord}
+            onClick={generarWord}
+          >
+            {generandoWord ? 'Generando...' : 'Descargar orden del día'}
+          </button>
+        </div>
+      )}
+      {pts.length === 0 ? (
+        modoBusqueda ? (
+          <div className="placeholder-msg" style={{ marginTop: '60px' }}><strong>No se encontraron coincidencias</strong><br />Prueba con otro término.</div>
+        ) : (
+          <div className="placeholder-msg" style={{ marginTop: '60px' }}>
+            <strong>No hay puntos en {seccionActual.charAt(0).toUpperCase() + seccionActual.slice(1)}</strong><br />
+            Haz clic en el botón + para crear uno.
+          </div>
+        )
+      ) : (
+        <div className="lista-puntos-expandida">
+          {pts.map(sec => {
+            const idx = secciones.indexOf(sec);
+            const puedeSubir = idx > 0 && secciones[idx - 1].seccion === sec.seccion;
+            const puedeBajar = idx < secciones.length - 1 && secciones[idx + 1].seccion === sec.seccion;
+            return (
+              <TarjetaPunto
+                key={sec.id}
+                sec={sec}
+                idx={idx}
+                puedeSubir={puedeSubir}
+                puedeBajar={puedeBajar}
+                esSeleccionada={sec.id === puntoSeleccionadoId}
+                onSeleccionar={() => setPuntoSeleccionadoId(sec.id)}
+                onMover={moverPunto}
+                onEditar={onEditar}
+                onEliminar={confirmarEliminar}
+                onToggleAnexo={toggleAnexo}
+                onPreviewArchivo={(a) => { setPreviewArchivo(a); setModalActivo('preview'); }}
+                onAdjuntar={(id) => { setPuntoAdjuntarId(id); setModalActivo('adjuntar'); }}
+              />
+            );
+          })}
+        </div>
+      )}
+    </>
   );
 }
 
