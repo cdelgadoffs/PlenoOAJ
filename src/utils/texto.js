@@ -1,3 +1,5 @@
+import React from 'react';
+
 const NOMBRES_PROPIOS = [
   'Pleno', 'DGEJ', 'DEGETD', 'DGTI', 'DGJJ', 'DGIPDI', 'DGRH',
   'Administración', 'Adscripción'
@@ -28,4 +30,16 @@ export function normalizarTexto(textoOriginal) {
 export function ocultarParaActa(texto) {
   if (!texto) return texto;
   return texto.replace(/\*\*(.+?)\*\*/g, (_, contenido) => contenido.replace(/\S/g, '*'));
+}
+
+export function renderConOcultos(texto) {
+  if (!texto) return texto;
+  const partes = texto.split(/(\*\*.+?\*\*)/g);
+  return partes.map((parte, i) => {
+    const match = parte.match(/^\*\*(.+)\*\*$/);
+    if (match) {
+      return React.createElement('span', { key: i, className: 'texto-oculto' }, match[1]);
+    }
+    return parte;
+  });
 }
