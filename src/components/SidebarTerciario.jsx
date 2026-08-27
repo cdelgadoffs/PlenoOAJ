@@ -9,6 +9,7 @@ import mammoth from 'mammoth';
 import { normalizarTexto } from '../utils/texto.js';
 import EditorOcultable from './EditorOcultable.jsx';
 import '../styles/SidebarTerciario.css';
+import TipoVotacionSelector from './TipoVotacionSelector.jsx';
 
 const CATEGORIAS = [
   { id: 'pleno', label: 'Pleno' },
@@ -36,7 +37,7 @@ const estadoVacio = {
   categoria: 'pleno',
   remitente: 'Pleno',
   contenido: '',
-  tipoVotacion: 'Económica',
+  tipoVotacion: JSON.stringify({ voto: 0, votacion: 0, estado: true }),
   acuerdo: '',
   archivos: []
 };
@@ -119,25 +120,36 @@ export default function SidebarTerciario() {
   const [oneDriveStatus, setOneDriveStatus] = useState('');
 
   useEffect(() => {
-    if (!sidebarTerciarioAbierto) return;
-    if (puntoEditandoId) {
-      const sec = secciones.find(s => s.id === puntoEditandoId);
-      if (!sec) return;
-      const dep = sec.dependencia || 'Pleno';
-      const categoria = TODAS_DEPENDENCIAS.find(d => d.id === dep)?.categoria || 'pleno';
-      setForm({
-        categoria,
-        remitente: dep,
-        contenido: sec.contenido || '',
-        tipoVotacion: sec.tipoVotacion || 'Económica',
-        acuerdo: sec.acuerdo || 'Se aprueba por unanimidad',
-        archivos: sec.archivos ? [...sec.archivos] : []
-      });
-    } else {
-      setForm(estadoVacio);
+  if (!sidebarTerciarioAbierto) return;
+  if (puntoEditandoId) {
+    const sec = secciones.find(s => s.id === puntoEditandoId);
+    if (!sec) return;
+    const dep = sec.dependencia || 'Pleno';
+    const categoria = TODAS_DEPENDENCIAS.find(d => d.id === dep)?.categoria || 'pleno';
+    let tipoVotacion = sec.tipoVotacion || JSON.stringify({ voto: 0, votacion: 0, estado: true });
+    // Si es un valor antiguo (Económica, Nominal, Cédula), lo convertimos a JSON con estado true
+    const antiguos = ['Económica', 'Nominal', 'Cédula'];
+    if (antiguos.includes(tipoVotacion)) {
+      const mapeo = {
+        'Económica': { voto: 0, votacion: 0, estado: true },
+        'Nominal': { voto: 0, votacion: 1, estado: true },
+        'Cédula': { voto: 0, votacion: 1, estado: true }
+      };
+      tipoVotacion = JSON.stringify(mapeo[tipoVotacion] || { voto: 0, votacion: 0, estado: true });
     }
-    setOneDriveStatus('');
-  }, [sidebarTerciarioAbierto, puntoEditandoId]);
+    setForm({
+      categoria,
+      remitente: dep,
+      contenido: sec.contenido || '',
+      tipoVotacion,
+      acuerdo: sec.acuerdo || 'Se aprueba por unanimidad',
+      archivos: sec.archivos ? [...sec.archivos] : []
+    });
+  } else {
+    setForm(estadoVacio);
+  }
+  setOneDriveStatus('');
+}, [sidebarTerciarioAbierto, puntoEditandoId]);
 
   useEffect(() => {
     if (vistaActual !== 'proyecto' && sidebarTerciarioAbierto) {
@@ -396,13 +408,11 @@ async function extraerTextoWord(file) {
         <div className="ter-field">
           <input type="file" id="archivosInput" multiple style={{ width: '100%', padding: '4px', border: '1px solid #ccc', borderRadius: '4px', background: '#fff', fontSize: '12px' }} onChange={adjuntarArchivos} />
           <div id="listaArchivosTemporales" style={{ marginTop: '6px', fontSize: '12px', color: '#555', maxHeight: '60px', overflowY: 'auto' }}>
-            {form.archivos.length === 0
-              ? <span style={{ color: '#aaa' }}>Ningún archivo adjunto</span>
-              : form.archivos.map((a, idx) => (
-                <span key={idx} className="archivo-item-temp">
-                  {a.nombre} <span className="eliminar-archivo-temp" onClick={() => eliminarArchivoTemporal(idx)}>✕</span>
-                </span>
-              ))}
+            {form.archivos.map((a, idx) => (
+              <span key={idx} className="archivo-item-temp">
+                {a.nombre} <span className="eliminar-archivo-temp" onClick={() => eliminarArchivoTemporal(idx)}>✕</span>
+              </span>
+            ))}
           </div>
           <div id="oneDriveStatus" className="onedrive-status">{oneDriveStatus}</div>
         </div>
@@ -415,20 +425,18 @@ async function extraerTextoWord(file) {
           />
         </div>
         <div className="ter-field">
-          <label className="ter-label">Tipo de votación</label>
-          <select id="tipoVotacionSelect" className="ter-select" value={form.tipoVotacion} onChange={(e) => setForm(f => ({ ...f, tipoVotacion: e.target.value }))}>
-            <option value="Económica">Económica</option>
-            <option value="Nominal">Nominal</option>
-            <option value="Cédula">Cédula</option>
-          </select>
-        </div>
-        <div className="ter-field">
           <label className="ter-label">Acuerdo</label>
           <EditorOcultable
             id="acuerdoSelect"
             value={form.acuerdo}
             onChange={(v) => setForm(f => ({ ...f, acuerdo: v }))}
             placeholder="Acuerdos"
+          />
+        </div>
+        <div className="ter-field">
+          <TipoVotacionSelector
+            value={form.tipoVotacion}
+            onChange={(nuevoValor) => setForm(f => ({ ...f, tipoVotacion: nuevoValor }))}
           />
         </div>
 

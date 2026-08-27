@@ -1,0 +1,26 @@
+{
+  "proyectosAcuerdoTomasNota": {
+    "voto": [
+      { "valor": 0, "etiqueta": "por unanimidad" },
+      { "valor": 1, "etiqueta": "por mayoría de 4 votos", "requiereQuorum": true },
+      { "valor": 2, "etiqueta": "por mayoría de 3 votos", "requiereQuorum": true },
+      { "valor": 3, "etiqueta": "acuerda retirar" }
+    ],
+    "votacion": [
+      { "valor": 0, "etiqueta": "votación económica" },
+      { "valor": 1, "etiqueta": "votación concurrente" }
+    ],
+    "estado": [
+      { "valor": true, "etiqueta": "aprueba" },
+      { "valor": false, "etiqueta": "acuerda" }
+    ]
+  },
+  "informes": {
+    "conocimiento": [
+      { "valor": 0, "etiqueta": "informe presentado" },
+      { "valor": 1, "etiqueta": "informe presentado y…", "requiereTextarea": true },
+      { "valor": 2, "etiqueta": "suspensión de labores decretada" },
+      { "valor": 3, "etiqueta": "declaración de día inhábil pero laborable" }
+    ]
+  }
+}
