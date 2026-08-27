@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { generarWordOrdenDia } from '../utils/word.js';
 import '../styles/PanelPrincipal.css';
 import VistaInicio from './VistaInicio.jsx';
+import { renderConOcultos } from '../utils/texto.js';
 
 function TarjetaPunto({ sec, idx, puedeSubir, puedeBajar, esSeleccionada, onSeleccionar, onMover, onEditar, onEliminar, onToggleAnexo, onPreviewArchivo, onAdjuntar }) {
   const titulo = getTituloPunto(sec, idx);
@@ -15,36 +16,49 @@ function TarjetaPunto({ sec, idx, puedeSubir, puedeBajar, esSeleccionada, onSele
   const dependenciaMostrada = sec.dependencia || 'Pleno';
 
   return (
-    <div className={'punto-card' + (esSeleccionada ? ' selected' : '')} data-id={sec.id} onClick={onSeleccionar}>
-      <div className="punto-card-header">
-        <span className="punto-card-titulo">{titulo}</span>
-        <span className="punto-card-badge">{dependenciaMostrada}</span>
-      </div>
-      <div className="punto-card-cuerpo">{sec.contenido || 'Sin contenido'}</div>
-      {(sec.tipoVotacion || sec.acuerdo) && (
-        <div className="punto-card-voto-info">
-          {sec.tipoVotacion && <div className="punto-card-voto-linea"><span className="punto-card-voto-label">Votación:</span> {sec.tipoVotacion}</div>}
-          {sec.acuerdo && <div className="punto-card-voto-linea"><span className="punto-card-voto-label">Acuerdo:</span> {sec.acuerdo}</div>}
-        </div>
-      )}
-      {tieneArchivos && (
-        <div className="archivos-adjuntos">
-          {sec.archivos.map((a, i) => <span key={i} className="archivo-item" onClick={(e) => { e.stopPropagation(); onPreviewArchivo(a); }}>{a.nombre}</span>)}
-        </div>
-      )}
-      <div className="punto-card-acciones">
-        <div className="checkbox-group" onClick={(e) => e.stopPropagation()}>
-          <input type="checkbox" id={'anexo_' + sec.id} checked={tieneArchivos || sec.anexo === true} onChange={(e) => onToggleAnexo(sec.id, e.target.checked)} />
-          <label htmlFor={'anexo_' + sec.id}>Anexo {numeroAnexo}</label>
-        </div>
-        <div className="botones">
-          <button className="btn-adjuntar" title="Adjuntar archivo" onClick={(e) => { e.stopPropagation(); onAdjuntar(sec.id); }}><i className="fas fa-paperclip"></i></button>
-          <button className="btn-mover" disabled={!puedeSubir} onClick={(e) => { e.stopPropagation(); onMover(sec.id, -1); }}>▲</button>
-          <button className="btn-mover" disabled={!puedeBajar} onClick={(e) => { e.stopPropagation(); onMover(sec.id, 1); }}>▼</button>
-          <button className="btn-editar" disabled={esFijo} title="Editar punto" onClick={(e) => { e.stopPropagation(); onEditar(sec.id); }}>Editar</button>
-          <button className="btn-eliminar" disabled={esFijo} onClick={(e) => { e.stopPropagation(); onEliminar(sec); }}>{esFijo ? 'Fijo' : 'Eliminar'}</button>
-        </div>
-      </div>
+    <div className={'punto-tabla-wrap' + (esSeleccionada ? ' selected' : '')} data-id={sec.id} onClick={onSeleccionar}>
+    <table className="punto-tabla">
+      <colgroup>
+        <col className="col-contenido" />
+        <col className="col-archivos" />
+      </colgroup>
+      <thead>
+        <tr>
+          <th colSpan={2} className="punto-tabla-header">
+            <span className="punto-tabla-titulo">{titulo}</span>
+            <span className="punto-tabla-dependencia">{dependenciaMostrada}</span>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td className="punto-tabla-contenido">
+            {sec.contenido ? renderConOcultos(sec.contenido) : 'Sin contenido'}
+          </td>
+          <td className="punto-tabla-archivos" rowSpan={3}>
+            {tieneArchivos ? (
+              sec.archivos.map((a, i) => (
+                <span key={i} className="archivo-item" onClick={(e) => { e.stopPropagation(); onPreviewArchivo(a); }}>{a.nombre}</span>
+              ))
+            ) : (
+              <span className="punto-tabla-sin-archivos">Sin archivos</span>
+            )}
+          </td>
+        </tr>
+        {(sec.tipoVotacion || sec.acuerdo) && (
+          <tr>
+            <td className="punto-tabla-acuerdo">
+              {sec.acuerdo && <div><span className="punto-tabla-label">Acuerdo:</span> {renderConOcultos(sec.acuerdo)}</div>}
+            </td>
+          </tr>
+        )}
+        <tr>
+          <td className="punto-tabla-votacion">
+            {sec.tipoVotacion && <span>{sec.tipoVotacion}</span>}
+          </td>
+        </tr>
+      </tbody>
+    </table>
     </div>
   );
 }
