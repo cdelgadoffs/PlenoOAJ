@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useUI } from '../context/UIContext.jsx';
 import { useProyecto } from '../context/ProyectoContext.jsx';
 import { formatearFechaCorta, hoyLocalISO, formatearFechaES } from '../utils/fechas.js';
@@ -11,10 +11,39 @@ export default function CintaSesiones() {
   const { vistaActual, sidebarTerciarioAbierto } = useUI();
   const { sesiones, sesionActivaFecha, proyectoMeta, cargarSesion } = useProyecto();
   const [mes, setMes] = useState(() => (sesionActivaFecha || hoyLocalISO()).substring(0, 7));
+  const [menuAbierto, setMenuAbierto] = useState(false);
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
+  const botonRef = useRef(null);
+  const menuRef = useRef(null);
 
   useEffect(() => {
     if (sesionActivaFecha) setMes(sesionActivaFecha.substring(0, 7));
   }, [sesionActivaFecha]);
+
+  useEffect(() => {
+    function manejarClickFuera(e) {
+      if (
+        menuRef.current && !menuRef.current.contains(e.target) &&
+        botonRef.current && !botonRef.current.contains(e.target)
+      ) setMenuAbierto(false);
+    }
+    document.addEventListener('mousedown', manejarClickFuera);
+    return () => document.removeEventListener('mousedown', manejarClickFuera);
+  }, []);
+
+  useEffect(() => {
+    if (!menuAbierto) return;
+    function cerrarPorScrollOResize(e) {
+      if (menuRef.current && menuRef.current.contains(e.target)) return;
+      setMenuAbierto(false);
+    }
+    window.addEventListener('scroll', cerrarPorScrollOResize, true);
+    window.addEventListener('resize', cerrarPorScrollOResize);
+    return () => {
+      window.removeEventListener('scroll', cerrarPorScrollOResize, true);
+      window.removeEventListener('resize', cerrarPorScrollOResize);
+    };
+  }, [menuAbierto]);
 
   const oculto = vistaActual !== 'proyecto' && vistaActual !== 'inicio';
   const modoFormulario = sidebarTerciarioAbierto;
@@ -22,6 +51,11 @@ export default function CintaSesiones() {
   const mesActivo = mes;
   const [anio, mesNum] = mesActivo.split('-');
   const mesLabel = `${MESES[parseInt(mesNum, 10) - 1]} ${anio}`;
+
+  const mesesDisponibles = Array.from(new Set([
+    ...Object.keys(sesiones).map(f => f.substring(0, 7)),
+    hoyLocalISO().substring(0, 7)
+  ])).sort();
 
   const fechas = obtenerSesionesDelMes(sesiones, mesActivo);
   const hoy = hoyLocalISO();
@@ -38,6 +72,19 @@ export default function CintaSesiones() {
     setMes(`${nuevoAnio}-${String(nuevoMes).padStart(2, '0')}`);
   }
 
+  function toggleMenu() {
+    if (!menuAbierto && botonRef.current) {
+      const rect = botonRef.current.getBoundingClientRect();
+      setMenuPos({ top: rect.bottom + 4, left: rect.left });
+    }
+    setMenuAbierto(v => !v);
+  }
+
+  function seleccionarMes(m) {
+    setMes(m);
+    setMenuAbierto(false);
+  }
+
   const tituloSesion = `Sesión ${proyectoMeta.tipoSesion || 'Ordinaria'} N° ${proyectoMeta.numeroSesion || 1}` +
     (proyectoMeta.fecha ? ` · ${formatearFechaES(proyectoMeta.fecha)}` : '');
 
@@ -48,7 +95,15 @@ export default function CintaSesiones() {
           <button className="cinta-nav" id="cintaAnterior" onClick={() => cambiarMes(-1)}>◀</button>
           <button className="cinta-nav" id="cintaSiguiente" onClick={() => cambiarMes(1)}>▶</button>
         </div>
-        <div className="cinta-mes" id="cintaMesLabel">{mesLabel}</div>
+        <div
+          ref={botonRef}
+          className={'cinta-mes cinta-mes-desplegable' + (menuAbierto ? ' abierto' : '')}
+          id="cintaMesLabel"
+          onClick={toggleMenu}
+        >
+          {mesLabel}
+          <span className="cinta-mes-chevron">▾</span>
+        </div>
         <div
           className="cinta-titulo-sesion"
           id="cintaTituloSesion"
@@ -95,6 +150,27 @@ export default function CintaSesiones() {
           })}
         </div>
       </div>
+      {menuAbierto && (
+        <div
+          ref={menuRef}
+          className="cinta-mes-menu"
+          style={{ top: menuPos.top, left: menuPos.left }}
+        >
+          {mesesDisponibles.map(m => {
+            const [a, me] = m.split('-');
+            const activo = m === mesActivo;
+            return (
+              <div
+                key={m}
+                className={'cinta-mes-item' + (activo ? ' activo' : '')}
+                onClick={() => seleccionarMes(m)}
+              >
+                {MESES[parseInt(me, 10) - 1]} {a}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
