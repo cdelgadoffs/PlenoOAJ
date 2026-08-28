@@ -5,6 +5,7 @@ import { usePermisos } from '../hooks/usePermisos.js';
 import { parsearFechaLocal } from '../utils/fechas.js';
 import { SECCIONES_DEL_DOCUMENTO, obtenerPuntosFiltrados } from '../utils/puntos.js';
 import '../styles/SidebarPrincipal.css';
+import BotonListaCerrada from './BotonListaCerrada.jsx';
 
 const VISTAS = [
   { id: 'inicio', label: 'Inicio' },
@@ -17,9 +18,11 @@ const SECCIONES_VISIBLES = SECCIONES_DEL_DOCUMENTO.filter(sec => sec !== 'licenc
 
 export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalPuntos = 0 }) {
   const { vistaActual, setVistaActual, terminoBusqueda } = useUI();
-  const { proyectoMeta, secciones, seccionActual, setSeccionActual, setPuntoSeleccionadoId } = useProyecto();
+  const { proyectoMeta, secciones, seccionActual, setSeccionActual, setPuntoSeleccionadoId, sesiones, sesionActivaFecha } = useProyecto();
   const { esLector } = usePermisos();
   const [acordeonAbierto, setAcordeonAbierto] = useState(vistaActual === 'proyecto');
+
+  const listaCerrada = sesionActivaFecha ? !!sesiones[sesionActivaFecha]?.listaCerrada : false;
 
   useEffect(() => {
     if (vistaActual === 'proyecto') setAcordeonAbierto(true);
@@ -91,7 +94,7 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
                     const conteo = puntosEnSeccion.filter(p => idsFiltrados.has(p.id)).length;
                     const oculto = conteo === 0 && terminoBusqueda;
                     const nombre = sec.charAt(0).toUpperCase() + sec.slice(1);
-                    const puedeAgregar = sec !== 'asuntos generales' && sec !== 'aprobaciones' && secciones.length > 0;
+                    const puedeAgregar = sec !== 'asuntos generales' && sec !== 'aprobaciones' && secciones.length > 0 && !listaCerrada;
                     return (
                       <div
                         key={sec}
@@ -126,6 +129,7 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
           );
         })}
       </nav>
+      {vistaActual === 'proyecto' && <BotonListaCerrada />}
       <div id="resumenClasificacion" style={{ display: (vistaActual === 'sesionPrevia') ? 'none' : 'block', padding: '12px 16px', borderTop: '1px solid #e0e0e0', marginTop: 'auto', fontSize: '12px', color: '#444' }}>
         <div style={{ fontWeight: '600', marginBottom: '6px' }}>Clasificaciones</div>
         <div id="contenedorClasificaciones"></div>

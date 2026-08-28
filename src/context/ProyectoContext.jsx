@@ -171,7 +171,9 @@ export function ProyectoProvider({ children }) {
     });
   }
 
+  // === FUNCIONES MODIFICADAS CON GUARD ===
   function moverPunto(id, direccion) {
+    if (sesiones[sesionActivaFecha]?.listaCerrada) return;
     setSecciones(prev => {
       const index = prev.findIndex(s => s.id === id);
       if (index === -1) return prev;
@@ -185,6 +187,7 @@ export function ProyectoProvider({ children }) {
   }
 
   function eliminarPunto(id) {
+    if (sesiones[sesionActivaFecha]?.listaCerrada) return;
     setSecciones(prev => {
       const index = prev.findIndex(s => s.id === id);
       if (index === -1 || prev[index].fijo) return prev;
@@ -192,11 +195,8 @@ export function ProyectoProvider({ children }) {
     });
   }
 
-  function toggleAnexo(id, valor) {
-    setSecciones(prev => prev.map(s => s.id === id ? { ...s, anexo: valor } : s));
-  }
-
   function agregarPunto(datos) {
+    if (sesiones[sesionActivaFecha]?.listaCerrada) return;
     const nuevoId = 'sec_' + Date.now();
     const nuevaSec = {
       id: nuevoId,
@@ -225,6 +225,7 @@ export function ProyectoProvider({ children }) {
   }
 
   function editarPuntoExistente(id, datos) {
+    if (sesiones[sesionActivaFecha]?.listaCerrada) return;
     setSecciones(prev => prev.map(s => s.id === id ? {
       ...s,
       contenido: datos.contenido,
@@ -234,6 +235,11 @@ export function ProyectoProvider({ children }) {
       archivos: datos.archivos,
       anexo: (datos.archivos || []).length > 0 || s.anexo === true
     } : s));
+  }
+  // === FIN FUNCIONES MODIFICADAS ===
+
+  function toggleAnexo(id, valor) {
+    setSecciones(prev => prev.map(s => s.id === id ? { ...s, anexo: valor } : s));
   }
 
   
@@ -325,7 +331,7 @@ export function ProyectoProvider({ children }) {
     }, 0);
   }
 
-
+  
   function adjuntarArchivoAPunto(id, archivo) {
     setSecciones(prev => prev.map(s => s.id === id ? { ...s, anexo: true, archivos: [...(s.archivos || []), archivo] } : s));
   }
@@ -333,6 +339,17 @@ export function ProyectoProvider({ children }) {
   function setOneDriveFolder(datos) {
     setProyectoMeta(prev => ({ ...prev, ...datos }));
   }
+
+  // === NUEVA FUNCIÓN toggleListaCerrada ===
+  function toggleListaCerrada() {
+    if (!sesionActivaFecha) return;
+    setSesiones(prev => {
+      const sesion = prev[sesionActivaFecha];
+      if (!sesion) return prev;
+      return { ...prev, [sesionActivaFecha]: { ...sesion, listaCerrada: !sesion.listaCerrada } };
+    });
+  }
+  // === FIN NUEVA FUNCIÓN ===
 
   const value = {
     secciones, setSecciones,
@@ -348,7 +365,8 @@ export function ProyectoProvider({ children }) {
     moverPunto, eliminarPunto, toggleAnexo, agregarPunto, editarPuntoExistente,
     cargarSesion, eliminarSesion, regenerarCalendario, agregarVacacion, agregarAsueto, eliminarExcepcion,
     agregarAsistente, eliminarAsistente, editarAsistente, toggleAsistentePresente,
-    actualizarPunto, agregarActa, crearSesionExtraordinaria, adjuntarArchivoAPunto, setOneDriveFolder
+    actualizarPunto, agregarActa, crearSesionExtraordinaria, adjuntarArchivoAPunto, setOneDriveFolder,
+    toggleListaCerrada // <--- exportada
   };
 
   return <ProyectoContext.Provider value={value}>{children}</ProyectoContext.Provider>;

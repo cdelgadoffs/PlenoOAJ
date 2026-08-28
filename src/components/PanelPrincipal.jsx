@@ -6,10 +6,11 @@ import { useState } from 'react';
 import { generarWordOrdenDia } from '../utils/word.js';
 import '../styles/PanelPrincipal.css';
 import VistaInicio from './VistaInicio.jsx';
+import { generarWordActa } from '../utils/wordActa.js';
 
 import { renderConOcultos, tieneTextoOculto } from '../utils/texto.js';
 
-function TarjetaPunto({ sec, idx, puedeSubir, puedeBajar, esSeleccionada, onSeleccionar, onMover, onEditar, onEliminar, onToggleAnexo, onPreviewArchivo, onAdjuntar }) {
+function TarjetaPunto({ sec, idx, puedeSubir, puedeBajar, esSeleccionada, listaCerrada, onSeleccionar, onMover, onEditar, onEliminar, onToggleAnexo, onPreviewArchivo, onAdjuntar }) {
   const titulo = getTituloPunto(sec, idx);
   const esFijo = sec.fijo === true;
   const tieneArchivos = sec.archivos && sec.archivos.length > 0;
@@ -35,10 +36,10 @@ function TarjetaPunto({ sec, idx, puedeSubir, puedeBajar, esSeleccionada, onSele
               </button>
               <button className="btn-tabla-accion" disabled={!puedeSubir} title="Mover arriba" onClick={() => onMover(sec.id, -1)}>▲</button>
               <button className="btn-tabla-accion" disabled={!puedeBajar} title="Mover abajo" onClick={() => onMover(sec.id, 1)}>▼</button>
-              <button className="btn-tabla-accion" disabled={esFijo} title="Editar punto" onClick={() => onEditar(sec.id)}>
+              <button className="btn-tabla-accion" disabled={esFijo || listaCerrada} title="Editar punto" onClick={() => onEditar(sec.id)}>
                 <i className="fas fa-pen"></i>
               </button>
-              <button className="btn-tabla-accion btn-tabla-eliminar" disabled={esFijo} title={esFijo ? 'Fijo' : 'Eliminar'} onClick={() => onEliminar(sec)}>
+              <button className="btn-tabla-accion btn-tabla-eliminar" disabled={esFijo || listaCerrada} title={esFijo ? 'Fijo' : 'Eliminar'} onClick={() => onEliminar(sec)}>
                 <i className="fas fa-trash"></i>
               </button>
             </div>
@@ -95,7 +96,8 @@ function TarjetaPunto({ sec, idx, puedeSubir, puedeBajar, esSeleccionada, onSele
 
 function VistaProyecto({ onEditar }) {
   const { terminoBusqueda, sidebarTerciarioAbierto, setModalActivo, setPreviewArchivo, setPuntoAdjuntarId } = useUI();
-  const { secciones, seccionActual, proyectoMeta, puntoSeleccionadoId, setPuntoSeleccionadoId, moverPunto, eliminarPunto, toggleAnexo } = useProyecto();
+  const { secciones, seccionActual, proyectoMeta, puntoSeleccionadoId, setPuntoSeleccionadoId, moverPunto, eliminarPunto, toggleAnexo, sesiones, sesionActivaFecha } = useProyecto();
+  const listaCerrada = sesionActivaFecha ? !!sesiones[sesionActivaFecha]?.listaCerrada : false;
   const [generandoWord, setGenerandoWord] = useState(false);
 
   const puntosFiltrados = obtenerPuntosFiltrados(secciones, terminoBusqueda);
@@ -167,6 +169,7 @@ function VistaProyecto({ onEditar }) {
                 onToggleAnexo={toggleAnexo}
                 onPreviewArchivo={(a) => { setPreviewArchivo(a); setModalActivo('preview'); }}
                 onAdjuntar={(id) => { setPuntoAdjuntarId(id); setModalActivo('adjuntar'); }}
+                listaCerrada={listaCerrada}
               />
             );
           })}
@@ -264,6 +267,19 @@ function VistaActaSesion() {
   const fecha = proyectoMeta.fecha ? formatearFechaES(proyectoMeta.fecha) : 'Fecha no definida';
   const puntosFiltrados = obtenerPuntosFiltrados(secciones, terminoBusqueda);
   const pendientes = puntosFiltrados.filter(s => !s.fijo && s.aprobado !== true).length;
+  const [generandoActa, setGenerandoActa] = useState(false);
+
+  async function generarActa() {
+    if (secciones.length === 0) { alert('Primero genera un proyecto.'); return; }
+    setGenerandoActa(true);
+    try {
+      await generarWordActa(secciones, proyectoMeta);
+    } catch (err) {
+      alert('No se pudo generar el acta: ' + err.message);
+    } finally {
+      setGenerandoActa(false);
+    }
+  }
 
   return (
     <>
@@ -277,6 +293,16 @@ function VistaActaSesion() {
           {pendientes} punto(s) sin votación registrada.
         </div>
       )}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+        <button
+          className="btn-nuevo-proyecto"
+          style={{ margin: 0, width: 'auto', padding: '8px 18px' }}
+          disabled={generandoActa}
+          onClick={generarActa}
+        >
+          {generandoActa ? 'Generando...' : 'Descargar acta'}
+        </button>
+      </div>
       {puntosFiltrados.length === 0 ? (
         <div className="placeholder-msg" style={{ marginTop: '40px' }}><strong>No hay coincidencias</strong></div>
       ) : (
