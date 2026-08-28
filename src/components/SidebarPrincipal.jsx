@@ -6,6 +6,7 @@ import { parsearFechaLocal } from '../utils/fechas.js';
 import { SECCIONES_DEL_DOCUMENTO, obtenerPuntosFiltrados } from '../utils/puntos.js';
 import '../styles/SidebarPrincipal.css';
 import BotonListaCerrada from './BotonListaCerrada.jsx';
+import { generarWordOrdenDia } from '../utils/word.js';
 
 const VISTAS = [
   { id: 'inicio', label: 'Inicio' },
@@ -18,11 +19,13 @@ const SECCIONES_VISIBLES = SECCIONES_DEL_DOCUMENTO.filter(sec => sec !== 'licenc
 
 export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalPuntos = 0 }) {
   const { vistaActual, setVistaActual, terminoBusqueda } = useUI();
-  const { proyectoMeta, secciones, seccionActual, setSeccionActual, setPuntoSeleccionadoId, sesiones, sesionActivaFecha } = useProyecto();
+  const { proyectoMeta, secciones, seccionActual, setSeccionActual, setPuntoSeleccionadoId, sesiones, sesionActivaFecha, toggleAsistentePresente } = useProyecto();
   const { esLector } = usePermisos();
   const [acordeonAbierto, setAcordeonAbierto] = useState(vistaActual === 'proyecto');
+  const [generandoWord, setGenerandoWord] = useState(false);
 
   const listaCerrada = sesionActivaFecha ? !!sesiones[sesionActivaFecha]?.listaCerrada : false;
+  const asistentes = sesionActivaFecha ? (sesiones[sesionActivaFecha]?.asistentes || []) : [];
 
   useEffect(() => {
     if (vistaActual === 'proyecto') setAcordeonAbierto(true);
@@ -58,6 +61,18 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
     setSeccionActual(sec);
     const pts = secciones.filter(s => s.seccion === sec);
     setPuntoSeleccionadoId(pts.length > 0 ? pts[0].id : null);
+  }
+
+  async function generarWord() {
+    if (secciones.length === 0) return;
+    setGenerandoWord(true);
+    try {
+      await generarWordOrdenDia(secciones, proyectoMeta);
+    } catch (err) {
+      alert('No se pudo generar el documento Word: ' + err.message);
+    } finally {
+      setGenerandoWord(false);
+    }
   }
 
   return (
@@ -129,14 +144,38 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
           );
         })}
       </nav>
-      {vistaActual === 'proyecto' && <BotonListaCerrada />}
       <div id="resumenClasificacion" style={{ display: (vistaActual === 'sesionPrevia') ? 'none' : 'block', padding: '12px 16px', borderTop: '1px solid #e0e0e0', marginTop: 'auto', fontSize: '12px', color: '#444' }}>
-        <div style={{ fontWeight: '600', marginBottom: '6px' }}>Clasificaciones</div>
-        <div id="contenedorClasificaciones"></div>
+        <div style={{ fontWeight: '600', marginBottom: '16px' }}>
+          {listaCerrada ? 'Lista de puntos cerrada' : 'Lista de puntos abierta'} · {secciones.length} punto{secciones.length === 1 ? '' : 's'}
+        </div>
+        {vistaActual === 'proyecto' && <BotonListaCerrada />}
+        {vistaActual === 'proyecto' && listaCerrada && (
+          <button
+            className="btn-nuevo-proyecto"
+            disabled={generandoWord || secciones.length === 0}
+            onClick={generarWord}
+          >
+            {generandoWord ? 'Generando...' : 'Descargar orden del día'}
+          </button>
+        )}
       </div>
-      <div id="quorumContainer" style={{ display: (vistaActual === 'sesionPrevia') ? 'block' : 'none', padding: '12px 16px', borderTop: '1px solid #e0e0e0', marginTop: 'auto', fontSize: '12px', color: '#444' }}>
-        <div style={{ fontWeight: '600', marginBottom: '6px' }}>Quórum</div>
-        <div id="quorumLista"></div>
+      <div id="quorumContainer" style={{ display: (vistaActual === 'sesionPrevia') ? 'block' : 'none', padding: '12px 25px', borderTop: '1px solid #e0e0e0', marginTop: 'auto', fontSize: '12px', color: '#444' }}>
+        <div style={{ fontWeight: '600', marginBottom: '6px' }}>
+          Quórum · {asistentes.filter(a => a.presente).length} de {asistentes.length}
+        </div>
+        <div id="quorumLista" style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '160px', overflowY: 'auto' }}>
+          {asistentes.length === 0 && <span style={{ color: '#999' }}>Sin asistentes registrados</span>}
+          {asistentes.map((a, idx) => (
+            <label key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={!!a.presente}
+                onChange={(e) => toggleAsistentePresente(idx, e.target.checked)}
+              />
+              {a.nombre}
+            </label>
+          ))}
+        </div>
       </div>
       {(vistaActual === 'proyecto' || vistaActual === 'actaSesion') && (
         <button className="btn-nuevo-proyecto" id="btnGenerarPDFSidebar" onClick={onGenerarPDF}>Generar PDF</button>

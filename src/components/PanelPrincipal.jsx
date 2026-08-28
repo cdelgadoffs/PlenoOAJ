@@ -3,7 +3,7 @@ import { useProyecto } from '../context/ProyectoContext.jsx';
 import { getTituloPunto, formatearFechaES } from '../utils/fechas.js';
 import { SECCIONES_DEL_DOCUMENTO, obtenerPuntosFiltrados } from '../utils/puntos.js';
 import { useState } from 'react';
-import { generarWordOrdenDia } from '../utils/word.js';
+//import { generarWordOrdenDia } from '../utils/word.js';
 import '../styles/PanelPrincipal.css';
 import VistaInicio from './VistaInicio.jsx';
 import { generarWordActa } from '../utils/wordActa.js';
@@ -126,19 +126,7 @@ function VistaProyecto({ onEditar }) {
   }
 
   return (
-    <>
-      {secciones.length > 0 && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
-          <button
-            className="btn-nuevo-proyecto"
-            style={{ margin: 0, width: 'auto', padding: '8px 18px' }}
-            disabled={generandoWord}
-            onClick={generarWord}
-          >
-            {generandoWord ? 'Generando...' : 'Descargar orden del día'}
-          </button>
-        </div>
-      )}
+    <div className="panel-proyecto">
       {pts.length === 0 ? (
         modoBusqueda ? (
           <div className="placeholder-msg" style={{ marginTop: '60px' }}><strong>No se encontraron coincidencias</strong><br />Prueba con otro término.</div>
@@ -175,7 +163,7 @@ function VistaProyecto({ onEditar }) {
           })}
         </div>
       )}
-    </>
+    </div>
   );
 }
 

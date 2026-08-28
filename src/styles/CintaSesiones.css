@@ -116,9 +116,6 @@
   background: #fafafa;
 }
 
-/* El estilo del dropdown de mes (toggle, chevron, menú, items) ahora vive en
-   global.css bajo las clases genéricas .dropdown-toggle / .dropdown-chevron /
-   .dropdown-menu / .dropdown-item, reutilizadas también por Categoría y Remitente. */
 .cinta-mes.dropdown-toggle {
   padding: 3px 8px;
   border-radius: 4px;

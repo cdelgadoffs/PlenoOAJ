@@ -253,7 +253,10 @@ export function ProyectoProvider({ children }) {
         alert('Ya existe un asistente con ese correo.');
         return prev;
       }
-      return { ...prev, [sesionActivaFecha]: { ...sesion, asistentes: [...asistentes, { ...datos, presente: true }] } };
+      const nuevos = datos.presidente
+        ? asistentes.map(a => ({ ...a, presidente: false }))
+        : asistentes;
+      return { ...prev, [sesionActivaFecha]: { ...sesion, asistentes: [...nuevos, { ...datos, presente: true }] } };
     });
   }
   function eliminarAsistente(idx) {
@@ -270,7 +273,11 @@ export function ProyectoProvider({ children }) {
     setSesiones(prev => {
       const sesion = prev[sesionActivaFecha];
       if (!sesion) return prev;
-      const asistentes = (sesion.asistentes || []).map((a, i) => i === idx ? { ...a, ...datos } : a);
+      let asistentes = sesion.asistentes || [];
+      if (datos.presidente) {
+        asistentes = asistentes.map((a, i) => i === idx ? a : { ...a, presidente: false });
+      }
+      asistentes = asistentes.map((a, i) => i === idx ? { ...a, ...datos } : a);
       return { ...prev, [sesionActivaFecha]: { ...sesion, asistentes } };
     });
   }
