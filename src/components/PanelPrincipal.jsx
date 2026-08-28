@@ -5,6 +5,9 @@ import { SECCIONES_DEL_DOCUMENTO, obtenerPuntosFiltrados } from '../utils/puntos
 import { useState } from 'react';
 import { generarWordOrdenDia } from '../utils/word.js';
 import '../styles/PanelPrincipal.css';
+import VistaInicio from './VistaInicio.jsx';
+
+import { renderConOcultos, tieneTextoOculto } from '../utils/texto.js';
 
 function TarjetaPunto({ sec, idx, puedeSubir, puedeBajar, esSeleccionada, onSeleccionar, onMover, onEditar, onEliminar, onToggleAnexo, onPreviewArchivo, onAdjuntar }) {
   const titulo = getTituloPunto(sec, idx);
@@ -14,65 +17,79 @@ function TarjetaPunto({ sec, idx, puedeSubir, puedeBajar, esSeleccionada, onSele
   const dependenciaMostrada = sec.dependencia || 'Pleno';
 
   return (
-    <div className={'punto-card' + (esSeleccionada ? ' selected' : '')} data-id={sec.id} onClick={onSeleccionar}>
-      <div className="punto-card-header">
-        <span className="punto-card-titulo">{titulo}</span>
-        <span className="punto-card-badge">{dependenciaMostrada}</span>
-      </div>
-      <div className="punto-card-cuerpo">{sec.contenido || 'Sin contenido'}</div>
-      {(sec.tipoVotacion || sec.acuerdo) && (
-        <div className="punto-card-voto-info">
-          {sec.tipoVotacion && <div className="punto-card-voto-linea"><span className="punto-card-voto-label">Votación:</span> {sec.tipoVotacion}</div>}
-          {sec.acuerdo && <div className="punto-card-voto-linea"><span className="punto-card-voto-label">Acuerdo:</span> {sec.acuerdo}</div>}
-        </div>
-      )}
-      {tieneArchivos && (
-        <div className="archivos-adjuntos">
-          {sec.archivos.map((a, i) => <span key={i} className="archivo-item" onClick={(e) => { e.stopPropagation(); onPreviewArchivo(a); }}>{a.nombre}</span>)}
-        </div>
-      )}
-      <div className="punto-card-acciones">
-        <div className="checkbox-group" onClick={(e) => e.stopPropagation()}>
-          <input type="checkbox" id={'anexo_' + sec.id} checked={tieneArchivos || sec.anexo === true} onChange={(e) => onToggleAnexo(sec.id, e.target.checked)} />
-          <label htmlFor={'anexo_' + sec.id}>Anexo {numeroAnexo}</label>
-        </div>
-        <div className="botones">
-          <button className="btn-adjuntar" title="Adjuntar archivo" onClick={(e) => { e.stopPropagation(); onAdjuntar(sec.id); }}><i className="fas fa-paperclip"></i></button>
-          <button className="btn-mover" disabled={!puedeSubir} onClick={(e) => { e.stopPropagation(); onMover(sec.id, -1); }}>▲</button>
-          <button className="btn-mover" disabled={!puedeBajar} onClick={(e) => { e.stopPropagation(); onMover(sec.id, 1); }}>▼</button>
-          <button className="btn-editar" disabled={esFijo} title="Editar punto" onClick={(e) => { e.stopPropagation(); onEditar(sec.id); }}>Editar</button>
-          <button className="btn-eliminar" disabled={esFijo} onClick={(e) => { e.stopPropagation(); onEliminar(sec); }}>{esFijo ? 'Fijo' : 'Eliminar'}</button>
-        </div>
-      </div>
+    <div className={'punto-tabla-wrap' + (esSeleccionada ? ' selected' : '')} data-id={sec.id} onClick={onSeleccionar}>
+    <table className="punto-tabla">
+      <colgroup>
+        <col className="col-titulos" />
+        <col className="col-contenido" />
+        <col className="col-archivos" />
+      </colgroup>
+      <thead>
+        <tr>
+          <th colSpan={3} className="punto-tabla-header">
+            <span className="punto-tabla-titulo">{titulo}</span>
+            <span className="punto-tabla-dependencia">{dependenciaMostrada}</span>
+            <div className="punto-tabla-acciones" onClick={(e) => e.stopPropagation()}>
+              <button className="btn-tabla-accion" title="Adjuntar archivo" onClick={() => onAdjuntar(sec.id)}>
+                <i className="fas fa-paperclip"></i>
+              </button>
+              <button className="btn-tabla-accion" disabled={!puedeSubir} title="Mover arriba" onClick={() => onMover(sec.id, -1)}>▲</button>
+              <button className="btn-tabla-accion" disabled={!puedeBajar} title="Mover abajo" onClick={() => onMover(sec.id, 1)}>▼</button>
+              <button className="btn-tabla-accion" disabled={esFijo} title="Editar punto" onClick={() => onEditar(sec.id)}>
+                <i className="fas fa-pen"></i>
+              </button>
+              <button className="btn-tabla-accion btn-tabla-eliminar" disabled={esFijo} title={esFijo ? 'Fijo' : 'Eliminar'} onClick={() => onEliminar(sec)}>
+                <i className="fas fa-trash"></i>
+              </button>
+            </div>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td className="punto-tabla-fila-titulo">
+            <span>Punto de acuerdo</span>
+            <span className={'badge-publico' + (tieneTextoOculto(sec.contenido) ? ' pendiente' : ' listo')}>
+              {tieneTextoOculto(sec.contenido) ? 'Pendiente' : 'Listo'}
+            </span>
+          </td>
+          <td className="punto-tabla-contenido">
+            {sec.contenido ? renderConOcultos(sec.contenido) : 'Sin contenido'}
+          </td>
+          <td className="punto-tabla-archivos" rowSpan={3}>
+            {tieneArchivos ? (
+              sec.archivos.map((a, i) => (
+                <span key={i} className="archivo-item" onClick={(e) => { e.stopPropagation(); onPreviewArchivo(a); }}>{a.nombre}</span>
+              ))
+            ) : (
+              <span className="punto-tabla-sin-archivos">Sin archivos</span>
+            )}
+          </td>
+        </tr>
+        {(sec.tipoVotacion || sec.acuerdo) && (
+          <tr>
+            <td className="punto-tabla-fila-titulo">
+              <span>Acuerdos</span>
+              <span className={'badge-publico' + (tieneTextoOculto(sec.acuerdo) ? ' pendiente' : ' listo')}>
+                {tieneTextoOculto(sec.acuerdo) ? 'Pendiente' : 'Listo'}
+              </span>
+            </td>
+            <td className="punto-tabla-acuerdo">
+              {sec.acuerdo && renderConOcultos(sec.acuerdo)}
+            </td>
+          </tr>
+        )}
+        <tr>
+          <td className="punto-tabla-fila-titulo">
+            <span>Votación</span>
+          </td>
+          <td className="punto-tabla-votacion">
+            {sec.tipoVotacion && <span>{sec.tipoVotacion}</span>}
+          </td>
+        </tr>
+      </tbody>
+    </table>
     </div>
-  );
-}
-
-function VistaInicio() {
-  const { secciones } = useProyecto();
-  return (
-    <>
-      <div className="doc-header">
-        <div className="doc-type">Inicio</div>
-        <div className="doc-title">Panel de control</div>
-        <div className="doc-sub">Bienvenido al generador de órdenes del día</div>
-      </div>
-      <div className="section-title">Resumen</div>
-      <div className="dashboard-grid">
-        <div className="dashboard-card"><div className="numero">{secciones.length}</div><div className="etiqueta">Puntos totales</div></div>
-        <div className="dashboard-card"><div className="numero">{SECCIONES_DEL_DOCUMENTO.length}</div><div className="etiqueta">Secciones</div></div>
-        <div className="dashboard-card"><div className="numero">PDF</div><div className="etiqueta">Listo para generar</div></div>
-      </div>
-      <div style={{ marginTop: '20px', padding: '20px', background: '#f7f7f7', borderRadius: '6px', border: '1px solid #e8e8e8' }}>
-        <p style={{ fontSize: '13px', color: '#555' }}>
-          <strong>Vistas disponibles:</strong><br />
-          • <strong>Inicio</strong> — Resumen general.<br />
-          • <strong>Proyecto del orden del día</strong> — Gestión de puntos por sección y generación de PDF.<br />
-          • <strong>Sesión previa</strong> — Revisión y aprobación de todos los puntos registrados.<br />
-          • <strong>Acta de sesión</strong> — Revisión final y generación del acta en PDF.
-        </p>
-      </div>
-    </>
   );
 }
 
