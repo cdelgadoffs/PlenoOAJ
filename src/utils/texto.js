@@ -43,3 +43,7 @@ export function renderConOcultos(texto) {
     return parte;
   });
 }
+export function tieneTextoOculto(texto) {
+  if (!texto) return false;
+  return /\*\*(.+?)\*\*/.test(texto);
+}

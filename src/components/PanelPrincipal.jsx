@@ -6,7 +6,8 @@ import { useState } from 'react';
 import { generarWordOrdenDia } from '../utils/word.js';
 import '../styles/PanelPrincipal.css';
 import VistaInicio from './VistaInicio.jsx';
-import { renderConOcultos } from '../utils/texto.js';
+
+import { renderConOcultos, tieneTextoOculto } from '../utils/texto.js';
 
 function TarjetaPunto({ sec, idx, puedeSubir, puedeBajar, esSeleccionada, onSeleccionar, onMover, onEditar, onEliminar, onToggleAnexo, onPreviewArchivo, onAdjuntar }) {
   const titulo = getTituloPunto(sec, idx);
@@ -19,19 +20,39 @@ function TarjetaPunto({ sec, idx, puedeSubir, puedeBajar, esSeleccionada, onSele
     <div className={'punto-tabla-wrap' + (esSeleccionada ? ' selected' : '')} data-id={sec.id} onClick={onSeleccionar}>
     <table className="punto-tabla">
       <colgroup>
+        <col className="col-titulos" />
         <col className="col-contenido" />
         <col className="col-archivos" />
       </colgroup>
       <thead>
         <tr>
-          <th colSpan={2} className="punto-tabla-header">
+          <th colSpan={3} className="punto-tabla-header">
             <span className="punto-tabla-titulo">{titulo}</span>
             <span className="punto-tabla-dependencia">{dependenciaMostrada}</span>
+            <div className="punto-tabla-acciones" onClick={(e) => e.stopPropagation()}>
+              <button className="btn-tabla-accion" title="Adjuntar archivo" onClick={() => onAdjuntar(sec.id)}>
+                <i className="fas fa-paperclip"></i>
+              </button>
+              <button className="btn-tabla-accion" disabled={!puedeSubir} title="Mover arriba" onClick={() => onMover(sec.id, -1)}>▲</button>
+              <button className="btn-tabla-accion" disabled={!puedeBajar} title="Mover abajo" onClick={() => onMover(sec.id, 1)}>▼</button>
+              <button className="btn-tabla-accion" disabled={esFijo} title="Editar punto" onClick={() => onEditar(sec.id)}>
+                <i className="fas fa-pen"></i>
+              </button>
+              <button className="btn-tabla-accion btn-tabla-eliminar" disabled={esFijo} title={esFijo ? 'Fijo' : 'Eliminar'} onClick={() => onEliminar(sec)}>
+                <i className="fas fa-trash"></i>
+              </button>
+            </div>
           </th>
         </tr>
       </thead>
       <tbody>
         <tr>
+          <td className="punto-tabla-fila-titulo">
+            <span>Punto de acuerdo</span>
+            <span className={'badge-publico' + (tieneTextoOculto(sec.contenido) ? ' pendiente' : ' listo')}>
+              {tieneTextoOculto(sec.contenido) ? 'Pendiente' : 'Listo'}
+            </span>
+          </td>
           <td className="punto-tabla-contenido">
             {sec.contenido ? renderConOcultos(sec.contenido) : 'Sin contenido'}
           </td>
@@ -47,12 +68,21 @@ function TarjetaPunto({ sec, idx, puedeSubir, puedeBajar, esSeleccionada, onSele
         </tr>
         {(sec.tipoVotacion || sec.acuerdo) && (
           <tr>
+            <td className="punto-tabla-fila-titulo">
+              <span>Acuerdos</span>
+              <span className={'badge-publico' + (tieneTextoOculto(sec.acuerdo) ? ' pendiente' : ' listo')}>
+                {tieneTextoOculto(sec.acuerdo) ? 'Pendiente' : 'Listo'}
+              </span>
+            </td>
             <td className="punto-tabla-acuerdo">
-              {sec.acuerdo && <div><span className="punto-tabla-label">Acuerdo:</span> {renderConOcultos(sec.acuerdo)}</div>}
+              {sec.acuerdo && renderConOcultos(sec.acuerdo)}
             </td>
           </tr>
         )}
         <tr>
+          <td className="punto-tabla-fila-titulo">
+            <span>Votación</span>
+          </td>
           <td className="punto-tabla-votacion">
             {sec.tipoVotacion && <span>{sec.tipoVotacion}</span>}
           </td>
