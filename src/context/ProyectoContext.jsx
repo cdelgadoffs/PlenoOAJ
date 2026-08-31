@@ -6,7 +6,7 @@ import {
   guardarDiaSesion as persistirDiaSesion, guardarExcepciones as persistirExcepciones
 } from '../utils/storage.js';
 import { conPuntosFijosAsegurados, conPunto2Actualizado, getInsertIndex } from '../utils/puntos.js';
-import { calcularFechaAnterior, formatearFechaES, hoyLocalISO } from '../utils/fechas.js';
+import { calcularFechaAnterior, formatearFechaES, hoyLocalISO, sumarDias } from '../utils/fechas.js';
 import {
   generarCalendarioAnual, aplicarExcepciones, limpiarSesionesInvalidas,
   recalcularNumerosSesion, obtenerProximaSesion, siguienteFechaSesion, esFechaSesionOrdinaria
@@ -76,9 +76,10 @@ export function ProyectoProvider({ children }) {
       }
       const data = nuevas[fecha];
       setProyectoMeta({ tipoSesion: data.tipoSesion, numeroSesion: data.numeroSesion || 1, fecha });
-      const conFijos = conPuntosFijosAsegurados(JSON.parse(JSON.stringify(data.secciones || [])));
-      setSecciones(conPunto2Actualizado(conFijos, { tipoSesion: data.tipoSesion, numeroSesion: data.numeroSesion, fecha }, nuevas, calcularFechaAnterior, formatearFechaES));
+      const conFijos = conPuntosFijosAsegurados(JSON.parse(JSON.stringify(data.secciones || [])), data.tipoSesion);
+      setSecciones(conPunto2Actualizado(conFijos, { tipoSesion: data.tipoSesion, numeroSesion: data.numeroSesion, fecha }, nuevas, calcularFechaAnterior, formatearFechaES, sumarDias));
       return nuevas;
+
     });
   }
 
@@ -315,28 +316,41 @@ export function ProyectoProvider({ children }) {
 
   
   function crearSesionExtraordinaria(fecha) {
+    const puntoOrdenDia = {
+      id: 'sec_fijo_1',
+      clasificacion: 'Pleno',
+      contenido: 'Aprobación, en su caso, del orden del día.',
+      seccion: 'aprobaciones',
+      subbloque: 'Pleno',
+      fijo: true,
+      anexo: false,
+      voto: 'Pendiente',
+      anotaciones: '',
+      aprobado: false,
+      dependencia: 'Pleno',
+      asunto: '',
+      archivos: []
+    };
+
     setSesiones(prev => {
-      const nuevas = { ...prev, [fecha]: { tipoSesion: 'Extraordinaria', numeroSesion: 1, secciones: [], asistentes: [] } };
+      const nuevas = { 
+        ...prev, 
+        [fecha]: { 
+          tipoSesion: 'Extraordinaria', 
+          numeroSesion: 1, 
+          secciones: [puntoOrdenDia], 
+          asistentes: [] 
+        } 
+      };
       return recalcularNumerosSesion(nuevas);
     });
-    cargarSesion(fecha);
-    setTimeout(() => {
-      const contenidoActa = `Aprobación, en su caso, del acta de la sesión extraordinaria del ${formatearFechaES(fecha)}.`;
-      setSecciones(prev => {
-        const yaExiste = prev.some(s => s.contenido === contenidoActa && s.seccion === 'aprobaciones');
-        if (yaExiste) return prev;
-        const nuevoPunto = {
-          id: 'sec_' + Date.now(), clasificacion: 'Pleno', contenido: contenidoActa, seccion: 'aprobaciones',
-          subbloque: 'Pleno', fijo: false, anexo: false, voto: 'Pendiente', anotaciones: '', aprobado: false,
-          dependencia: 'Pleno', asunto: 'Acta extraordinaria', archivos: []
-        };
-        const insertIdx = getInsertIndex(prev, 'aprobaciones');
-        const copia = [...prev];
-        copia.splice(insertIdx, 0, nuevoPunto);
-        return copia;
-      });
-    }, 0);
-  }
+
+  // Actualizar estados locales
+  setSesionActivaFecha(fecha);
+  setProyectoMeta({ tipoSesion: 'Extraordinaria', numeroSesion: 1, fecha });
+  setSecciones([puntoOrdenDia]);
+  primeraVezRef.current = true;
+}
 
   
   function adjuntarArchivoAPunto(id, archivo) {
@@ -373,7 +387,7 @@ export function ProyectoProvider({ children }) {
     cargarSesion, eliminarSesion, regenerarCalendario, agregarVacacion, agregarAsueto, eliminarExcepcion,
     agregarAsistente, eliminarAsistente, editarAsistente, toggleAsistentePresente,
     actualizarPunto, agregarActa, crearSesionExtraordinaria, adjuntarArchivoAPunto, setOneDriveFolder,
-    toggleListaCerrada // <--- exportada
+    toggleListaCerrada
   };
 
   return <ProyectoContext.Provider value={value}>{children}</ProyectoContext.Provider>;
