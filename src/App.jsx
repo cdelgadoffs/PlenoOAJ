@@ -14,13 +14,15 @@ import SidebarTerciario from './components/SidebarTerciario.jsx';
 import PanelPrincipal from './components/PanelPrincipal.jsx';
 import SidebarDerecho from './components/SidebarDerecho.jsx';
 import Modales from './components/Modales.jsx';
+import AccesoBloqueado from './components/AccesoBloqueado.jsx';
 
 export default function App() {
   const { cuentaActiva } = useAuth();
   const { sidebarNuevoAbierto, setSidebarNuevoAbierto, setSidebarTerciarioAbierto, setModalActivo, vistaActual, setVistaActual } = useUI();
   const { secciones, seccionActual, setSeccionActual, proyectoMeta, setPuntoEditandoId } = useProyecto();
-  const { esLector } = usePermisos();
+  const { esLector, esAdmin, bloqueado, cargandoPermisos } = usePermisos();
   const [fechaActualTexto, setFechaActualTexto] = useState('');
+  const sinAcceso = cuentaActiva && !esAdmin && !cargandoPermisos && bloqueado;
 
   useEffect(() => {
     document.body.classList.toggle('modo-lectura', esLector);
@@ -50,7 +52,8 @@ export default function App() {
   return (
     <>
       <LoginGate />
-      <div className={'app-shell' + (cuentaActiva ? '' : ' hidden')} id="appShell">
+      {sinAcceso && <AccesoBloqueado />}
+      <div className={'app-shell' + (cuentaActiva && !sinAcceso ? '' : ' hidden')} id="appShell">
         <Topbar
           fechaActualTexto={fechaActualTexto}
           onToggleSidebarNuevo={() => setSidebarNuevoAbierto(!sidebarNuevoAbierto)}

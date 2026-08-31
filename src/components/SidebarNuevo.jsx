@@ -5,11 +5,12 @@ import Calendarizacion from './Calendarizacion.jsx';
 import Email from './Email.jsx';
 import Quorum from './Quorum.jsx';
 import Sync from './Sync.jsx';
+import GestionUsuarios from './GestionUsuarios.jsx';
 import '../styles/SidebarNuevo.css';
 
 export default function SidebarNuevo() {
   const { sidebarNuevoAbierto, sidebarNuevoAncho, setSidebarNuevoAncho, panelNuevoActivo, setPanelNuevoActivo } = useUI();
-  const { puedeCalendarizacion, puedeEmail, puedeSync } = usePermisos();
+  const { puedeCalendarizacion, puedeEmail, puedeSync, puedeGestionarUsuarios } = usePermisos();
   const [mostrarFormularioCalendario, setMostrarFormularioCalendario] = useState(false);
 
   function abrirPanel(panel, ancho) {
@@ -45,6 +46,7 @@ export default function SidebarNuevo() {
           <li className="nuevo-menu-item">Notificaciones</li>
           <li className="nuevo-menu-item">Perfil</li>
           <li className="nuevo-menu-item" id="menuItemSync" style={{ display: puedeSync ? '' : 'none' }} onClick={() => abrirPanel('sync', false)}>Carpeta local</li>
+          <li className="nuevo-menu-item" id="menuItemUsuarios" style={{ display: puedeGestionarUsuarios ? '' : 'none' }} onClick={() => abrirPanel('usuarios', false)}>Gestión de usuarios</li>
         </ul>
       </div>
 
@@ -69,6 +71,10 @@ export default function SidebarNuevo() {
 
       <div className={'sb-nav nuevo-panel' + (panelNuevoActivo === 'sync' ? '' : ' hidden')} id="panelSync">
         {panelNuevoActivo === 'sync' && <Sync onVolver={volverAlMenu} />}
+      </div>
+
+      <div className={'sb-nav nuevo-panel' + (panelNuevoActivo === 'usuarios' ? '' : ' hidden')} id="panelGestionUsuariosWrap">
+        {panelNuevoActivo === 'usuarios' && <GestionUsuarios onVolver={volverAlMenu} />}
       </div>
     </aside>
   );

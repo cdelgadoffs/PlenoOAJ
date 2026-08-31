@@ -12,7 +12,7 @@ const VISTAS = [
   { id: 'inicio', label: 'Inicio' },
   { id: 'proyecto', label: 'Proyecto del orden del día', badge: true, id2: 'navProyecto', acordeon: true },
   { id: 'sesionPrevia', label: 'Previa de sesión' },
-  { id: 'actaSesion', label: 'Acta de sesión' }
+  { id: 'actaSesion', label: 'Historial' }
 ];
 
 const SECCIONES_VISIBLES = SECCIONES_DEL_DOCUMENTO.filter(sec => sec !== 'licencias');

@@ -11,6 +11,8 @@ import {
   generarCalendarioAnual, aplicarExcepciones, limpiarSesionesInvalidas,
   recalcularNumerosSesion, obtenerProximaSesion, siguienteFechaSesion, esFechaSesionOrdinaria
 } from '../utils/calendario.js';
+import { useAuth } from './AuthContext.jsx';
+import { registrarEvento } from '../utils/eventosDB.js';
 
 const ProyectoContext = createContext(null);
 
@@ -192,6 +194,7 @@ export function ProyectoProvider({ children }) {
     setSecciones(prev => {
       const index = prev.findIndex(s => s.id === id);
       if (index === -1 || prev[index].fijo) return prev;
+      registrar('punto_eliminar', 'Eliminó un punto', prev[index].dependencia || '');
       return prev.filter(s => s.id !== id);
     });
   }
@@ -222,6 +225,7 @@ export function ProyectoProvider({ children }) {
       copia.splice(insertIdx, 0, nuevaSec);
       return copia;
     });
+    registrar('punto_crear', 'Creó un punto', `${nuevaSec.seccion} · ${nuevaSec.dependencia}`);
     return nuevoId;
   }
 
@@ -236,8 +240,8 @@ export function ProyectoProvider({ children }) {
       archivos: datos.archivos,
       anexo: (datos.archivos || []).length > 0 || s.anexo === true
     } : s));
+    registrar('punto_editar', 'Editó un punto', `${datos.dependencia || ''}`);
   }
-  // === FIN FUNCIONES MODIFICADAS ===
 
   function toggleAnexo(id, valor) {
     setSecciones(prev => prev.map(s => s.id === id ? { ...s, anexo: valor } : s));
@@ -371,6 +375,19 @@ export function ProyectoProvider({ children }) {
     });
   }
   // === FIN NUEVA FUNCIÓN ===
+
+  const { cuentaActiva } = useAuth();
+
+  function registrar(categoria, accion, detalle = '') {
+    registrarEvento({
+      sesionFecha: sesionActivaFecha,
+      usuarioNombre: cuentaActiva?.name || '',
+      usuarioCorreo: cuentaActiva?.username || '',
+      categoria,
+      accion,
+      detalle
+    }).catch(err => console.error('No se pudo registrar el evento:', err));
+  }
 
   const value = {
     secciones, setSecciones,

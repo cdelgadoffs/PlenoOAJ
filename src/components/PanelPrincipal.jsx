@@ -3,11 +3,10 @@ import { useProyecto } from '../context/ProyectoContext.jsx';
 import { getTituloPunto, formatearFechaES } from '../utils/fechas.js';
 import { SECCIONES_DEL_DOCUMENTO, obtenerPuntosFiltrados } from '../utils/puntos.js';
 import { useState } from 'react';
-//import { generarWordOrdenDia } from '../utils/word.js';
 import '../styles/PanelPrincipal.css';
 import VistaInicio from './VistaInicio.jsx';
 import { generarWordActa } from '../utils/wordActa.js';
-
+import VistaHistorial from './VistaHistorial.jsx';
 import { renderConOcultos, tieneTextoOculto } from '../utils/texto.js';
 
 function TarjetaPunto({ sec, idx, puedeSubir, puedeBajar, esSeleccionada, listaCerrada, onSeleccionar, onMover, onEditar, onEliminar, onToggleAnexo, onPreviewArchivo, onAdjuntar }) {
@@ -247,7 +246,7 @@ function VistaSesionPrevia() {
   );
 }
 
-function VistaActaSesion() {
+/*function VistaActaSesion() {
   const { secciones, proyectoMeta } = useProyecto();
   const { terminoBusqueda } = useUI();
   const tipo = proyectoMeta.tipoSesion || 'Ordinaria';
@@ -319,7 +318,7 @@ function VistaActaSesion() {
       )}
     </>
   );
-}
+}*/
 
 export default function PanelPrincipal({ onEditarPunto }) {
   const { vistaActual, sidebarDerechoAbierto } = useUI();
@@ -328,7 +327,7 @@ export default function PanelPrincipal({ onEditarPunto }) {
   if (vistaActual === 'inicio') contenido = <VistaInicio />;
   else if (vistaActual === 'proyecto') contenido = <VistaProyecto onEditar={onEditarPunto} />;
   else if (vistaActual === 'sesionPrevia') contenido = <VistaSesionPrevia />;
-  else if (vistaActual === 'actaSesion') contenido = <VistaActaSesion />;
+  else if (vistaActual === 'actaSesion') contenido = <VistaHistorial />;
 
   return <main className={'main' + (sidebarDerechoAbierto && vistaActual === 'proyecto' ? ' shifted' : '')} id="panelPrincipal">{contenido}</main>;
 }
