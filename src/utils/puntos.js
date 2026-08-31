@@ -52,9 +52,10 @@ function puntoFijoBase(id) {
 }
 
 
-export function conPuntosFijosAsegurados(seccionesEntrada) {
+export function conPuntosFijosAsegurados(seccionesEntrada, tipoSesion) {
   let secciones = [...seccionesEntrada];
-  const idsFijos = ['sec_fijo_1', 'sec_fijo_2', 'sec_fijo_3'];
+  const esExtraordinaria = tipoSesion === 'Extraordinaria';
+  const idsFijos = esExtraordinaria ? ['sec_fijo_1'] : ['sec_fijo_1', 'sec_fijo_2', 'sec_fijo_3'];
 
   idsFijos.forEach(id => {
     if (!secciones.some(s => s.id === id)) {
@@ -98,6 +99,11 @@ export function conPuntosFijosAsegurados(seccionesEntrada) {
     }
   });
 
+  // Limpieza: si es extraordinaria, no debe quedar rastro de acta ni asuntos generales
+  if (esExtraordinaria) {
+    secciones = secciones.filter(s => s.id !== 'sec_fijo_2' && s.id !== 'sec_fijo_3');
+  }
+
   return reordenarAsuntosGenerales(secciones);
 }
 
@@ -107,7 +113,7 @@ export function reordenarAsuntosGenerales(secciones) {
   return [...otros, ...generales];
 }
 
-export function conPunto2Actualizado(secciones, proyectoMeta, sesiones, calcularFechaAnterior, formatearFechaES) {
+export function conPunto2Actualizado(secciones, proyectoMeta, sesiones, calcularFechaAnterior, formatearFechaES, sumarDias) {
   const idx = secciones.findIndex(s => s.id === 'sec_fijo_2');
   if (idx === -1 || !proyectoMeta.fecha) return secciones;
   const fechaAnterior = calcularFechaAnterior(proyectoMeta.fecha, 7);
@@ -117,7 +123,16 @@ export function conPunto2Actualizado(secciones, proyectoMeta, sesiones, calcular
   const actas = [`la sesión ${tipoActual} del ${formatearFechaES(fechaAnterior)}`];
 
   Object.keys(sesiones)
-    .filter(f => sesiones[f].tipoSesion === 'Extraordinaria' && f > fechaAnterior && f < proyectoMeta.fecha)
+    .filter(f => {
+      if (sesiones[f].tipoSesion !== 'Extraordinaria') return false;
+      // Si la extraordinaria cayó el día inmediato anterior a ESTA ordinaria,
+      // ya no entra en el periodo de recepción: se difiere a la siguiente ordinaria.
+      if (sumarDias(f, 1) === proyectoMeta.fecha) return false;
+      // Recuperar las que quedaron diferidas de la ordinaria pasada
+      // (cayeron el día inmediato anterior a esa ordinaria anterior).
+      if (sumarDias(f, 1) === fechaAnterior) return f < proyectoMeta.fecha;
+      return f > fechaAnterior && f < proyectoMeta.fecha;
+    })
     .sort()
     .forEach(f => actas.push(`la sesión extraordinaria del ${formatearFechaES(f)}`));
 

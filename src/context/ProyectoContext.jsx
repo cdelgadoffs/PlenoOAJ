@@ -6,7 +6,7 @@ import {
   guardarDiaSesion as persistirDiaSesion, guardarExcepciones as persistirExcepciones
 } from '../utils/storage.js';
 import { conPuntosFijosAsegurados, conPunto2Actualizado, getInsertIndex } from '../utils/puntos.js';
-import { calcularFechaAnterior, formatearFechaES, hoyLocalISO } from '../utils/fechas.js';
+import { calcularFechaAnterior, formatearFechaES, hoyLocalISO, sumarDias } from '../utils/fechas.js';
 import {
   generarCalendarioAnual, aplicarExcepciones, limpiarSesionesInvalidas,
   recalcularNumerosSesion, obtenerProximaSesion, siguienteFechaSesion, esFechaSesionOrdinaria
@@ -76,9 +76,10 @@ export function ProyectoProvider({ children }) {
       }
       const data = nuevas[fecha];
       setProyectoMeta({ tipoSesion: data.tipoSesion, numeroSesion: data.numeroSesion || 1, fecha });
-      const conFijos = conPuntosFijosAsegurados(JSON.parse(JSON.stringify(data.secciones || [])));
-      setSecciones(conPunto2Actualizado(conFijos, { tipoSesion: data.tipoSesion, numeroSesion: data.numeroSesion, fecha }, nuevas, calcularFechaAnterior, formatearFechaES));
+      const conFijos = conPuntosFijosAsegurados(JSON.parse(JSON.stringify(data.secciones || [])), data.tipoSesion);
+      setSecciones(conPunto2Actualizado(conFijos, { tipoSesion: data.tipoSesion, numeroSesion: data.numeroSesion, fecha }, nuevas, calcularFechaAnterior, formatearFechaES, sumarDias));
       return nuevas;
+
     });
   }
 
@@ -171,7 +172,9 @@ export function ProyectoProvider({ children }) {
     });
   }
 
+  // === FUNCIONES MODIFICADAS CON GUARD ===
   function moverPunto(id, direccion) {
+    if (sesiones[sesionActivaFecha]?.listaCerrada) return;
     setSecciones(prev => {
       const index = prev.findIndex(s => s.id === id);
       if (index === -1) return prev;
@@ -185,6 +188,7 @@ export function ProyectoProvider({ children }) {
   }
 
   function eliminarPunto(id) {
+    if (sesiones[sesionActivaFecha]?.listaCerrada) return;
     setSecciones(prev => {
       const index = prev.findIndex(s => s.id === id);
       if (index === -1 || prev[index].fijo) return prev;
@@ -192,11 +196,8 @@ export function ProyectoProvider({ children }) {
     });
   }
 
-  function toggleAnexo(id, valor) {
-    setSecciones(prev => prev.map(s => s.id === id ? { ...s, anexo: valor } : s));
-  }
-
   function agregarPunto(datos) {
+    if (sesiones[sesionActivaFecha]?.listaCerrada) return;
     const nuevoId = 'sec_' + Date.now();
     const nuevaSec = {
       id: nuevoId,
@@ -225,6 +226,7 @@ export function ProyectoProvider({ children }) {
   }
 
   function editarPuntoExistente(id, datos) {
+    if (sesiones[sesionActivaFecha]?.listaCerrada) return;
     setSecciones(prev => prev.map(s => s.id === id ? {
       ...s,
       contenido: datos.contenido,
@@ -234,6 +236,11 @@ export function ProyectoProvider({ children }) {
       archivos: datos.archivos,
       anexo: (datos.archivos || []).length > 0 || s.anexo === true
     } : s));
+  }
+  // === FIN FUNCIONES MODIFICADAS ===
+
+  function toggleAnexo(id, valor) {
+    setSecciones(prev => prev.map(s => s.id === id ? { ...s, anexo: valor } : s));
   }
 
   
@@ -247,7 +254,10 @@ export function ProyectoProvider({ children }) {
         alert('Ya existe un asistente con ese correo.');
         return prev;
       }
-      return { ...prev, [sesionActivaFecha]: { ...sesion, asistentes: [...asistentes, { ...datos, presente: true }] } };
+      const nuevos = datos.presidente
+        ? asistentes.map(a => ({ ...a, presidente: false }))
+        : asistentes;
+      return { ...prev, [sesionActivaFecha]: { ...sesion, asistentes: [...nuevos, { ...datos, presente: true }] } };
     });
   }
   function eliminarAsistente(idx) {
@@ -264,7 +274,11 @@ export function ProyectoProvider({ children }) {
     setSesiones(prev => {
       const sesion = prev[sesionActivaFecha];
       if (!sesion) return prev;
-      const asistentes = (sesion.asistentes || []).map((a, i) => i === idx ? { ...a, ...datos } : a);
+      let asistentes = sesion.asistentes || [];
+      if (datos.presidente) {
+        asistentes = asistentes.map((a, i) => i === idx ? a : { ...a, presidente: false });
+      }
+      asistentes = asistentes.map((a, i) => i === idx ? { ...a, ...datos } : a);
       return { ...prev, [sesionActivaFecha]: { ...sesion, asistentes } };
     });
   }
@@ -302,30 +316,43 @@ export function ProyectoProvider({ children }) {
 
   
   function crearSesionExtraordinaria(fecha) {
+    const puntoOrdenDia = {
+      id: 'sec_fijo_1',
+      clasificacion: 'Pleno',
+      contenido: 'Aprobación, en su caso, del orden del día.',
+      seccion: 'aprobaciones',
+      subbloque: 'Pleno',
+      fijo: true,
+      anexo: false,
+      voto: 'Pendiente',
+      anotaciones: '',
+      aprobado: false,
+      dependencia: 'Pleno',
+      asunto: '',
+      archivos: []
+    };
+
     setSesiones(prev => {
-      const nuevas = { ...prev, [fecha]: { tipoSesion: 'Extraordinaria', numeroSesion: 1, secciones: [], asistentes: [] } };
+      const nuevas = { 
+        ...prev, 
+        [fecha]: { 
+          tipoSesion: 'Extraordinaria', 
+          numeroSesion: 1, 
+          secciones: [puntoOrdenDia], 
+          asistentes: [] 
+        } 
+      };
       return recalcularNumerosSesion(nuevas);
     });
-    cargarSesion(fecha);
-    setTimeout(() => {
-      const contenidoActa = `Aprobación, en su caso, del acta de la sesión extraordinaria del ${formatearFechaES(fecha)}.`;
-      setSecciones(prev => {
-        const yaExiste = prev.some(s => s.contenido === contenidoActa && s.seccion === 'aprobaciones');
-        if (yaExiste) return prev;
-        const nuevoPunto = {
-          id: 'sec_' + Date.now(), clasificacion: 'Pleno', contenido: contenidoActa, seccion: 'aprobaciones',
-          subbloque: 'Pleno', fijo: false, anexo: false, voto: 'Pendiente', anotaciones: '', aprobado: false,
-          dependencia: 'Pleno', asunto: 'Acta extraordinaria', archivos: []
-        };
-        const insertIdx = getInsertIndex(prev, 'aprobaciones');
-        const copia = [...prev];
-        copia.splice(insertIdx, 0, nuevoPunto);
-        return copia;
-      });
-    }, 0);
-  }
 
+  // Actualizar estados locales
+  setSesionActivaFecha(fecha);
+  setProyectoMeta({ tipoSesion: 'Extraordinaria', numeroSesion: 1, fecha });
+  setSecciones([puntoOrdenDia]);
+  primeraVezRef.current = true;
+}
 
+  
   function adjuntarArchivoAPunto(id, archivo) {
     setSecciones(prev => prev.map(s => s.id === id ? { ...s, anexo: true, archivos: [...(s.archivos || []), archivo] } : s));
   }
@@ -333,6 +360,17 @@ export function ProyectoProvider({ children }) {
   function setOneDriveFolder(datos) {
     setProyectoMeta(prev => ({ ...prev, ...datos }));
   }
+
+  // === NUEVA FUNCIÓN toggleListaCerrada ===
+  function toggleListaCerrada() {
+    if (!sesionActivaFecha) return;
+    setSesiones(prev => {
+      const sesion = prev[sesionActivaFecha];
+      if (!sesion) return prev;
+      return { ...prev, [sesionActivaFecha]: { ...sesion, listaCerrada: !sesion.listaCerrada } };
+    });
+  }
+  // === FIN NUEVA FUNCIÓN ===
 
   const value = {
     secciones, setSecciones,
@@ -348,7 +386,8 @@ export function ProyectoProvider({ children }) {
     moverPunto, eliminarPunto, toggleAnexo, agregarPunto, editarPuntoExistente,
     cargarSesion, eliminarSesion, regenerarCalendario, agregarVacacion, agregarAsueto, eliminarExcepcion,
     agregarAsistente, eliminarAsistente, editarAsistente, toggleAsistentePresente,
-    actualizarPunto, agregarActa, crearSesionExtraordinaria, adjuntarArchivoAPunto, setOneDriveFolder
+    actualizarPunto, agregarActa, crearSesionExtraordinaria, adjuntarArchivoAPunto, setOneDriveFolder,
+    toggleListaCerrada
   };
 
   return <ProyectoContext.Provider value={value}>{children}</ProyectoContext.Provider>;

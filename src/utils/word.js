@@ -186,6 +186,7 @@ export async function generarWordOrdenDia(secciones, proyectoMeta) {
           indent: { left: 720, hanging: 720 },
           tabs: [{ type: 'left', position: 720 }],
           spacing: { before: 160, after: 100 },
+          alignment: AlignmentType.JUSTIFIED, // <--- ÚNICO CAMBIO: texto justificado
           children: childrenRuns
         })
       );
