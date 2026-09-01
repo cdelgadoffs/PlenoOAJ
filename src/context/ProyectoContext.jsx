@@ -6,7 +6,7 @@ import {
   guardarDiaSesion as persistirDiaSesion, guardarExcepciones as persistirExcepciones
 } from '../utils/storage.js';
 import { conPuntosFijosAsegurados, conPunto2Actualizado, getInsertIndex } from '../utils/puntos.js';
-import { calcularFechaAnterior, formatearFechaES, hoyLocalISO, sumarDias } from '../utils/fechas.js';
+import { calcularFechaAnterior, formatearFechaES, hoyLocalISO, getTituloPunto, sumarDias, padNumber } from '../utils/fechas.js';
 import {
   generarCalendarioAnual, aplicarExcepciones, limpiarSesionesInvalidas,
   recalcularNumerosSesion, obtenerProximaSesion, siguienteFechaSesion, esFechaSesionOrdinaria
@@ -194,7 +194,8 @@ export function ProyectoProvider({ children }) {
     setSecciones(prev => {
       const index = prev.findIndex(s => s.id === id);
       if (index === -1 || prev[index].fijo) return prev;
-      registrar('punto_eliminar', 'Eliminó un punto', prev[index].dependencia || '');
+      const titulo = codigoPunto(index);    
+      registrar('punto_eliminar', `Eliminó el punto ${titulo}`, `${prev[index].dependencia || ''} · "${resumenTexto(prev[index].contenido)}"`);
       return prev.filter(s => s.id !== id);
     });
   }
@@ -219,18 +220,21 @@ export function ProyectoProvider({ children }) {
       asunto: datos.asunto || '',
       archivos: datos.archivos || []
     };
+    const insertIdx = getInsertIndex(secciones, nuevaSec.seccion);
     setSecciones(prev => {
-      const insertIdx = getInsertIndex(prev, nuevaSec.seccion);
+      const idx = getInsertIndex(prev, nuevaSec.seccion);
       const copia = [...prev];
-      copia.splice(insertIdx, 0, nuevaSec);
+      copia.splice(idx, 0, nuevaSec);
       return copia;
     });
-    registrar('punto_crear', 'Creó un punto', `${nuevaSec.seccion} · ${nuevaSec.dependencia}`);
+    registrar('punto_crear', `Creó el punto ${codigoPunto(insertIdx)}`, `${nuevaSec.seccion} · ${nuevaSec.dependencia} · "${resumenTexto(nuevaSec.contenido)}"`);
     return nuevoId;
   }
 
   function editarPuntoExistente(id, datos) {
     if (sesiones[sesionActivaFecha]?.listaCerrada) return;
+    const idxGlobal = secciones.findIndex(s => s.id === id);
+    const tituloPrevio = idxGlobal !== -1 ? codigoPunto(idxGlobal) : '';
     setSecciones(prev => prev.map(s => s.id === id ? {
       ...s,
       contenido: datos.contenido,
@@ -240,7 +244,7 @@ export function ProyectoProvider({ children }) {
       archivos: datos.archivos,
       anexo: (datos.archivos || []).length > 0 || s.anexo === true
     } : s));
-    registrar('punto_editar', 'Editó un punto', `${datos.dependencia || ''}`);
+    registrar('punto_editar', `Editó el punto ${tituloPrevio}`, `${datos.dependencia || ''} · "${resumenTexto(datos.contenido)}"`);
   }
 
   function toggleAnexo(id, valor) {
@@ -365,16 +369,19 @@ export function ProyectoProvider({ children }) {
     setProyectoMeta(prev => ({ ...prev, ...datos }));
   }
 
-  // === NUEVA FUNCIÓN toggleListaCerrada ===
   function toggleListaCerrada() {
     if (!sesionActivaFecha) return;
     setSesiones(prev => {
       const sesion = prev[sesionActivaFecha];
       if (!sesion) return prev;
-      return { ...prev, [sesionActivaFecha]: { ...sesion, listaCerrada: !sesion.listaCerrada } };
+      const nuevoEstado = !sesion.listaCerrada;
+      return { ...prev, [sesionActivaFecha]: { ...sesion, listaCerrada: nuevoEstado } };
     });
+    const sesionActual = sesiones[sesionActivaFecha];
+    const seCierra = !sesionActual?.listaCerrada;
+    const totalPuntos = secciones.length;
+    registrar('lista', seCierra ? 'Cerró la lista de puntos' : 'Reabrió la lista de puntos', `${totalPuntos} punto${totalPuntos === 1 ? '' : 's'} en el orden del día`);
   }
-  // === FIN NUEVA FUNCIÓN ===
 
   const { cuentaActiva } = useAuth();
 
@@ -387,6 +394,14 @@ export function ProyectoProvider({ children }) {
       accion,
       detalle
     }).catch(err => console.error('No se pudo registrar el evento:', err));
+  }
+  function resumenTexto(texto, max = 60) {
+    if (!texto) return '';
+    const limpio = texto.replace(/\*\*/g, '');
+    return limpio.length > max ? limpio.slice(0, max) + '…' : limpio;
+  }
+  function codigoPunto(idx) {
+    return 'PLE/' + padNumber(idx + 1, 3);
   }
 
   const value = {
