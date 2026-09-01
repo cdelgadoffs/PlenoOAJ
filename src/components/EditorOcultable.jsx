@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { agregarNombrePropio } from '../utils/diccionarioPropios.js';
 
 function escaparHtml(texto) {
   return texto
@@ -36,6 +37,7 @@ function nodoAMarkers(nodo) {
 export default function EditorOcultable({ id, value, onChange, placeholder }) {
   const ref = useRef(null);
   const [botonPos, setBotonPos] = useState(null);
+  const [textoSeleccionado, setTextoSeleccionado] = useState('');
   const ultimoValorExternoRef = useRef(value);
 
   useEffect(() => {
@@ -64,16 +66,19 @@ export default function EditorOcultable({ id, value, onChange, placeholder }) {
     const sel = window.getSelection();
     if (!sel || sel.isCollapsed || sel.rangeCount === 0) {
       setBotonPos(null);
+      setTextoSeleccionado('');
       return;
     }
     const range = sel.getRangeAt(0);
     if (!ref.current || !ref.current.contains(range.commonAncestorContainer)) {
       setBotonPos(null);
+      setTextoSeleccionado('');
       return;
     }
     const rect = range.getBoundingClientRect();
     const contenedorRect = ref.current.getBoundingClientRect();
     if (rect.width === 0 && rect.height === 0) { setBotonPos(null); return; }
+    setTextoSeleccionado(sel.toString());
     setBotonPos({
       top: rect.top - contenedorRect.top - 34,
       left: rect.right - contenedorRect.left
@@ -86,17 +91,41 @@ export default function EditorOcultable({ id, value, onChange, placeholder }) {
     setBotonPos(null);
   }
 
+  function agregarADiccionario() {
+    const texto = textoSeleccionado.trim();
+    if (!texto) return;
+    const resultado = agregarNombrePropio(texto);
+    if (resultado.ok) {
+      alert(`"${texto}" se agregó al diccionario de nombres propios.`);
+    } else if (resultado.motivo === 'duplicado') {
+      alert(`"${texto}" ya está en el diccionario.`);
+    }
+    setBotonPos(null);
+  }
+
   return (
     <div style={{ position: 'relative' }}>
       {botonPos && (
-        <button
-          type="button"
-          className="btn-ocultar-flotante"
-          style={{ position: 'absolute', top: botonPos.top, left: botonPos.left }}
-          onMouseDown={(e) => { e.preventDefault(); ocultarSeleccion(); }}
+        <div
+          style={{ position: 'absolute', top: botonPos.top, left: botonPos.left, display: 'flex', gap: '4px' }}
         >
-          <i className="fas fa-eye-slash"></i>
-        </button>
+          <button
+            type="button"
+            className="btn-ocultar-flotante"
+            title="Ocultar selección"
+            onMouseDown={(e) => { e.preventDefault(); ocultarSeleccion(); }}
+          >
+            <i className="fas fa-eye-slash"></i>
+          </button>
+          <button
+            type="button"
+            className="btn-ocultar-flotante"
+            title="Añadir al diccionario"
+            onMouseDown={(e) => { e.preventDefault(); agregarADiccionario(); }}
+          >
+            <i className="fas fa-book"></i>
+          </button>
+        </div>
       )}
       <div
         id={id}
@@ -114,8 +143,9 @@ export default function EditorOcultable({ id, value, onChange, placeholder }) {
     </div>
   );
 }
-  function manejarPegado(e) {
-    e.preventDefault();
-    const texto = e.clipboardData.getData('text/plain');
-    document.execCommand('insertText', false, texto);
-  }
+
+function manejarPegado(e) {
+  e.preventDefault();
+  const texto = e.clipboardData.getData('text/plain');
+  document.execCommand('insertText', false, texto);
+}

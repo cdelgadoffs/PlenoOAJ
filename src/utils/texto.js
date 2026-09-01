@@ -1,12 +1,5 @@
 import React from 'react';
-
-const NOMBRES_PROPIOS = [
-  'Pleno', 'DGEJ', 'DEGETD', 'DGTI', 'DGJJ', 'DGIPDI', 'DGRH',
-  'Administración', 'Adscripción',
-  'Órgano de Administración Judicial',
-  'Poder Judicial de la Federación',
-  'Coordinación de Seguridad'
-];
+import { obtenerNombresPropios } from './diccionarioPropios.js';
 
 // Títulos que preceden un nombre propio de persona; se amplía esta lista según se necesite.
 const TITULOS_PERSONA = ['Magistrado', 'Magistrada', 'Licenciado', 'Licenciada', 'Juez', 'Jueza'];
@@ -19,10 +12,15 @@ function capitalizarOracion(oracion) {
 
 const LETRA = 'A-Za-zÀ-ÖØ-öø-ÿ';
 
+function escaparRegex(texto) {
+  return texto.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function restaurarNombresPropios(texto) {
   let resultado = texto;
-  NOMBRES_PROPIOS.forEach(nombre => {
-    const regex = new RegExp(`(?<![${LETRA}])${nombre}(?![${LETRA}])`, 'gi');
+  obtenerNombresPropios().forEach(nombre => {
+    const escapado = escaparRegex(nombre);
+    const regex = new RegExp(`(?<![${LETRA}])${escapado}(?![${LETRA}])`, 'gi');
     resultado = resultado.replace(regex, nombre);
   });
   return resultado;

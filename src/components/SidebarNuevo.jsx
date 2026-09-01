@@ -7,6 +7,7 @@ import Quorum from './Quorum.jsx';
 import Sync from './Sync.jsx';
 import GestionUsuarios from './GestionUsuarios.jsx';
 import '../styles/SidebarNuevo.css';
+import DiccionarioPersonalizado from './DiccionarioPersonalizado.jsx';
 
 export default function SidebarNuevo() {
   const { sidebarNuevoAbierto, sidebarNuevoAncho, setSidebarNuevoAncho, panelNuevoActivo, setPanelNuevoActivo } = useUI();
@@ -47,6 +48,7 @@ export default function SidebarNuevo() {
           <li className="nuevo-menu-item">Perfil</li>
           <li className="nuevo-menu-item" id="menuItemSync" style={{ display: puedeSync ? '' : 'none' }} onClick={() => abrirPanel('sync', false)}>Carpeta local</li>
           <li className="nuevo-menu-item" id="menuItemUsuarios" style={{ display: puedeGestionarUsuarios ? '' : 'none' }} onClick={() => abrirPanel('usuarios', false)}>Gestión de usuarios</li>
+          <li className="nuevo-menu-item" id="menuItemDiccionario" onClick={() => abrirPanel('diccionario', false)}>Diccionario de nombres propios</li>
         </ul>
       </div>
 
@@ -75,6 +77,9 @@ export default function SidebarNuevo() {
 
       <div className={'sb-nav nuevo-panel' + (panelNuevoActivo === 'usuarios' ? '' : ' hidden')} id="panelGestionUsuariosWrap">
         {panelNuevoActivo === 'usuarios' && <GestionUsuarios onVolver={volverAlMenu} />}
+      </div>
+      <div className={'sb-nav nuevo-panel' + (panelNuevoActivo === 'diccionario' ? '' : ' hidden')} id="panelDiccionarioWrap">
+        {panelNuevoActivo === 'diccionario' && <DiccionarioPersonalizado onVolver={volverAlMenu} />}
       </div>
     </aside>
   );
