@@ -8,6 +8,7 @@ import '../styles/SidebarPrincipal.css';
 import BotonListaCerrada from './BotonListaCerrada.jsx';
 import { generarWordOrdenDia } from '../utils/word.js';
 import { obtenerProximaSesion } from '../utils/calendario.js';
+import { generarWordActa } from '../utils/wordActa.js';
 
 const VISTAS = [
   { id: 'inicio', label: 'Inicio' },
@@ -20,7 +21,7 @@ const SECCIONES_VISIBLES = SECCIONES_DEL_DOCUMENTO.filter(sec => sec !== 'licenc
 
 export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalPuntos = 0 }) {
   const { vistaActual, setVistaActual, terminoBusqueda } = useUI();
-  const { proyectoMeta, secciones, seccionActual, setSeccionActual, setPuntoSeleccionadoId, sesiones, sesionActivaFecha, toggleAsistentePresente, asistentes, comenzarSesionCelebracion, finalizarSesionCelebracion } = useProyecto();  
+  const { proyectoMeta, secciones, seccionActual, setSeccionActual, setPuntoSeleccionadoId, sesiones, sesionActivaFecha, toggleAsistentePresente, asistentes, comenzarSesionCelebracion, finalizarSesionCelebracion, restablecerSesionCelebracion } = useProyecto();
   const horaInicioSesion = sesionActivaFecha ? sesiones[sesionActivaFecha]?.horaInicio : null;
   const horaFinSesion = sesionActivaFecha ? sesiones[sesionActivaFecha]?.horaFin : null;
   const presentes = asistentes.filter(a => a.presente).length;
@@ -29,6 +30,7 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
   const { esLector } = usePermisos();
   const [acordeonAbierto, setAcordeonAbierto] = useState(vistaActual === 'proyecto');
   const [generandoWord, setGenerandoWord] = useState(false);
+  const [generandoActaQuorum, setGenerandoActaQuorum] = useState(false);
 
   const listaCerrada = sesionActivaFecha ? !!sesiones[sesionActivaFecha]?.listaCerrada : false;
 
@@ -77,6 +79,17 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
       alert('No se pudo generar el documento Word: ' + err.message);
     } finally {
       setGenerandoWord(false);
+    }
+  }
+    async function generarActaDesdeQuorum() {
+    if (secciones.length === 0) { alert('No hay puntos para generar el acta.'); return; }
+    setGenerandoActaQuorum(true);
+    try {
+      await generarWordActa(secciones, proyectoMeta);
+    } catch (err) {
+      alert('No se pudo generar el acta: ' + err.message);
+    } finally {
+      setGenerandoActaQuorum(false);
     }
   }
 
@@ -226,6 +239,25 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
           {!horaInicioSesion && (
             <button className="btn-nuevo-proyecto" style={{ margin: 0, width: '100%' }} onClick={comenzarSesionCelebracion}>
               Comenzar sesión
+            </button>
+          )}
+          {horaFinSesion && (
+            <button
+              className="btn-nuevo-proyecto"
+              style={{ margin: 0, width: '100%' }}
+              disabled={generandoActaQuorum}
+              onClick={generarActaDesdeQuorum}
+            >
+              {generandoActaQuorum ? 'Generando...' : `Descargar acta de Sesión ${tipo} N°${numero}`}
+            </button>
+          )}
+          {horaInicioSesion && (
+            <button
+              className="btn-nuevo-proyecto"
+              style={{ margin: 0, width: '100%', background: 'transparent', color: '#888', border: '1px solid #ccc' }}
+              onClick={restablecerSesionCelebracion}
+            >
+              Restablecer sesión
             </button>
           )}
           {horaInicioSesion && !horaFinSesion && (

@@ -383,6 +383,17 @@ export function ProyectoProvider({ children }) {
     });
     registrar('sesion', 'Finalizó la sesión', new Date(ahora).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }));
   }
+  function restablecerSesionCelebracion() {
+    if (!sesionActivaFecha) return;
+    if (!confirm('¿Restablecer esta celebración? Se borrarán las horas de inicio y fin.')) return;
+    setSesiones(prev => {
+      const sesion = prev[sesionActivaFecha];
+      if (!sesion) return prev;
+      const { horaInicio, horaFin, ...resto } = sesion;
+      return { ...prev, [sesionActivaFecha]: resto };
+    });
+    registrar('sesion', 'Restableció la sesión', '');
+  }
 
   const { cuentaActiva } = useAuth();
 
@@ -420,7 +431,7 @@ export function ProyectoProvider({ children }) {
     cargarSesion, eliminarSesion, regenerarCalendario, agregarVacacion, agregarAsueto, eliminarExcepcion,
     asistentes, agregarAsistente, eliminarAsistente, editarAsistente, toggleAsistentePresente,
     actualizarPunto, agregarActa, crearSesionExtraordinaria, adjuntarArchivoAPunto, setOneDriveFolder,
-    toggleListaCerrada, comenzarSesionCelebracion, finalizarSesionCelebracion
+    toggleListaCerrada, comenzarSesionCelebracion, finalizarSesionCelebracion, restablecerSesionCelebracion
   };
 
   return <ProyectoContext.Provider value={value}>{children}</ProyectoContext.Provider>;
