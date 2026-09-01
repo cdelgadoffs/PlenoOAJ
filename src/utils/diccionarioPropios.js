@@ -35,6 +35,10 @@ export function obtenerNombresPropios() {
   return Array.from(new Set([...BASE, ...extra]));
 }
 
+function emitirCambio() {
+  window.dispatchEvent(new CustomEvent('diccionario-actualizado', { detail: { personalizados: leer() } }));
+}
+
 export function agregarNombrePropio(nombreCrudo) {
   const nombre = (nombreCrudo || '').trim();
   if (!nombre) return { ok: false, motivo: 'vacio' };
@@ -43,10 +47,19 @@ export function agregarNombrePropio(nombreCrudo) {
   const extra = leer();
   extra.push(nombre);
   escribir(extra);
+  emitirCambio();
   return { ok: true };
 }
 
 export function eliminarNombrePropio(nombre) {
   const extra = leer().filter(n => n !== nombre);
   escribir(extra);
+  emitirCambio();
+}
+export function importarPersonalizados(lista) {
+  if (!Array.isArray(lista)) return;
+  const actuales = leer();
+  const combinados = Array.from(new Set([...actuales, ...lista]));
+  escribir(combinados);
+  emitirCambio();
 }

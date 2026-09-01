@@ -218,7 +218,7 @@ export function ProyectoProvider({ children }) {
       tipoVotacion: datos.tipoVotacion || '',
       acuerdo: datos.acuerdo || '',
       anotaciones: '',
-      aprobado: false,
+      aprobado: true,
       dependencia: datos.dependencia || 'Pleno',
       asunto: datos.asunto || '',
       archivos: datos.archivos || []

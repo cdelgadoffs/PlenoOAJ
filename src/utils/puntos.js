@@ -67,7 +67,7 @@ export function conPuntosFijosAsegurados(seccionesEntrada, tipoSesion) {
           contenido: 'Aprobación, en su caso, del orden del día.',
           seccion: 'aprobaciones',
           subbloque: 'Pleno',
-          aprobado: false
+          aprobado: true
         }, ...secciones];
       } else if (id === 'sec_fijo_2') {
         secciones = [
@@ -81,7 +81,7 @@ export function conPuntosFijosAsegurados(seccionesEntrada, tipoSesion) {
           contenido: 'Asuntos generales.',
           seccion: 'asuntos generales',
           subbloque: 'Pleno',
-          aprobado: false
+          aprobado: true
         }];
       }
     } else {
@@ -128,7 +128,7 @@ export function conPunto2Actualizado(secciones, proyectoMeta, sesiones, calcular
     .filter(f => {
       if (sesiones[f].tipoSesion !== 'Extraordinaria') return false;
       // Si la extraordinaria cayó el día inmediato anterior a ESTA ordinaria,
-      // ya no entra en el periodo de recepción: se difiere a la siguiente ordinaria.
+      // ya no entra en el periodo de recepción: se difieif (id === 'sec_fijo_1') {re a la siguiente ordinaria.
       if (sumarDias(f, 1) === proyectoMeta.fecha) return false;
       // Recuperar las que quedaron diferidas de la ordinaria pasada
       // (cayeron el día inmediato anterior a esa ordinaria anterior).

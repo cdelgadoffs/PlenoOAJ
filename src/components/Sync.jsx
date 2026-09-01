@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useProyecto } from '../context/ProyectoContext.jsx';
+import { obtenerNombresPersonalizados, importarPersonalizados } from '../utils/diccionarioPropios.js';
 
 const FS_DB_NAME = 'ordenDiaFS';
 const FS_DB_STORE = 'carpetas';
@@ -62,6 +63,27 @@ async function fsEscribirArchivo(handle, nombre, datos) {
   await writable.write(JSON.stringify(datos, null, 2));
   await writable.close();
 }
+async function fsEscribirDiccionario(handle) {
+  await fsEscribirArchivo(handle, 'diccionario.json', {
+    personalizados: obtenerNombresPersonalizados()
+  });
+}
+
+async function fsLeerDiccionario(handle) {
+  try {
+    const ok = await fsVerificarPermiso(handle, 'read');
+    if (!ok) return;
+    const fileHandle = await handle.getFileHandle('diccionario.json');
+    const file = await fileHandle.getFile();
+    const texto = await file.text();
+    const data = JSON.parse(texto);
+    if (data && Array.isArray(data.personalizados)) {
+      importarPersonalizados(data.personalizados);
+    }
+  } catch (err) {
+    // No existe todavía el archivo, no pasa nada
+  }
+}
 async function fsEliminarArchivo(handle, nombre) {
   try {
     const ok = await fsVerificarPermiso(handle, 'readwrite');
@@ -90,6 +112,7 @@ export default function Sync({ onVolver }) {
         if (permitido === 'granted') {
           setHandle(h);
           setNombreCarpeta(h.name);
+          fsLeerDiccionario(h);
         } else {
           setNombreCarpeta(h.name + ' (toca "Seleccionar carpeta" para reconectar)');
           setNecesitaReconectar(true);
@@ -97,6 +120,13 @@ export default function Sync({ onVolver }) {
       } catch (err) { console.error('No se pudo restaurar la carpeta local:', err); }
     })();
   }, [claveUsuario]);
+  useEffect(() => {
+    function alCambiarDiccionario() {
+      if (handle) fsEscribirDiccionario(handle).catch(err => console.error('No se pudo respaldar el diccionario:', err));
+    }
+    window.addEventListener('diccionario-actualizado', alCambiarDiccionario);
+    return () => window.removeEventListener('diccionario-actualizado', alCambiarDiccionario);
+  }, [handle]);
 
   const primeraSincRef = useRef(true);
   useEffect(() => {
@@ -122,6 +152,8 @@ export default function Sync({ onVolver }) {
       setNombreCarpeta(h.name);
       setNecesitaReconectar(false);
       await fsGuardarHandle(claveUsuario, h);
+      await fsLeerDiccionario(h); 
+      await fsEscribirDiccionario(h); 
       
       for (const fecha of Object.keys(sesiones)) {
         const sesion = sesiones[fecha];
