@@ -5,6 +5,7 @@ export const NUEVO_SIDEBAR_KEY = 'nuevoSidebarOpen';
 export const SESIONES_KEY = 'sesiones';
 export const DIA_SESION_KEY = 'diaSesion';
 export const EXCEPCIONES_KEY = 'excepcionesCalendario';
+export const ASISTENTES_KEY = 'asistentesQuorum';
 
 function leerJSON(key, porDefecto) {
   const data = localStorage.getItem(key);
@@ -23,6 +24,9 @@ export const guardarProyectoMeta = (meta) => guardarJSON(PROYECTO_META_KEY, meta
 
 export const cargarSesiones = () => leerJSON(SESIONES_KEY, {});
 export const guardarSesiones = (sesiones) => guardarJSON(SESIONES_KEY, sesiones);
+
+export const cargarAsistentes = () => leerJSON(ASISTENTES_KEY, []);
+export const guardarAsistentes = (asistentes) => guardarJSON(ASISTENTES_KEY, asistentes);
 
 export function cargarDiaSesion() {
   const data = localStorage.getItem(DIA_SESION_KEY);

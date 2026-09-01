@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useProyecto } from '../context/ProyectoContext.jsx';
 
 export default function Quorum({ onVolver }) {
-  const { sesiones, sesionActivaFecha, agregarAsistente, eliminarAsistente, editarAsistente } = useProyecto();
+  const { asistentes, agregarAsistente, eliminarAsistente, editarAsistente } = useProyecto();
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
   const [genero, setGenero] = useState('masculino');
@@ -10,7 +10,6 @@ export default function Quorum({ onVolver }) {
   const [presidente, setPresidente] = useState(false);
   const [editandoIdx, setEditandoIdx] = useState(null);
 
-  const asistentes = (sesionActivaFecha && sesiones[sesionActivaFecha]?.asistentes) || [];
   const limiteAlcanzado = asistentes.length >= 5;
   const mostrarFormulario = !limiteAlcanzado || editandoIdx !== null;
   const hayPresidente = asistentes.some((a, idx) => a.presidente && idx !== editandoIdx);

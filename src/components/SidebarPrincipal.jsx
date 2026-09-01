@@ -7,11 +7,12 @@ import { SECCIONES_DEL_DOCUMENTO, obtenerPuntosFiltrados } from '../utils/puntos
 import '../styles/SidebarPrincipal.css';
 import BotonListaCerrada from './BotonListaCerrada.jsx';
 import { generarWordOrdenDia } from '../utils/word.js';
+import { obtenerProximaSesion } from '../utils/calendario.js';
 
 const VISTAS = [
   { id: 'inicio', label: 'Inicio' },
   { id: 'proyecto', label: 'Proyecto del orden del día', badge: true, id2: 'navProyecto', acordeon: true },
-  { id: 'sesionPrevia', label: 'Previa de sesión' },
+  { id: 'sesionPrevia', label: 'Celebrar sesión' },
   { id: 'actaSesion', label: 'Historial' }
 ];
 
@@ -19,13 +20,17 @@ const SECCIONES_VISIBLES = SECCIONES_DEL_DOCUMENTO.filter(sec => sec !== 'licenc
 
 export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalPuntos = 0 }) {
   const { vistaActual, setVistaActual, terminoBusqueda } = useUI();
-  const { proyectoMeta, secciones, seccionActual, setSeccionActual, setPuntoSeleccionadoId, sesiones, sesionActivaFecha, toggleAsistentePresente } = useProyecto();
+  const { proyectoMeta, secciones, seccionActual, setSeccionActual, setPuntoSeleccionadoId, sesiones, sesionActivaFecha, toggleAsistentePresente, asistentes, comenzarSesionCelebracion, finalizarSesionCelebracion } = useProyecto();  
+  const horaInicioSesion = sesionActivaFecha ? sesiones[sesionActivaFecha]?.horaInicio : null;
+  const horaFinSesion = sesionActivaFecha ? sesiones[sesionActivaFecha]?.horaFin : null;
+  const presentes = asistentes.filter(a => a.presente).length;
+  const proximaSesionFecha = obtenerProximaSesion(sesiones);
+  const esSesionProxima = sesionActivaFecha === proximaSesionFecha;
   const { esLector } = usePermisos();
   const [acordeonAbierto, setAcordeonAbierto] = useState(vistaActual === 'proyecto');
   const [generandoWord, setGenerandoWord] = useState(false);
 
   const listaCerrada = sesionActivaFecha ? !!sesiones[sesionActivaFecha]?.listaCerrada : false;
-  const asistentes = sesionActivaFecha ? (sesiones[sesionActivaFecha]?.asistentes || []) : [];
 
   useEffect(() => {
     if (vistaActual === 'proyecto') setAcordeonAbierto(true);
@@ -76,14 +81,15 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
   }
 
   return (
-    <aside className="sidebar-principal" id="sidebarPrincipal">
+    <aside className={'sidebar-principal' + (vistaActual === 'sesionPrevia' ? ' ancho-quorum' : '')} id="sidebarPrincipal">
       <div className="sb-header">
         <div className="sb-title" id="docTitleSidebar">Sesión {tipo} N° {numero}</div>
         <div className="sb-subtitle" id="docSubSidebar">{fechaTexto}</div>
       </div>
-      <nav className="sb-nav" id="navPrincipal">
+      <nav className="sb-nav" id="navPrincipal" style={vistaActual === 'sesionPrevia' ? { flex: '0 0 10px', overflowY: 'visible' } : undefined}>
         {VISTAS.map(v => {
           if (esLector && (v.id === 'inicio' || v.id === 'proyecto')) return null;
+          if (v.id === 'sesionPrevia' && !esSesionProxima) return null;
           const activo = vistaActual === v.id;
           const expandido = v.acordeon && activo && acordeonAbierto;
           return (
@@ -95,7 +101,7 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
                 onClick={() => seleccionarVista(v)}
               >
                 <span className="nav-dot"></span>
-                <span>{v.label}</span>
+                <span>{v.id === 'sesionPrevia' ? `Celebrar Sesión ${tipo} N°${numero}` : v.label}</span>
                 {v.badge && <span className="badge-total" id="totalBadge">{totalPuntos}</span>}
                 {v.acordeon && (
                   <span className={'nav-chevron' + (expandido ? ' expanded' : '')}>&#8250;</span>
@@ -159,22 +165,74 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
           </button>
         )}
       </div>
-      <div id="quorumContainer" style={{ display: (vistaActual === 'sesionPrevia') ? 'block' : 'none', padding: '12px 25px', borderTop: '1px solid #e0e0e0', marginTop: 'auto', fontSize: '12px', color: '#444' }}>
-        <div style={{ fontWeight: '600', marginBottom: '6px' }}>
-          Quórum · {asistentes.filter(a => a.presente).length} de {asistentes.length}
+      <div id="quorumContainer" style={{ display: (vistaActual === 'sesionPrevia') ? 'flex' : 'none', flexDirection: 'column', flex: '1', minHeight: 0, padding: '18px 22px', borderTop: '1px solid #e0e0e0' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '14px' }}>
+          <span style={{ fontWeight: '700', fontSize: '15px', color: '#1a1a1a' }}>Quórum</span>
+          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: presentes === asistentes.length && asistentes.length > 0 ? '#2e7d32' : '#888', fontWeight: '700' }}>
+            {presentes} / {asistentes.length}
+          </span>
         </div>
-        <div id="quorumLista" style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '160px', overflowY: 'auto' }}>
-          {asistentes.length === 0 && <span style={{ color: '#999' }}>Sin asistentes registrados</span>}
-          {asistentes.map((a, idx) => (
-            <label key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={!!a.presente}
-                onChange={(e) => toggleAsistentePresente(idx, e.target.checked)}
-              />
-              {a.nombre}
-            </label>
-          ))}
+        <div id="quorumLista" style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: '1', minHeight: 0, overflowY: 'auto' }}>
+          {asistentes.length === 0 && <span style={{ color: '#999', fontSize: '12px' }}>Sin asistentes registrados</span>}
+          {asistentes.map((a, idx) => {
+            const iniciales = (a.nombre || '').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
+            return (
+              <label
+                key={idx}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer',
+                  padding: '10px 12px', borderRadius: '8px',
+                  background: a.presente ? '#f1f9f1' : '#fafafa',
+                  border: '1px solid ' + (a.presente ? '#a5d6a7' : '#e5e5e5'),
+                  transition: 'background 0.15s, border-color 0.15s'
+                }}
+              >
+                <div style={{
+                  width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: a.presidente ? '#1a1a1a' : '#dbe5f5',
+                  color: a.presidente ? '#fff' : '#3a5a8f',
+                  fontSize: '12px', fontWeight: '700'
+                }}>
+                  {iniciales || '?'}
+                </div>
+                <div style={{ flex: '1', minWidth: 0 }}>
+                  <div style={{ fontSize: '13px', fontWeight: '600', color: '#1a1a1a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {a.nombre}{a.presidente ? ' · Presidente' : ''}
+                  </div>
+                  <div style={{ fontSize: '10.5px', color: '#999' }}>{a.grado}</div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={!!a.presente}
+                  onChange={(e) => toggleAsistentePresente(idx, e.target.checked)}
+                  style={{ width: '17px', height: '17px', flexShrink: 0, cursor: 'pointer' }}
+                />
+              </label>
+            );
+          })}
+        </div>
+        <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {horaInicioSesion && (
+            <div style={{ textAlign: 'center', fontSize: '11.5px', color: '#2e7d32', fontWeight: '600' }}>
+              Comenzó a las {new Date(horaInicioSesion).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+            </div>
+          )}
+          {horaFinSesion && (
+            <div style={{ textAlign: 'center', fontSize: '11.5px', color: '#b91c1c', fontWeight: '600' }}>
+              Finalizó a las {new Date(horaFinSesion).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+            </div>
+          )}
+          {!horaInicioSesion && (
+            <button className="btn-nuevo-proyecto" style={{ margin: 0, width: '100%' }} onClick={comenzarSesionCelebracion}>
+              Comenzar sesión
+            </button>
+          )}
+          {horaInicioSesion && !horaFinSesion && (
+            <button className="btn-nuevo-proyecto" style={{ margin: 0, width: '100%', background: '#b91c1c' }} onClick={finalizarSesionCelebracion}>
+              Finalizar sesión
+            </button>
+          )}
         </div>
       </div>
       {(vistaActual === 'proyecto' || vistaActual === 'actaSesion') && (

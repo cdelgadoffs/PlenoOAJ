@@ -57,3 +57,13 @@
 .btn-lista-toggle:active {
   transform: scale(0.98);
 }
+.sidebar-principal.ancho-quorum {
+  width: 380px;
+  min-width: 380px;
+}
+@media (max-width: 1100px) {
+  .sidebar-principal.ancho-quorum { width: 320px; min-width: 320px; }
+}
+@media (max-width: 900px) {
+  .sidebar-principal.ancho-quorum { width: 260px; min-width: 260px; }
+}
