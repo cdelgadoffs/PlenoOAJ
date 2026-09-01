@@ -15,7 +15,9 @@ export function getInsertIndex(secciones, seccion) {
   for (let i = 0; i < secciones.length; i++) {
     if (secciones[i].seccion === seccion) lastIndex = i;
   }
-  return lastIndex !== -1 ? lastIndex + 1 : secciones.length;
+  if (lastIndex !== -1) return lastIndex + 1;
+  const idxAsuntos = secciones.findIndex(s => s.seccion === 'asuntos generales');
+  return idxAsuntos !== -1 ? idxAsuntos : secciones.length;
 }
 
 export function puntoCoincide(secciones, punto, termino) {
@@ -149,4 +151,20 @@ export function conPunto2Actualizado(secciones, proyectoMeta, sesiones, calcular
     clasificacion: 'Pleno',
     subbloque: 'Pleno'
   } : s);
+}
+export function describirVotacion(tipoVotacionStr) {
+  if (!tipoVotacionStr) return '';
+  try {
+    const v = JSON.parse(tipoVotacionStr);
+    const votoLabel = ['por unanimidad', 'por mayoría de 4 votos', 'por mayoría de 3 votos', 'acuerda retirar'][v.voto] || '';
+    const esRetirar = v.voto === 3;
+    const votacionLabel = esRetirar ? '' : (v.votacion === 1 ? 'votación concurrente' : 'votación económica');
+    const estadoLabel = v.estado ? 'aprueba' : 'acuerda';
+    const quorumTxt = (v.quorum && v.quorum.length > 0) ? ` (quórum: ${v.quorum.join(', ')})` : '';
+    return esRetirar
+      ? `El Pleno, ${votoLabel}.`
+      : `El Pleno, en ${votacionLabel}, ${votoLabel}, ${estadoLabel}${quorumTxt}.`;
+  } catch {
+    return tipoVotacionStr;
+  }
 }

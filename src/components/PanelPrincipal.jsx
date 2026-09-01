@@ -1,7 +1,7 @@
 import { useUI } from '../context/UIContext.jsx';
 import { useProyecto } from '../context/ProyectoContext.jsx';
 import { getTituloPunto, formatearFechaES } from '../utils/fechas.js';
-import { SECCIONES_DEL_DOCUMENTO, obtenerPuntosFiltrados } from '../utils/puntos.js';
+import { SECCIONES_DEL_DOCUMENTO, obtenerPuntosFiltrados, describirVotacion } from '../utils/puntos.js';
 import { useState } from 'react';
 import '../styles/PanelPrincipal.css';
 import VistaInicio from './VistaInicio.jsx';
@@ -84,7 +84,7 @@ function TarjetaPunto({ sec, idx, puedeSubir, puedeBajar, esSeleccionada, listaC
             <span>Votación</span>
           </td>
           <td className="punto-tabla-votacion">
-            {sec.tipoVotacion && <span>{sec.tipoVotacion}</span>}
+            {sec.tipoVotacion && <span>{describirVotacion(sec.tipoVotacion)}</span>}
           </td>
         </tr>
       </tbody>
