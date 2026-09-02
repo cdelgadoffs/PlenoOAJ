@@ -162,3 +162,37 @@
 #cintaIrActual:hover {
   padding: 0 12px;
 }
+/* Botón calendario (ícono sin borde) */
+.cinta-calendario-toggle {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+  margin-left: auto; /* Empuja a la derecha */
+  border-radius: 4px;
+  transition: background 0.2s, transform 0.1s;
+  line-height: 1;
+}
+
+.cinta-calendario-toggle:hover {
+  background: #e6f0ff; /* Azul claro en hover */
+}
+
+.cinta-calendario-toggle.activo {
+  background: #cce0ff; /* Azul más oscuro cuando el calendario está abierto */
+}
+
+.cinta-calendario-toggle:active {
+  transform: scale(0.95);
+}
+
+/* Dropdown del calendario con animación */
+.cinta-calendario-dropdown {
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
