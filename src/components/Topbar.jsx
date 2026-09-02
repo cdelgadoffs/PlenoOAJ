@@ -46,7 +46,7 @@ export default function Topbar({ fechaActualTexto, onToggleSidebarNuevo, onNuevo
         </div>
         <button className="btn-nuevo-proyecto-top" id="btnNuevoProyecto" style={{ display: puedeNuevoProyecto ? '' : 'none' }} onClick={onNuevoProyecto}>
           <span className="btn-np-icon">+</span>
-          <span className="btn-np-label">Nueva extraordinaria</span>
+          <span className="btn-np-label">Nueva Extraordinaria</span>
         </button>
         <span id="fechaActual">{fechaActualTexto}</span>
         <div className="user-session">

@@ -59,10 +59,14 @@ export default function CintaSesiones() {
 
   const fechas = obtenerSesionesDelMes(sesiones, mesActivo);
   const hoy = hoyLocalISO();
+  
   let proximaGlobal = null;
   for (const f of Object.keys(sesiones).sort()) {
     if (f >= hoy) { proximaGlobal = f; break; }
   }
+
+  const mesProxima = proximaGlobal ? proximaGlobal.substring(0, 7) : null;
+  const mostrarBotonIrActual = mesProxima && mes !== mesProxima;
 
   function cambiarMes(delta) {
     const [a, m] = mesActivo.split('-').map(Number);
@@ -85,6 +89,10 @@ export default function CintaSesiones() {
     setMenuAbierto(false);
   }
 
+  function irASesionActual() {
+    if (mesProxima) setMes(mesProxima);
+  }
+
   const tituloSesion = `Sesión ${proyectoMeta.tipoSesion || 'Ordinaria'} N° ${proyectoMeta.numeroSesion || 1}` +
     (proyectoMeta.fecha ? ` · ${formatearFechaES(proyectoMeta.fecha)}` : '');
 
@@ -94,6 +102,16 @@ export default function CintaSesiones() {
         <div className="cinta-nav-group">
           <button className="cinta-nav" id="cintaAnterior" onClick={() => cambiarMes(-1)}>◀</button>
           <button className="cinta-nav" id="cintaSiguiente" onClick={() => cambiarMes(1)}>▶</button>
+          {mostrarBotonIrActual && (
+            <button
+              className="cinta-nav"
+              id="cintaIrActual"
+              onClick={irASesionActual}
+            >
+              <span className="icono">↩</span>
+              <span className="texto">Volver a sesión actual</span>
+            </button>
+          )}
         </div>
         <div
           ref={botonRef}
