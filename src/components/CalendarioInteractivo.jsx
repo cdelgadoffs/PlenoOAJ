@@ -1,5 +1,5 @@
 import React from 'react';
-import './CalendarioInteractivo.css';
+import '../styles/CalendarioInteractivo.css';
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 

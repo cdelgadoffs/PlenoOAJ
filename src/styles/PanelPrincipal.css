@@ -245,3 +245,14 @@
   background: #ffcdd2;
   color: #c62828;
 }
+.acuerdo-texto {
+  font-size: 13.5px;
+  color: #333;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.acuerdo-separador {
+  border: none;
+  border-top: 1px dashed #ccc;
+  margin: 6px 0;
+}
