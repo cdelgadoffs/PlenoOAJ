@@ -25,9 +25,7 @@ const MAPEO_ANTIGUO = {
   'Cédula': { voto: 0, votacion: 1, estado: true, quorum: [] }
 };
 
-const NOMBRES_FICTICIOS = ['Persona 1', 'Persona 2', 'Persona 3', 'Persona 4', 'Persona 5'];
-
-function TipoVotacionSelector({ value, onChange }) {
+function TipoVotacionSelector({ value, onChange, nombresQuorum = [] }) {
   const parseValue = (val) => {
     if (!val) return { voto: 0, votacion: 0, estado: true, quorum: [], precision: '' };
     try {
@@ -163,7 +161,7 @@ function TipoVotacionSelector({ value, onChange }) {
             Quórum ({estado.quorum.length}/{maxQuorum})
           </label>
           <div className="quorum-lista">
-            {NOMBRES_FICTICIOS.map(nombre => {
+            {nombresQuorum.map(nombre => {
               const marcado = estado.quorum.includes(nombre);
               const bloqueado = !marcado && estado.quorum.length >= maxQuorum;
               return (

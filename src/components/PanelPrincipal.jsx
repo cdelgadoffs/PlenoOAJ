@@ -96,7 +96,7 @@ function TarjetaPunto({ sec, idx, puedeSubir, puedeBajar, esSeleccionada, listaC
 
 function VistaProyecto({ onEditar }) {
   const { terminoBusqueda, sidebarTerciarioAbierto, setModalActivo, setPreviewArchivo, setPuntoAdjuntarId } = useUI();
-  const { secciones, seccionActual, proyectoMeta, puntoSeleccionadoId, setPuntoSeleccionadoId, moverPunto, eliminarPunto, toggleAnexo, sesiones, sesionActivaFecha } = useProyecto();
+const { secciones, puntoPreviaSeleccionadoId, setPuntoPreviaSeleccionadoId, eliminarPunto, actualizarPunto, asistentes } = useProyecto();
   const listaCerrada = sesionActivaFecha ? !!sesiones[sesionActivaFecha]?.listaCerrada : false;
   const [generandoWord, setGenerandoWord] = useState(false);
 
@@ -168,7 +168,7 @@ function VistaProyecto({ onEditar }) {
 }
 
 function VistaSesionPrevia() {
-  const { secciones, puntoPreviaSeleccionadoId, setPuntoPreviaSeleccionadoId, eliminarPunto, actualizarPunto } = useProyecto();
+  const { secciones, puntoPreviaSeleccionadoId, setPuntoPreviaSeleccionadoId, eliminarPunto, actualizarPunto, asistentes } = useProyecto();
   const { terminoBusqueda } = useUI();
 
   if (secciones.length === 0) {
@@ -189,6 +189,14 @@ function VistaSesionPrevia() {
   const puedeAnterior = idxFiltrado > 0;
   const puedeSiguiente = idxFiltrado < puntosFiltrados.length - 1;
   const esFijo = sec.fijo === true;
+  const textoVotoFijo = sec.id === 'sec_fijo_1'
+    ? 'El Pleno, en votación económica, por unanimidad, aprueba el orden del día.'
+    : 'El Pleno, en votación económica, por unanimidad, aprueba el acta e instruye la elaboración y publicación de la versión pública.';
+  const lineasAcuerdo = (sec.acuerdo || '').split('\n').filter(l => l.trim() !== '');
+  const esAcuerdoUnico = lineasAcuerdo.length === 1 && /^ÚNICO\.?\s*/i.test(lineasAcuerdo[0].trim());
+  const textoAcuerdoUnico = esAcuerdoUnico
+    ? lineasAcuerdo[0].trim().replace(/^ÚNICO\.?\s*/i, '').replace(/\.\s*$/, '')
+    : '';
 
   function eliminar() {
     if (esFijo) return;
@@ -197,6 +205,41 @@ function VistaSesionPrevia() {
       const restantes = puntosFiltrados.filter(s => s.id !== sec.id);
       setPuntoPreviaSeleccionadoId(restantes.length > 0 ? restantes[Math.min(idxFiltrado, restantes.length - 1)].id : null);
     }
+  }
+  function formatearVotanteQuorum(nombreEnQuorum) {
+    const a = asistentes.find(x => x.nombre === nombreEnQuorum);
+    if (!a) return nombreEnQuorum;
+    const articulo = a.genero === 'femenino' ? 'la' : 'el';
+    const gradoMap = {
+      'Licenciatura': a.genero === 'femenino' ? 'licenciada' : 'licenciado',
+      'Maestría': a.genero === 'femenino' ? 'maestra' : 'maestro',
+      'Doctorado': a.genero === 'femenino' ? 'doctora' : 'doctor'
+    };
+    const gradoTexto = gradoMap[a.grado] || '';
+    return `${articulo} ${gradoTexto} ${a.nombre}`.replace(/\s+/g, ' ').trim();
+  }
+  function generarTextoVotacion() {
+    if (!sec.tipoVotacion) return 'Sin votación registrada.';
+    let v;
+    try { v = JSON.parse(sec.tipoVotacion); } catch { return describirVotacion(sec.tipoVotacion); }
+    const estadoLabel = v.estado ? 'aprueba' : 'acuerda';
+
+    if (v.voto === 1 || v.voto === 2) {
+      const cantidadTexto = v.voto === 1 ? 'cuatro' : 'tres';
+      const nombresVotantes = (v.quorum && v.quorum.length > 0)
+        ? v.quorum.map(formatearVotanteQuorum).join(' y ')
+        : '<<pendiente>>';
+      const base = `El Pleno, por mayoría de ${cantidadTexto} votos, con el voto en contra de ${nombresVotantes}, `;
+      if (esAcuerdoUnico) {
+        return base + estadoLabel + ' ' + textoAcuerdoUnico.charAt(0).toLowerCase() + textoAcuerdoUnico.slice(1) + '.';
+      }
+      return base + estadoLabel + ':';
+    }
+
+    if (esAcuerdoUnico) {
+      return describirVotacion(sec.tipoVotacion).replace(/\.\s*$/, '') + ', ' + textoAcuerdoUnico.charAt(0).toLowerCase() + textoAcuerdoUnico.slice(1) + '.';
+    }
+    return describirVotacion(sec.tipoVotacion);
   }
 
   return (
@@ -213,28 +256,41 @@ function VistaSesionPrevia() {
           {sec.contenido ? renderConOcultos(sec.contenido) : 'Sin contenido'}
         </div>
         <div className="previa-campos">
-          <div className="ter-field">
-            <label className="ter-label">Acuerdo</label>
-            <EditorOcultable
-              id={'previaAcuerdo_' + sec.id}
-              value={sec.acuerdo || ''}
-              onChange={(v) => actualizarPunto(sec.id, { acuerdo: v })}
-              placeholder="Acuerdos"
-              autoAjustar
-            />
-          </div>
-          {aprobado ? (
+          {esFijo && sec.seccion === 'aprobaciones' ? (
             <div className="ter-field">
+              <div className="votacion-resultado">{textoVotoFijo}</div>
+            </div>
+          ) : (
+            <>
+              <div className="ter-field">
+                {aprobado ? (
               <TipoVotacionSelector
                 value={sec.tipoVotacion || ''}
                 onChange={(nuevoValor) => actualizarPunto(sec.id, { tipoVotacion: nuevoValor })}
+                nombresQuorum={asistentes.map(a => a.nombre)}
               />
-              {sec.tipoVotacion && <div className="votacion-resultado">{describirVotacion(sec.tipoVotacion)}</div>}
-            </div>
-          ) : (
-            <div className="ter-field">
-              <div className="votacion-resultado votacion-resultado-vacio">El punto debe estar aprobado para configurar la votación.</div>
-            </div>
+                ) : (
+                  <span className="email-vacio">Disponible solo si el punto está aprobado</span>
+                )}
+                <div className={'votacion-resultado' + (!aprobado || !sec.tipoVotacion ? ' votacion-resultado-vacio' : '')}>
+                  {aprobado ? generarTextoVotacion() : 'El punto debe estar aprobado para contar con votación.'}
+                </div>
+              </div>
+              {!esAcuerdoUnico && (
+                <div className="ter-field">
+                  <label className="ter-label">Acuerdo</label>
+                  <div className="acuerdo-texto">
+                    {lineasAcuerdo.map((linea, i, arr) => (
+                      <span key={i}>
+                        {renderConOcultos(linea)}
+                        {i < arr.length - 1 && <hr className="acuerdo-separador" />}
+                      </span>
+                    ))}
+                    {lineasAcuerdo.length === 0 && <span className="email-vacio">Sin acuerdo registrado</span>}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
         <div className="previa-footer">

@@ -3,6 +3,7 @@ import { useUI } from '../context/UIContext.jsx';
 import { useProyecto } from '../context/ProyectoContext.jsx';
 import { formatearFechaCorta, hoyLocalISO, formatearFechaES } from '../utils/fechas.js';
 import { obtenerSesionesDelMes } from '../utils/calendario.js';
+import CalendarioInteractivo from './CalendarioInteractivo.jsx';
 import '../styles/CintaSesiones.css';
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -16,10 +17,14 @@ export default function CintaSesiones() {
   const botonRef = useRef(null);
   const menuRef = useRef(null);
 
-  useEffect(() => {
-    if (sesionActivaFecha) setMes(sesionActivaFecha.substring(0, 7));
-  }, [sesionActivaFecha]);
+  // Estados para el calendario expandido
+  const [calendarioAbierto, setCalendarioAbierto] = useState(false);
+  const [calendarioMes, setCalendarioMes] = useState(() => mes);
+  const [calendarioPos, setCalendarioPos] = useState({ top: 0, left: 0 });
+  const calendarioRef = useRef(null);
+  const calendarioBotonRef = useRef(null);
 
+  // Efecto para cerrar menú de meses
   useEffect(() => {
     function manejarClickFuera(e) {
       if (
@@ -31,6 +36,34 @@ export default function CintaSesiones() {
     return () => document.removeEventListener('mousedown', manejarClickFuera);
   }, []);
 
+  // Efecto para cerrar calendario al hacer clic fuera o scroll/resize
+  useEffect(() => {
+    if (!calendarioAbierto) return;
+
+    function manejarClickFueraCalendario(e) {
+      if (
+        calendarioRef.current && !calendarioRef.current.contains(e.target) &&
+        calendarioBotonRef.current && !calendarioBotonRef.current.contains(e.target)
+      ) {
+        setCalendarioAbierto(false);
+      }
+    }
+
+    function cerrarPorScrollOResize() {
+      setCalendarioAbierto(false);
+    }
+
+    document.addEventListener('mousedown', manejarClickFueraCalendario);
+    window.addEventListener('scroll', cerrarPorScrollOResize, true);
+    window.addEventListener('resize', cerrarPorScrollOResize);
+    return () => {
+      document.removeEventListener('mousedown', manejarClickFueraCalendario);
+      window.removeEventListener('scroll', cerrarPorScrollOResize, true);
+      window.removeEventListener('resize', cerrarPorScrollOResize);
+    };
+  }, [calendarioAbierto]);
+
+  // Efecto para cerrar menú de meses por scroll/resize
   useEffect(() => {
     if (!menuAbierto) return;
     function cerrarPorScrollOResize(e) {
@@ -59,10 +92,14 @@ export default function CintaSesiones() {
 
   const fechas = obtenerSesionesDelMes(sesiones, mesActivo);
   const hoy = hoyLocalISO();
+  
   let proximaGlobal = null;
   for (const f of Object.keys(sesiones).sort()) {
     if (f >= hoy) { proximaGlobal = f; break; }
   }
+
+  const mesProxima = proximaGlobal ? proximaGlobal.substring(0, 7) : null;
+  const mostrarBotonIrActual = mesProxima && mes !== mesProxima;
 
   function cambiarMes(delta) {
     const [a, m] = mesActivo.split('-').map(Number);
@@ -85,6 +122,33 @@ export default function CintaSesiones() {
     setMenuAbierto(false);
   }
 
+  function irASesionActual() {
+    if (mesProxima) setMes(mesProxima);
+  }
+
+  // Funciones para el calendario expandido
+  function toggleCalendario() {
+    if (!calendarioAbierto && calendarioBotonRef.current) {
+      const rect = calendarioBotonRef.current.getBoundingClientRect();
+      setCalendarioPos({
+        top: rect.bottom + 8,
+        left: rect.right - 320, // Ancho aproximado del calendario
+      });
+    }
+    setCalendarioAbierto(prev => !prev);
+    if (!calendarioAbierto) {
+      setCalendarioMes(mes);
+    }
+  }
+
+  function cambiarMesCalendario(delta) {
+    const [a, m] = calendarioMes.split('-').map(Number);
+    let nuevoMes = m + delta, nuevoAnio = a;
+    if (nuevoMes < 1) { nuevoMes = 12; nuevoAnio--; }
+    if (nuevoMes > 12) { nuevoMes = 1; nuevoAnio++; }
+    setCalendarioMes(`${nuevoAnio}-${String(nuevoMes).padStart(2, '0')}`);
+  }
+
   const tituloSesion = `Sesión ${proyectoMeta.tipoSesion || 'Ordinaria'} N° ${proyectoMeta.numeroSesion || 1}` +
     (proyectoMeta.fecha ? ` · ${formatearFechaES(proyectoMeta.fecha)}` : '');
 
@@ -94,6 +158,12 @@ export default function CintaSesiones() {
         <div className="cinta-nav-group">
           <button className="cinta-nav" id="cintaAnterior" onClick={() => cambiarMes(-1)}>◀</button>
           <button className="cinta-nav" id="cintaSiguiente" onClick={() => cambiarMes(1)}>▶</button>
+          {mostrarBotonIrActual && (
+            <button className="cinta-nav" id="cintaIrActual" onClick={irASesionActual}>
+              <span className="icono">↩</span>
+              <span className="texto">Volver a sesión actual</span>
+            </button>
+          )}
         </div>
         <div
           ref={botonRef}
@@ -149,7 +219,49 @@ export default function CintaSesiones() {
             );
           })}
         </div>
+
+        {/* Botón calendario - ícono sin borde, alineado a la derecha */}
+        <button
+          ref={calendarioBotonRef}
+          className={`cinta-calendario-toggle ${calendarioAbierto ? 'activo' : ''}`}
+          onClick={toggleCalendario}
+          title="Ver calendario ampliado"
+        >
+          📅
+        </button>
+
+        {/* Dropdown del calendario - flotante con position fixed */}
+        {calendarioAbierto && (
+          <div
+            ref={calendarioRef}
+            className="cinta-calendario-dropdown"
+            style={{
+              position: 'fixed',
+              top: calendarioPos.top,
+              left: calendarioPos.left,
+              width: '320px',
+              background: '#fff',
+              borderRadius: '8px',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+              padding: '8px',
+              zIndex: 9999,
+            }}
+          >
+            <CalendarioInteractivo
+              mes={calendarioMes}
+              onChangeMes={cambiarMesCalendario}
+              sesiones={sesiones}
+              proximaGlobal={proximaGlobal}
+              hoy={hoy}
+              sesionActivaFecha={sesionActivaFecha}
+              cargarSesion={cargarSesion}
+              modoFormulario={modoFormulario}
+              onClose={() => setCalendarioAbierto(false)}
+            />
+          </div>
+        )}
       </div>
+
       {menuAbierto && (
         <div
           ref={menuRef}

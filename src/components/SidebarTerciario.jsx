@@ -44,7 +44,7 @@ const estadoVacio = {
 
 export default function SidebarTerciario() {
   const { sidebarTerciarioAbierto, setSidebarTerciarioAbierto, vistaActual } = useUI();
-  const { secciones, seccionActual, puntoEditandoId, setPuntoEditandoId, agregarPunto, editarPuntoExistente, setPuntoSeleccionadoId, proyectoMeta, setOneDriveFolder } = useProyecto();
+  const { secciones, seccionActual, puntoEditandoId, setPuntoEditandoId, agregarPunto, editarPuntoExistente, setPuntoSeleccionadoId, proyectoMeta, setOneDriveFolder, asistentes } = useProyecto();
   const { obtenerAccessToken } = useAuth();
   const [form, setForm] = useState(estadoVacio);
   const [oneDriveStatus, setOneDriveStatus] = useState('');
@@ -288,6 +288,7 @@ export default function SidebarTerciario() {
           <TipoVotacionSelector
             value={form.tipoVotacion}
             onChange={(nuevoValor) => setForm(f => ({ ...f, tipoVotacion: nuevoValor }))}
+            nombresQuorum={asistentes.map(a => a.nombre)}
           />
         </div>
 
