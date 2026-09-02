@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { agregarNombrePropio } from '../utils/diccionarioPropios.js';
 
+
 function escaparHtml(texto) {
   return texto
     .replace(/&/g, '&amp;')
@@ -34,7 +35,7 @@ function nodoAMarkers(nodo) {
   return resultado;
 }
 
-export default function EditorOcultable({ id, value, onChange, placeholder }) {
+export default function EditorOcultable({ id, value, onChange, placeholder, autoAjustar }) {
   const ref = useRef(null);
   const [botonPos, setBotonPos] = useState(null);
   const [textoSeleccionado, setTextoSeleccionado] = useState('');
@@ -130,7 +131,7 @@ export default function EditorOcultable({ id, value, onChange, placeholder }) {
       <div
         id={id}
         ref={ref}
-        className="ter-textarea ter-textarea-editable"
+        className={'ter-textarea ter-textarea-editable' + (autoAjustar ? ' ter-textarea-auto' : '')}
         contentEditable
         suppressContentEditableWarning
         data-placeholder={placeholder}

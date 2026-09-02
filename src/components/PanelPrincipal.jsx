@@ -5,9 +5,10 @@ import { SECCIONES_DEL_DOCUMENTO, obtenerPuntosFiltrados, describirVotacion } fr
 import { useState } from 'react';
 import '../styles/PanelPrincipal.css';
 import VistaInicio from './VistaInicio.jsx';
-import { generarWordActa } from '../utils/wordActa.js';
 import VistaHistorial from './VistaHistorial.jsx';
 import { renderConOcultos, tieneTextoOculto } from '../utils/texto.js';
+import TipoVotacionSelector from './TipoVotacionSelector.jsx';
+import EditorOcultable from './EditorOcultable.jsx';
 
 function TarjetaPunto({ sec, idx, puedeSubir, puedeBajar, esSeleccionada, listaCerrada, onSeleccionar, onMover, onEditar, onEliminar, onToggleAnexo, onPreviewArchivo, onAdjuntar }) {
   const titulo = getTituloPunto(sec, idx);
@@ -184,20 +185,10 @@ function VistaSesionPrevia() {
   const titulo = getTituloPunto(sec, idxGlobal);
   const aprobado = sec.aprobado === true;
   const dependencia = sec.dependencia || 'Pleno';
-  const votoActual = sec.voto || 'Pendiente';
   const idxFiltrado = puntosFiltrados.findIndex(s => s.id === sec.id);
   const puedeAnterior = idxFiltrado > 0;
   const puedeSiguiente = idxFiltrado < puntosFiltrados.length - 1;
   const esFijo = sec.fijo === true;
-
-  const opcionesVoto = [
-    'El Pleno, en votación económica, por unanimidad, aprueba el orden del día.',
-    'El Pleno, en votación económica, por unanimidad, aprueba el acta e instruye la elaboración y publicación de la versión pública.',
-    'El Pleno, en votación económica, por unanimidad, acuerda:',
-    'El Pleno, en votación económica, por unanimidad, aprueba…',
-    'El Pleno toma conocimiento del informe presentado.',
-    'El Pleno toma conocimiento de la suspensión de labores decretada.'
-  ];
 
   function eliminar() {
     if (esFijo) return;
@@ -218,22 +209,25 @@ function VistaSesionPrevia() {
           <span className="previa-tag">{dependencia}</span>
           <span className="previa-tag">{sec.seccion}</span>
         </div>
-        <div className="previa-cuerpo">{sec.contenido || 'Sin contenido'}</div>
+        <div className="previa-cuerpo">
+          {sec.contenido ? renderConOcultos(sec.contenido) : 'Sin contenido'}
+        </div>
         <div className="previa-campos">
           <div className="ter-field">
-            <label className="ter-label">Tipo de votación</label>
-            <select id="previaVotoSelect" className="ter-select" value={votoActual} onChange={(e) => actualizarPunto(sec.id, { voto: e.target.value })}>
-              {!opcionesVoto.includes(votoActual) && <option value={votoActual}>{votoActual}</option>}
-              {opcionesVoto.map(op => <option key={op} value={op}>{op}</option>)}
-            </select>
+            <label className="ter-label">Acuerdo</label>
+            <EditorOcultable
+              id={'previaAcuerdo_' + sec.id}
+              value={sec.acuerdo || ''}
+              onChange={(v) => actualizarPunto(sec.id, { acuerdo: v })}
+              placeholder="Acuerdos"
+              autoAjustar
+            />
           </div>
           <div className="ter-field">
-            <label className="ter-label">Acuerdos</label>
-            <textarea
-              id="previaAnotaciones" className="ter-textarea"
-              value={sec.anotaciones || ''}
-              onChange={(e) => actualizarPunto(sec.id, { anotaciones: e.target.value })}
-            ></textarea>
+            <TipoVotacionSelector
+              value={sec.tipoVotacion || ''}
+              onChange={(nuevoValor) => actualizarPunto(sec.id, { tipoVotacion: nuevoValor })}
+            />
           </div>
         </div>
         <div className="previa-footer">
