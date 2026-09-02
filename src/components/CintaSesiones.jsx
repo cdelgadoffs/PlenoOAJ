@@ -45,7 +45,7 @@ export default function CintaSesiones() {
     };
   }, [menuAbierto]);
 
-  const oculto = vistaActual !== 'proyecto' && vistaActual !== 'inicio';
+  const oculto = vistaActual !== 'proyecto' && vistaActual !== 'inicio' && vistaActual !== 'actaSesion';
   const modoFormulario = sidebarTerciarioAbierto;
 
   const mesActivo = mes;

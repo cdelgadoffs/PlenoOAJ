@@ -63,15 +63,17 @@ export function aplicarExcepciones(sesiones, excepciones, sesionActivaFecha) {
     Object.keys(nuevas).forEach(f => {
       if (f < v.inicio || f > v.fin || f === sesionActivaFecha) return;
       const s = nuevas[f];
-      const vacio = !s.secciones || !s.secciones.some(p => !p.fijo);
-      if (vacio) delete nuevas[f];
+      const sinPuntos = !s.secciones || !s.secciones.some(p => !p.fijo);
+      const sinAsistentes = !s.asistentes || s.asistentes.length === 0;
+      if (sinPuntos && sinAsistentes) delete nuevas[f];
     });
   });
   excepciones.asuetos.forEach(a => {
     const s = nuevas[a.fecha];
     if (!s || a.fecha === sesionActivaFecha) return;
-    const vacio = !s.secciones || !s.secciones.some(p => !p.fijo);
-    if (!vacio) return;
+    const sinPuntos = !s.secciones || !s.secciones.some(p => !p.fijo);
+    const sinAsistentes = !s.asistentes || s.asistentes.length === 0;
+    if (!(sinPuntos && sinAsistentes)) return;
     delete nuevas[a.fecha];
     if (!nuevas[a.destino] && !estaEnVacaciones(excepciones, a.destino)) {
       nuevas[a.destino] = { tipoSesion: 'Ordinaria', numeroSesion: 1, secciones: [] };
@@ -86,7 +88,7 @@ export function limpiarSesionesInvalidas(sesiones, diaSesion, sesionActivaFecha)
   Object.keys(nuevas).forEach(fecha => {
     const sesion = nuevas[fecha];
     if (!sesion || fecha === sesionActivaFecha) return;
-    const sinAbrir = !sesion.secciones || sesion.secciones.length === 0;
+    const sinAbrir = (!sesion.secciones || sesion.secciones.length === 0) && (!sesion.asistentes || sesion.asistentes.length === 0);
     if (sesion.tipoSesion === 'Extraordinaria') {
       if (sinAbrir) delete nuevas[fecha];
       return;

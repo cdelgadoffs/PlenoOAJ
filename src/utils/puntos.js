@@ -15,7 +15,9 @@ export function getInsertIndex(secciones, seccion) {
   for (let i = 0; i < secciones.length; i++) {
     if (secciones[i].seccion === seccion) lastIndex = i;
   }
-  return lastIndex !== -1 ? lastIndex + 1 : secciones.length;
+  if (lastIndex !== -1) return lastIndex + 1;
+  const idxAsuntos = secciones.findIndex(s => s.seccion === 'asuntos generales');
+  return idxAsuntos !== -1 ? idxAsuntos : secciones.length;
 }
 
 export function puntoCoincide(secciones, punto, termino) {
@@ -65,7 +67,7 @@ export function conPuntosFijosAsegurados(seccionesEntrada, tipoSesion) {
           contenido: 'Aprobación, en su caso, del orden del día.',
           seccion: 'aprobaciones',
           subbloque: 'Pleno',
-          aprobado: false
+          aprobado: true
         }, ...secciones];
       } else if (id === 'sec_fijo_2') {
         secciones = [
@@ -79,7 +81,7 @@ export function conPuntosFijosAsegurados(seccionesEntrada, tipoSesion) {
           contenido: 'Asuntos generales.',
           seccion: 'asuntos generales',
           subbloque: 'Pleno',
-          aprobado: false
+          aprobado: true
         }];
       }
     } else {
@@ -126,7 +128,7 @@ export function conPunto2Actualizado(secciones, proyectoMeta, sesiones, calcular
     .filter(f => {
       if (sesiones[f].tipoSesion !== 'Extraordinaria') return false;
       // Si la extraordinaria cayó el día inmediato anterior a ESTA ordinaria,
-      // ya no entra en el periodo de recepción: se difiere a la siguiente ordinaria.
+      // ya no entra en el periodo de recepción: se difieif (id === 'sec_fijo_1') {re a la siguiente ordinaria.
       if (sumarDias(f, 1) === proyectoMeta.fecha) return false;
       // Recuperar las que quedaron diferidas de la ordinaria pasada
       // (cayeron el día inmediato anterior a esa ordinaria anterior).
@@ -149,4 +151,24 @@ export function conPunto2Actualizado(secciones, proyectoMeta, sesiones, calcular
     clasificacion: 'Pleno',
     subbloque: 'Pleno'
   } : s);
+}
+export function describirVotacion(tipoVotacionStr) {
+  if (!tipoVotacionStr) return '';
+  try {
+    const v = JSON.parse(tipoVotacionStr);
+    const votoLabel = ['por unanimidad', 'por mayoría de 4 votos', 'por mayoría de 3 votos', 'acuerda retirar'][v.voto] || '';
+    const esRetirar = v.voto === 3;
+    const votacionLabel = esRetirar ? '' : (v.votacion === 1 ? 'votación concurrente' : 'votación económica');
+    const estadoLabel = v.estado ? 'aprueba' : 'acuerda';
+    const quorumTxt = (v.quorum && v.quorum.length > 0) ? ` (quórum: ${v.quorum.join(', ')})` : '';
+    const esUnanimidadConcurrente = v.voto === 0 && v.votacion === 1;
+    if (esUnanimidadConcurrente && v.precision) {
+      return `El Pleno, por unanimidad de votos, con la precisión de que ${v.precision}, ${estadoLabel}.`;
+    }
+    return esRetirar
+      ? `El Pleno, ${votoLabel}.`
+      : `El Pleno, en ${votacionLabel}, ${votoLabel}, ${estadoLabel}${quorumTxt}.`;
+  } catch {
+    return tipoVotacionStr;
+  }
 }

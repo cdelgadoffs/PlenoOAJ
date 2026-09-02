@@ -145,3 +145,25 @@
 .quorum-item.bloqueado input[type="checkbox"] {
   cursor: not-allowed;
 }
+
+.precision-wrap {
+  flex: 1 1 100%;
+  margin-top: 4px;
+}
+.precision-textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 60px;
+  padding: 7px 10px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: 'DM Mono', monospace;
+  color: #333;
+  resize: vertical;
+}
+.precision-textarea:focus {
+  outline: none;
+  border-color: #90a4ae;
+}

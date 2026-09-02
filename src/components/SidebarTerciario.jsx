@@ -5,8 +5,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { formatearFechaES } from '../utils/fechas.js';
 import { crearCarpetaProyecto, crearCarpetaPunto, subirArchivoAOneDrive } from '../services/onedrive.js';
 import { guardarArchivo, obtenerArchivo, eliminarArchivo } from '../utils/archivosDB.js';
-import mammoth from 'mammoth';
-import { normalizarTexto } from '../utils/texto.js';
+import { esArchivoWord, extraerTextoWord } from '../utils/extraccionWord.js';
 import EditorOcultable from './EditorOcultable.jsx';
 import '../styles/SidebarTerciario.css';
 import TipoVotacionSelector from './TipoVotacionSelector.jsx';
@@ -108,90 +107,6 @@ export default function SidebarTerciario() {
     setForm(f => ({ ...f, categoria, remitente: opciones[0] }));
   }
 
-function esArchivoWord(file) {
-  return file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-         /\.docx$/i.test(file.name);
-}
-function esLineaTitulo(linea) {
-  return /^[A-ZÁÉÍÓÚÑ\s]{4,}:?\s*$/.test(linea) && linea === linea.toUpperCase();
-}
-
-function extraerSeccionPorTitulo(textoCompleto, patronTitulo, patronTituloConTexto, cortarEnBlanco, separador) {
-  const lineas = textoCompleto.split('\n').map(l => l.trim());
-
-  let idxTitulo = -1;
-  let textoEnMismaLinea = '';
-
-  for (let i = 0; i < lineas.length; i++) {
-    const linea = lineas[i];
-    if (!linea) continue;
-    const matchConTexto = linea.match(patronTituloConTexto);
-    if (matchConTexto) {
-      idxTitulo = i;
-      textoEnMismaLinea = matchConTexto[2].trim();
-      break;
-    }
-    if (patronTitulo.test(linea)) {
-      idxTitulo = i;
-      break;
-    }
-  }
-
-  if (idxTitulo === -1) return '';
-
-  const parrafos = [];
-  if (textoEnMismaLinea) parrafos.push(textoEnMismaLinea);
-
-  let actual = [];
-  for (let i = idxTitulo + 1; i < lineas.length; i++) {
-    const linea = lineas[i];
-    if (!linea) {
-      if (actual.length > 0) { parrafos.push(actual.join(' ')); actual = []; }
-      if (cortarEnBlanco && parrafos.length > 0) break;
-      continue;
-    }
-    if (esLineaTitulo(linea) && (parrafos.length > 0 || actual.length > 0)) break;
-    actual.push(linea);
-  }
-  if (actual.length > 0) parrafos.push(actual.join(' '));
-
-  return parrafos.join(separador).trim();
-}
-
-function extraerParrafoAcuerdo(textoCompleto) {
-  return extraerSeccionPorTitulo(
-    textoCompleto,
-    /^(PUNTO\s+DE\s+ACUERDO|ACUERDO)\s*:?\s*$/i,
-    /^(PUNTO\s+DE\s+ACUERDO|ACUERDO)\s*:\s*(.+)$/i,
-    true,
-    ' '
-  );
-}
-
-function extraerTextoAcuerdos(textoCompleto) {
-  return extraerSeccionPorTitulo(
-    textoCompleto,
-    /^ACUERDOS\s*:?\s*$/i,
-    /^ACUERDOS\s*:\s*(.+)$/i,
-    false,
-    '\n\n'
-  );
-}
-
-async function extraerTextoWord(file) {
-  try {
-    const arrayBuffer = await file.arrayBuffer();
-    const resultado = await mammoth.extractRawText({ arrayBuffer });
-    const texto = resultado.value || '';
-    const puntoAcuerdo = normalizarTexto(extraerParrafoAcuerdo(texto));
-    const acuerdos = extraerTextoAcuerdos(texto);
-    return { puntoAcuerdo, acuerdos };
-  } catch (err) {
-    console.error('Error al extraer texto del Word:', err);
-    return { puntoAcuerdo: '', acuerdos: '' };
-  }
-}
-
   function adjuntarArchivos(e) {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
@@ -217,7 +132,7 @@ async function extraerTextoWord(file) {
         if (form.contenido.trim() !== '' || form.acuerdo.trim() !== '') {
           if (!confirm('Se detectó un documento Word. ¿Extraer el punto de acuerdo y los acuerdos, reemplazando el contenido actual?')) return;
         }
-        const { puntoAcuerdo, acuerdos } = await extraerTextoWord(wordFile._file);
+        const { puntoAcuerdo, acuerdos } = await extraerTextoWord(wordFile._file, seccionActual);
         if (puntoAcuerdo || acuerdos) {
           setForm(f => ({
             ...f,
@@ -240,13 +155,18 @@ async function extraerTextoWord(file) {
   }
 
   function confirmar() {
-    const contenido = form.contenido.trim() || 'Sin resumen';
+    const contenido = form.contenido.trim();
+    const acuerdo = form.acuerdo.trim();
+    if (!contenido || !acuerdo) {
+      alert('Debes completar el punto de acuerdo y los acuerdos antes de añadir el punto.');
+      return;
+    }
     if (puntoEditandoId) {
       editarPuntoExistente(puntoEditandoId, {
         contenido,
         dependencia: form.remitente,
         tipoVotacion: form.tipoVotacion,
-        acuerdo: form.acuerdo,
+        acuerdo,
         archivos: form.archivos
       });
       setPuntoSeleccionadoId(puntoEditandoId);
@@ -260,7 +180,7 @@ async function extraerTextoWord(file) {
       dependencia: form.remitente,
       seccion: seccionActual,
       tipoVotacion: form.tipoVotacion,
-      acuerdo: form.acuerdo,
+      acuerdo,
       archivos: form.archivos
     });
     setPuntoSeleccionadoId(nuevoId);
@@ -373,7 +293,7 @@ async function extraerTextoWord(file) {
 
         <div className="ter-acciones">
           <button className="btn-cancel" id="btnCancelarCreacion" onClick={cerrar}>Cancelar</button>
-          <button className="btn-confirm" id="btnConfirmarCreacion" onClick={confirmar}>{puntoEditandoId ? 'Guardar cambios' : 'Añadir'}</button>
+          <button className="btn-confirm" id="btnConfirmarCreacion" disabled={!form.contenido.trim() || !form.acuerdo.trim()} onClick={confirmar}>{puntoEditandoId ? 'Guardar cambios' : 'Añadir'}</button>
         </div>
       </div>
     </aside>
