@@ -223,12 +223,19 @@ function VistaSesionPrevia() {
               autoAjustar
             />
           </div>
-          <div className="ter-field">
-            <TipoVotacionSelector
-              value={sec.tipoVotacion || ''}
-              onChange={(nuevoValor) => actualizarPunto(sec.id, { tipoVotacion: nuevoValor })}
-            />
-          </div>
+          {aprobado ? (
+            <div className="ter-field">
+              <TipoVotacionSelector
+                value={sec.tipoVotacion || ''}
+                onChange={(nuevoValor) => actualizarPunto(sec.id, { tipoVotacion: nuevoValor })}
+              />
+              {sec.tipoVotacion && <div className="votacion-resultado">{describirVotacion(sec.tipoVotacion)}</div>}
+            </div>
+          ) : (
+            <div className="ter-field">
+              <div className="votacion-resultado votacion-resultado-vacio">El punto debe estar aprobado para configurar la votación.</div>
+            </div>
+          )}
         </div>
         <div className="previa-footer">
           <button className="btn-eliminar" id="btnEliminarPrevia" disabled={esFijo} onClick={eliminar}>{esFijo ? 'Fijo' : 'Eliminar'}</button>

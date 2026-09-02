@@ -29,7 +29,7 @@ const NOMBRES_FICTICIOS = ['Persona 1', 'Persona 2', 'Persona 3', 'Persona 4', '
 
 function TipoVotacionSelector({ value, onChange }) {
   const parseValue = (val) => {
-    if (!val) return { voto: 0, votacion: 0, estado: true, quorum: [] };
+    if (!val) return { voto: 0, votacion: 0, estado: true, quorum: [], precision: '' };
     try {
       const parsed = JSON.parse(val);
       if (parsed && typeof parsed.voto === 'number' && typeof parsed.votacion === 'number') {
@@ -37,13 +37,14 @@ function TipoVotacionSelector({ value, onChange }) {
           voto: parsed.voto,
           votacion: parsed.votacion,
           estado: typeof parsed.estado === 'boolean' ? parsed.estado : true,
-          quorum: Array.isArray(parsed.quorum) ? parsed.quorum : []
+          quorum: Array.isArray(parsed.quorum) ? parsed.quorum : [],
+          precision: typeof parsed.precision === 'string' ? parsed.precision : ''
         };
       }
     } catch (e) {
-      if (MAPEO_ANTIGUO[val]) return MAPEO_ANTIGUO[val];
+      if (MAPEO_ANTIGUO[val]) return { ...MAPEO_ANTIGUO[val], precision: '' };
     }
-    return { voto: 0, votacion: 0, estado: true, quorum: [] };
+    return { voto: 0, votacion: 0, estado: true, quorum: [], precision: '' };
   };
 
   const [estado, setEstado] = useState(() => parseValue(value));
@@ -54,6 +55,7 @@ function TipoVotacionSelector({ value, onChange }) {
       nuevo.voto !== estado.voto ||
       nuevo.votacion !== estado.votacion ||
       nuevo.estado !== estado.estado ||
+      nuevo.precision !== estado.precision ||
       JSON.stringify(nuevo.quorum) !== JSON.stringify(estado.quorum)
     ) {
       setEstado(nuevo);
@@ -81,6 +83,10 @@ function TipoVotacionSelector({ value, onChange }) {
     emitir({ ...estado, estado: !estado.estado });
   }
 
+  function handlePrecisionChange(e) {
+    emitir({ ...estado, precision: e.target.value });
+  }
+
   function toggleQuorum(nombre) {
     const yaSeleccionado = estado.quorum.includes(nombre);
     if (yaSeleccionado) {
@@ -95,6 +101,7 @@ function TipoVotacionSelector({ value, onChange }) {
   const requiereQuorum = opcionVoto.requiereQuorum || false;
   const esRetirar = estado.voto === 3;
   const maxQuorum = estado.voto === 1 ? 1 : (estado.voto === 2 ? 2 : 0);
+  const mostrarPrecision = estado.voto === 0 && estado.votacion === 1;
 
   return (
     <div className="ter-field votacion-selector">
@@ -137,6 +144,18 @@ function TipoVotacionSelector({ value, onChange }) {
           {estado.estado ? 'aprueba' : 'acuerda'}
         </button>
       </div>
+
+      {mostrarPrecision && (
+        <div className="precision-wrap">
+          <label className="ter-label">Precisión</label>
+          <textarea
+            className="precision-textarea"
+            value={estado.precision}
+            onChange={handlePrecisionChange}
+            placeholder="Escribe la precisión sobre la votación..."
+          />
+        </div>
+      )}
 
       {requiereQuorum && (
         <div className="quorum-lista-wrap">

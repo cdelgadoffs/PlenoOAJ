@@ -24,7 +24,7 @@ export default function SidebarSecundario({ onAbrirCreacion }) {
         <aside className="sidebar-secundario" id="sidebarSecundario">
           <div className="sb-header">
             <div className="sb-header-top">
-              <div className="sb-badge" id="secBadgeLabel">Sesión previa</div>
+              <div className="sb-badge" id="secBadgeLabel">Sesión en curso</div>
             </div>
             <div className="sb-subtitle" id="secSubtitle">0 puntos</div>
           </div>
@@ -40,7 +40,7 @@ export default function SidebarSecundario({ onAbrirCreacion }) {
       <aside className="sidebar-secundario" id="sidebarSecundario">
         <div className="sb-header">
           <div className="sb-header-top">
-            <div className="sb-badge" id="secBadgeLabel">Sesión previa</div>
+            <div className="sb-badge" id="secBadgeLabel">Sesión en curso</div>
             <div className="sb-header-actions">
               <button
                 className="btn-add" id="btnAprobarTodos" title="Marcar/desmarcar todos"
@@ -64,11 +64,11 @@ export default function SidebarSecundario({ onAbrirCreacion }) {
                 onClick={() => setPuntoPreviaSeleccionadoId(sec.id)}
               >
                 <input
-                  type="checkbox" id={'chkPrevia_' + sec.id} checked={!!sec.aprobado}
+                  type="checkbox" checked={!!sec.aprobado}
                   onChange={(e) => { e.stopPropagation(); actualizarPunto(sec.id, { aprobado: e.target.checked }); }}
                   onClick={(e) => e.stopPropagation()}
                 />
-                <label htmlFor={'chkPrevia_' + sec.id}>{titulo}</label>
+                <label>{titulo}</label>
               </div>
             );
           })}

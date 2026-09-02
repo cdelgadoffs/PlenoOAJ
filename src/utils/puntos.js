@@ -161,6 +161,10 @@ export function describirVotacion(tipoVotacionStr) {
     const votacionLabel = esRetirar ? '' : (v.votacion === 1 ? 'votación concurrente' : 'votación económica');
     const estadoLabel = v.estado ? 'aprueba' : 'acuerda';
     const quorumTxt = (v.quorum && v.quorum.length > 0) ? ` (quórum: ${v.quorum.join(', ')})` : '';
+    const esUnanimidadConcurrente = v.voto === 0 && v.votacion === 1;
+    if (esUnanimidadConcurrente && v.precision) {
+      return `El Pleno, por unanimidad de votos, con la precisión de que ${v.precision}, ${estadoLabel}.`;
+    }
     return esRetirar
       ? `El Pleno, ${votoLabel}.`
       : `El Pleno, en ${votacionLabel}, ${votoLabel}, ${estadoLabel}${quorumTxt}.`;
