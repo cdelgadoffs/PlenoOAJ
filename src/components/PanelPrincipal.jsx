@@ -2,13 +2,11 @@ import { useUI } from '../context/UIContext.jsx';
 import { useProyecto } from '../context/ProyectoContext.jsx';
 import { getTituloPunto, formatearFechaES } from '../utils/fechas.js';
 import { SECCIONES_DEL_DOCUMENTO, obtenerPuntosFiltrados, describirVotacion } from '../utils/puntos.js';
-import { useState } from 'react';
 import '../styles/PanelPrincipal.css';
 import VistaInicio from './VistaInicio.jsx';
 import VistaHistorial from './VistaHistorial.jsx';
 import { renderConOcultos, tieneTextoOculto } from '../utils/texto.js';
 import TipoVotacionSelector from './TipoVotacionSelector.jsx';
-import EditorOcultable from './EditorOcultable.jsx';
 
 function TarjetaPunto({ sec, idx, puedeSubir, puedeBajar, esSeleccionada, listaCerrada, onSeleccionar, onMover, onEditar, onEliminar, onToggleAnexo, onPreviewArchivo, onAdjuntar }) {
   const titulo = getTituloPunto(sec, idx);
@@ -96,26 +94,11 @@ function TarjetaPunto({ sec, idx, puedeSubir, puedeBajar, esSeleccionada, listaC
 
 function VistaProyecto({ onEditar }) {
   const { terminoBusqueda, sidebarTerciarioAbierto, setModalActivo, setPreviewArchivo, setPuntoAdjuntarId } = useUI();
-const { secciones, puntoPreviaSeleccionadoId, setPuntoPreviaSeleccionadoId, eliminarPunto, actualizarPunto, asistentes } = useProyecto();
+  const { secciones, seccionActual, proyectoMeta, puntoSeleccionadoId, setPuntoSeleccionadoId, moverPunto, eliminarPunto, toggleAnexo, sesiones, sesionActivaFecha } = useProyecto();
   const listaCerrada = sesionActivaFecha ? !!sesiones[sesionActivaFecha]?.listaCerrada : false;
-  const [generandoWord, setGenerandoWord] = useState(false);
 
-  const puntosFiltrados = obtenerPuntosFiltrados(secciones, terminoBusqueda);
-  const modoBusqueda = !!terminoBusqueda;
-  const listaBase = modoBusqueda ? puntosFiltrados : secciones.filter(s => s.seccion === seccionActual);
-  const pts = modoBusqueda ? listaBase : (sidebarTerciarioAbierto ? [...listaBase].reverse() : listaBase);
-
-  async function generarWord() {
-    if (secciones.length === 0) { alert('Primero genera un proyecto.'); return; }
-    setGenerandoWord(true);
-    try {
-      await generarWordOrdenDia(secciones, proyectoMeta);
-    } catch (err) {
-      alert('No se pudo generar el documento Word: ' + err.message);
-    } finally {
-      setGenerandoWord(false);
-    }
-  }
+  const pts = obtenerPuntosFiltrados(secciones, terminoBusqueda);
+  const modoBusqueda = terminoBusqueda.trim().length > 0;
 
   function confirmarEliminar(sec) {
     const idx = secciones.indexOf(sec);
