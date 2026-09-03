@@ -8,11 +8,13 @@ import Sync from './Sync.jsx';
 import GestionUsuarios from './GestionUsuarios.jsx';
 import '../styles/SidebarNuevo.css';
 import DiccionarioPersonalizado from './DiccionarioPersonalizado.jsx';
+import { useAuth } from '../context/AuthContext';
 
 export default function SidebarNuevo() {
   const { sidebarNuevoAbierto, sidebarNuevoAncho, setSidebarNuevoAncho, panelNuevoActivo, setPanelNuevoActivo } = useUI();
   const { puedeCalendarizacion, puedeEmail, puedeSync, puedeGestionarUsuarios } = usePermisos();
   const [mostrarFormularioCalendario, setMostrarFormularioCalendario] = useState(false);
+  const { cuentaActiva } = useAuth();
 
   function abrirPanel(panel, ancho) {
     setPanelNuevoActivo(panel);
@@ -36,7 +38,7 @@ export default function SidebarNuevo() {
             onClick={() => setMostrarFormularioCalendario(v => !v)}
           >+</button>
         </div>
-        <div className="sb-subtitle sb-subtitle-nuevo" id="sidebarNuevoSubtitle">Futuras funcionalidades</div>
+        <div className="sb-subtitle sb-subtitle-nuevo" id="sidebarNuevoSubtitle">{cuentaActiva?.username}</div>
       </div>
 
       <div className={'sb-nav nuevo-panel' + (panelNuevoActivo === 'menu' ? '' : ' hidden')} id="panelMenuNuevo">

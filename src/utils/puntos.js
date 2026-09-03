@@ -122,36 +122,57 @@ export function conPunto2Actualizado(secciones, proyectoMeta, sesiones, calcular
   if (!fechaAnterior) return secciones;
 
   const tipoActual = (proyectoMeta.tipoSesion || 'Ordinaria').toLowerCase();
-  const actas = [`la sesión ${tipoActual} del ${formatearFechaES(fechaAnterior)}`];
 
-  Object.keys(sesiones)
+  const extraordinarias = Object.keys(sesiones)
     .filter(f => {
       if (sesiones[f].tipoSesion !== 'Extraordinaria') return false;
-      // Si la extraordinaria cayó el día inmediato anterior a ESTA ordinaria,
-      // ya no entra en el periodo de recepción: se difieif (id === 'sec_fijo_1') {re a la siguiente ordinaria.
       if (sumarDias(f, 1) === proyectoMeta.fecha) return false;
-      // Recuperar las que quedaron diferidas de la ordinaria pasada
-      // (cayeron el día inmediato anterior a esa ordinaria anterior).
       if (sumarDias(f, 1) === fechaAnterior) return f < proyectoMeta.fecha;
       return f > fechaAnterior && f < proyectoMeta.fecha;
     })
-    .sort()
-    .forEach(f => actas.push(`la sesión extraordinaria del ${formatearFechaES(f)}`));
+    .sort();
 
-  const listado = actas.length === 1
-    ? actas[0]
-    : actas.slice(0, -1).join(', ') + ' y ' + actas[actas.length - 1];
+  // Punto base (sec_fijo_2): acta de la sesión inmediata anterior
+  const contenidoBase = `Aprobación, en su caso, del acta de la sesión ${tipoActual} del ${formatearFechaES(fechaAnterior)}.`;
 
-  const nuevoContenido = `Aprobación, en su caso, del acta${actas.length > 1 ? 's' : ''} de ${listado}.`;
+  // Puntos adicionales: uno independiente por cada extraordinaria pendiente
+  const nuevosAuto = extraordinarias.map(f => ({
+    id: 'acta_auto_' + f,
+    clasificacion: 'Pleno',
+    fijo: true,
+    anexo: false,
+    voto: 'Pendiente',
+    anotaciones: '',
+    dependencia: 'Pleno',
+    asunto: '',
+    archivos: [],
+    contenido: `Aprobación, en su caso, del acta de la sesión extraordinaria del ${formatearFechaES(f)}.`,
+    seccion: 'aprobaciones',
+    subbloque: 'Pleno',
+    aprobado: true
+  }));
 
-  return secciones.map((s, i) => i === idx ? {
+  // DEBO AÑADIR RESTRICCIÓN DE QUE SI SE RETIRA UNA SESIÓN EXTRAORDINARIA DESDE CALENDARIZACIÓN, 
+  //EL OUNTO AUTOGENERADO DEBE DESAPARECER en tipo real!
+  const sinAutosViejos = secciones.filter(s => s.id === 'sec_fijo_2' || !s.id.startsWith('acta_auto_'));
+
+  const base = sinAutosViejos.map(s => s.id === 'sec_fijo_2' ? {
     ...s,
-    contenido: nuevoContenido,
+    contenido: contenidoBase,
     seccion: 'aprobaciones',
     clasificacion: 'Pleno',
     subbloque: 'Pleno'
   } : s);
+
+  const idxBase = base.findIndex(s => s.id === 'sec_fijo_2');
+
+  return [
+    ...base.slice(0, idxBase + 1),
+    ...nuevosAuto,
+    ...base.slice(idxBase + 1)
+  ];
 }
+
 export function describirVotacion(tipoVotacionStr) {
   if (!tipoVotacionStr) return '';
   try {

@@ -85,7 +85,7 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
     if (secciones.length === 0) { alert('No hay puntos para generar el acta.'); return; }
     setGenerandoActaQuorum(true);
     try {
-      await generarWordActa(secciones, proyectoMeta);
+      await generarWordActa(secciones, proyectoMeta, asistentes, sesiones[sesionActivaFecha]);
     } catch (err) {
       alert('No se pudo generar el acta: ' + err.message);
     } finally {

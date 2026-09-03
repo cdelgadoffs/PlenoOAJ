@@ -49,7 +49,7 @@ async function obtenerImagenBase64(url) {
   }
 }
 
-export async function generarWordActa(secciones, proyectoMeta) {
+export async function generarWordActa(secciones, proyectoMeta, asistentes = [], sesionData = {}) {
   if (secciones.length === 0) {
     alert('No hay puntos para generar el acta.');
     return;
@@ -88,7 +88,7 @@ export async function generarWordActa(secciones, proyectoMeta) {
   }
 
   // ========== TÍTULO ==========
-  const tituloTexto = 'ACTA DE LA SESIÓN ORDINARIA NÚMERO UNO DEL PLENO DEL ÓRGANO DE ADMINISTRACIÓN JUDICIAL CORRESPONDIENTE AL DÍA SIETE DE ENERO DE DOS MIL VEINTISÉIS';
+  const tituloTexto = `ACTA DE LA ${tituloSesion} DEL PLENO DEL ÓRGANO DE ADMINISTRACIÓN JUDICIAL CORRESPONDIENTE AL DÍA ${fechaConDia}`;
   parrafos.push(new Paragraph({
     alignment: AlignmentType.CENTER,
     spacing: { ...interlineado115, after: 280 },
@@ -103,23 +103,33 @@ export async function generarWordActa(secciones, proyectoMeta) {
     ],
   }));
 
-  // ========== TEXTO INTRODUCTORIO ==========
-  const textoIntro = `En la Ciudad de México, siendo las <<19:30 horas del siete de enero de dos mil veintiséis>>, se reúnen de manera presencial en el salón del Pleno del Órgano de Administración Judicial para celebrar la sesión ordinaria convocada por las y los integrantes: <<maestro ⁠José Alberto Gallegos Ramírez, maestra Catalina Ramírez Hernández, licenciada Surit Berenice Romero Domínguez y el Presidente maestro Néstor Vargas Solano>>; con lo cual se da cuenta sobre la adopción de las siguientes determinaciones:`;
+// ========== TEXTO INTRODUCTORIO ==========
+const horaInicio = sesionData.horaInicio
+  ? new Date(sesionData.horaInicio).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+  : '<<hora>>';
 
-  parrafos.push(new Paragraph({
-    alignment: AlignmentType.JUSTIFIED,
-    spacing: { ...interlineado115, before: 0, after: 300 },
-    children: [
-      new TextRun({
-        text: textoIntro,
-        bold: false,
-        size: 24,
-        color: '000000',
-        font: 'Arial',
-      }),
-    ],
-  }));
+const presidente = asistentes.find(a => a.presidente);
+const miembros = asistentes.filter(a => !a.presidente && a.presente);
+const nombresAsistentes = [
+  ...miembros.map(a => `${a.grado ? a.grado + ' ' : ''}${a.nombre}`),
+  presidente ? `y el Presidente ${presidente.grado ? presidente.grado + ' ' : ''}${presidente.nombre}` : ''
+].filter(Boolean).join(', ');
 
+const textoIntro = `En la Ciudad de México, siendo las ${horaInicio} horas del ${fechaConDia.toLowerCase()}, se reúnen de manera presencial en el salón del Pleno del Órgano de Administración Judicial para celebrar la sesión ${tipoSesion.toLowerCase()} convocada por las y los integrantes: ${nombresAsistentes || '<<integrantes>>'}; con lo cual se da cuenta sobre la adopción de las siguientes determinaciones:`;
+
+parrafos.push(new Paragraph({
+  alignment: AlignmentType.JUSTIFIED,
+  spacing: { ...interlineado115, before: 0, after: 300 },
+  children: [
+    new TextRun({
+      text: textoIntro,
+      bold: false,
+      size: 24,
+      color: '000000',
+      font: 'Arial',
+    }),
+  ],
+}));
   // ========== PUNTOS ==========
   let numeroGlobal = 1;
 
