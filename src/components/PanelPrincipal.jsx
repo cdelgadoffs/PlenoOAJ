@@ -97,7 +97,9 @@ function VistaProyecto({ onEditar }) {
   const { secciones, seccionActual, proyectoMeta, puntoSeleccionadoId, setPuntoSeleccionadoId, moverPunto, eliminarPunto, toggleAnexo, sesiones, sesionActivaFecha } = useProyecto();
   const listaCerrada = sesionActivaFecha ? !!sesiones[sesionActivaFecha]?.listaCerrada : false;
 
-  const pts = obtenerPuntosFiltrados(secciones, terminoBusqueda);
+  // === FILTRO POR SECCIÓN + BÚSQUEDA ===
+  const puntosDeSeccion = secciones.filter(s => s.seccion === seccionActual);
+  const pts = obtenerPuntosFiltrados(puntosDeSeccion, terminoBusqueda);
   const modoBusqueda = terminoBusqueda.trim().length > 0;
 
   function confirmarEliminar(sec) {
