@@ -8,7 +8,7 @@ import { guardarArchivo, obtenerArchivo, eliminarArchivo } from '../utils/archiv
 import { esArchivoWord, extraerTextoWord } from '../utils/extraccionWord.js';
 import EditorOcultable from './EditorOcultable.jsx';
 import '../styles/SidebarTerciario.css';
-import TipoVotacionSelector from './TipoVotacionSelector.jsx';
+// import TipoVotacionSelector from './TipoVotacionSelector.jsx';  // COMENTADO: ya no se usa
 import DropdownSelect from './DropdownSelect.jsx';
 
 const CATEGORIAS = [
@@ -37,7 +37,7 @@ const estadoVacio = {
   categoria: 'pleno',
   remitente: 'Pleno',
   contenido: '',
-  tipoVotacion: JSON.stringify({ voto: 0, votacion: 0, estado: true }),
+  tipoVotacion: JSON.stringify({ voto: 0, votacion: 0, estado: true }), // se mantiene para lógica
   acuerdo: '',
   archivos: []
 };
@@ -284,6 +284,7 @@ export default function SidebarTerciario() {
             placeholder="Acuerdos"
           />
         </div>
+        {/* COMENTADO: el selector de tipo de votación ya no se muestra
         <div className="ter-field">
           <TipoVotacionSelector
             value={form.tipoVotacion}
@@ -291,6 +292,7 @@ export default function SidebarTerciario() {
             nombresQuorum={asistentes.map(a => a.nombre)}
           />
         </div>
+        */}
 
         <div className="ter-acciones">
           <button className="btn-cancel" id="btnCancelarCreacion" onClick={cerrar}>Cancelar</button>
