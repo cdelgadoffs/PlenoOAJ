@@ -72,3 +72,4 @@ export default function HorariosCelebracion({ horaInicioSesion, horaFinSesion, o
     </div>
   );
 }
+
