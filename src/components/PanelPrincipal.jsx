@@ -78,14 +78,6 @@ function TarjetaPunto({ sec, idx, puedeSubir, puedeBajar, esSeleccionada, listaC
             </td>
           </tr>
         )}
-        <tr>
-          <td className="punto-tabla-fila-titulo">
-            <span>Votación</span>
-          </td>
-          <td className="punto-tabla-votacion">
-            {sec.tipoVotacion && <span>{describirVotacion(sec.tipoVotacion)}</span>}
-          </td>
-        </tr>
       </tbody>
     </table>
     </div>
@@ -182,6 +174,9 @@ function VistaSesionPrevia() {
   const textoAcuerdoUnico = esAcuerdoUnico
     ? lineasAcuerdo[0].trim().replace(/^ÚNICO\.?\s*/i, '').replace(/\.\s*$/, '')
     : '';
+  const textoVotacionMostrado = sec.votacionTextoManual !== undefined
+    ? sec.votacionTextoManual
+    : (aprobado ? generarTextoVotacion() : 'El punto debe estar aprobado para contar con votación.');
 
   function eliminar() {
     if (esFijo) return;
@@ -251,14 +246,22 @@ function VistaSesionPrevia() {
                 {aprobado ? (
               <TipoVotacionSelector
                 value={sec.tipoVotacion || ''}
-                onChange={(nuevoValor) => actualizarPunto(sec.id, { tipoVotacion: nuevoValor })}
+                onChange={(nuevoValor) => actualizarPunto(sec.id, { tipoVotacion: nuevoValor, votacionTextoManual: undefined })}
                 nombresQuorum={asistentes.map(a => a.nombre)}
               />
                 ) : (
                   <span className="email-vacio">Disponible solo si el punto está aprobado</span>
                 )}
-                <div className={'votacion-resultado' + (!aprobado || !sec.tipoVotacion ? ' votacion-resultado-vacio' : '')}>
-                  {aprobado ? generarTextoVotacion() : 'El punto debe estar aprobado para contar con votación.'}
+                <div
+                  className={'votacion-resultado' + (!aprobado || !sec.tipoVotacion ? ' votacion-resultado-vacio' : '')}
+                  contentEditable={aprobado}
+                  suppressContentEditableWarning
+                  onBlur={(e) => {
+                    if (!aprobado) return;
+                    actualizarPunto(sec.id, { votacionTextoManual: e.currentTarget.textContent });
+                  }}
+                >
+                  {textoVotacionMostrado}
                 </div>
               </div>
               {!esAcuerdoUnico && (

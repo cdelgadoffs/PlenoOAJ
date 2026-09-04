@@ -655,11 +655,12 @@ input[type="checkbox"] {
 }
 .votacion-resultado {
   margin-top: 8px;
-  font-size: 12.5px;
+  font-size: 15.5px;
   color: #444;
-  padding: 8px 10px;
+  padding: 16px 20px;
   background: #f5f5f5;
-  border-left: 2px solid #ccc;
+  border: 1px solid #ccc;
+  border-left: 4px solid #ccc;
   border-radius: 4px;
 }
 .votacion-resultado-vacio {
@@ -1071,9 +1072,6 @@ input[type="checkbox"] {
   box-shadow: 0 6px 18px rgba(0,0,0,0.15);
   z-index: 1200;
   padding: 4px 0;
-  /* Lista completa sin scroll. Si en el futuro se necesita limitar altura, descomentar: */
-  /* max-height: 240px; */
-  /* overflow-y: auto; */
 }
 .dropdown-item {
   padding: 6px 14px;
@@ -1090,9 +1088,3 @@ input[type="checkbox"] {
   color: #1a56db;
   font-weight: 600;
 }
-/* Scrollbar temático por si se reactiva overflow-y en .dropdown-menu:
-.dropdown-menu::-webkit-scrollbar { width: 4px; }
-.dropdown-menu::-webkit-scrollbar-track { background: transparent; }
-.dropdown-menu::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
-.dropdown-menu::-webkit-scrollbar-thumb:hover { background: #aaa; }
-*/
