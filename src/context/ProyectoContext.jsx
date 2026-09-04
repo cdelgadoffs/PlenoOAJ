@@ -398,27 +398,32 @@ export function ProyectoProvider({ children }) {
     if (!sesionActivaFecha) return;
     setSesiones(prev => {
       const sesion = prev[sesionActivaFecha];
-      if (!sesion) return prev;
-      const base = sesion.horaInicio ? new Date(sesion.horaInicio) : parsearFechaLocal(sesionActivaFecha);
+      if (!sesion || !sesion.horaInicio) return prev;
+      const base = new Date(sesion.horaInicio);
       const [h, m] = horaStr.split(':').map(Number);
       base.setHours(h, m, 0, 0);
+      if (sesion.horaFin && base.getTime() > sesion.horaFin) {
+        alert('La hora de inicio no puede ser posterior a la hora de fin.');
+        return prev;
+      }
       return { ...prev, [sesionActivaFecha]: { ...sesion, horaInicio: base.getTime() } };
     });
-    registrar('sesion', 'Editó la hora de inicio', horaStr);
   }
   function actualizarHoraFinCelebracion(horaStr) {
     if (!sesionActivaFecha) return;
     setSesiones(prev => {
       const sesion = prev[sesionActivaFecha];
-      if (!sesion) return prev;
-      const base = sesion.horaFin ? new Date(sesion.horaFin) : parsearFechaLocal(sesionActivaFecha);
+      if (!sesion || !sesion.horaFin) return prev;
+      const base = new Date(sesion.horaFin);
       const [h, m] = horaStr.split(':').map(Number);
       base.setHours(h, m, 0, 0);
+      if (sesion.horaInicio && base.getTime() < sesion.horaInicio) {
+        alert('La hora de fin no puede ser anterior a la hora de inicio.');
+        return prev;
+      }
       return { ...prev, [sesionActivaFecha]: { ...sesion, horaFin: base.getTime() } };
     });
-    registrar('sesion', 'Editó la hora de fin', horaStr);
   }
-
   const { cuentaActiva } = useAuth();
 
   function registrar(categoria, accion, detalle = '') {

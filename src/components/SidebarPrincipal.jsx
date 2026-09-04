@@ -9,6 +9,8 @@ import BotonListaCerrada from './BotonListaCerrada.jsx';
 import { generarWordOrdenDia } from '../utils/word.js';
 import { obtenerProximaSesion } from '../utils/calendario.js';
 import { generarWordActa } from '../utils/wordActa.js';
+import HorariosCelebracion from './HorariosCelebracion.jsx';
+import IndicadorEnVivo from './IndicadorEnVivo.jsx';
 
 const VISTAS = [
   { id: 'inicio', label: 'Inicio' },
@@ -33,6 +35,7 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
   const [generandoActaQuorum, setGenerandoActaQuorum] = useState(false);
 
   const listaCerrada = sesionActivaFecha ? !!sesiones[sesionActivaFecha]?.listaCerrada : false;
+  const sesionEnCurso = !!horaInicioSesion && !horaFinSesion;
 
   useEffect(() => {
     if (vistaActual === 'proyecto') setAcordeonAbierto(true);
@@ -51,6 +54,7 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
   const totalFiltrados = puntosFiltrados.length;
 
   function seleccionarVista(v) {
+    if (sesionEnCurso && v.id !== 'sesionPrevia') return;
     if (v.acordeon) {
       if (vistaActual === v.id) {
         setAcordeonAbierto(prev => !prev);
@@ -105,16 +109,22 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
           if (v.id === 'sesionPrevia' && !esSesionProxima) return null;
           const activo = vistaActual === v.id;
           const expandido = v.acordeon && activo && acordeonAbierto;
+          const bloqueadoPorSesion = sesionEnCurso && v.id !== 'sesionPrevia';
           return (
             <div key={v.id}>
               <div
-                className={'nav-item' + (activo ? ' active' : '')}
+                className={'nav-item' + (activo ? ' active' : '') + (bloqueadoPorSesion ? ' disabled' : '')}
                 data-vista={v.id}
                 id={v.id2}
                 onClick={() => seleccionarVista(v)}
               >
                 <span className="nav-dot"></span>
-                <span>{v.id === 'sesionPrevia' ? `Celebrar Sesión ${tipo} N°${numero}` : v.label}</span>
+                <span style={v.id === 'sesionPrevia' && sesionEnCurso ? { fontWeight: '700', color: '#349739', fontSize: '18px' } : undefined}>
+                  {v.id === 'sesionPrevia'
+                    ? (sesionEnCurso ? `Celebrando Sesión ${tipo} N°${numero}` : `Celebrar Sesión ${tipo} N°${numero}`)
+                    : v.label}
+                </span>
+                {v.id === 'sesionPrevia' && sesionEnCurso && <IndicadorEnVivo />}
                 {v.badge && <span className="badge-total" id="totalBadge">{totalPuntos}</span>}
                 {v.acordeon && (
                   <span className={'nav-chevron' + (expandido ? ' expanded' : '')}>&#8250;</span>
@@ -185,7 +195,7 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
             {presentes} / {asistentes.length}
           </span>
         </div>
-        <div id="quorumLista" style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: '1', minHeight: 0, overflowY: 'auto' }}>
+        <div id="quorumLista" style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '400px', overflowY: 'auto' }}>
           {asistentes.length === 0 && <span style={{ color: '#999', fontSize: '12px' }}>Sin asistentes registrados</span>}
           {asistentes.map((a, idx) => {
             const iniciales = (a.nombre || '').trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
@@ -222,48 +232,16 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
                   style={{ width: '17px', height: '17px', flexShrink: 0, cursor: 'pointer' }}
                 />
               </label>
-            );
-          })}
-        </div>
-        <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {horaInicioSesion && (
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-              textAlign: 'center', fontSize: '13.5px', fontWeight: '700', color: '#2e7d32',
-              background: '#e6f7ed', border: '1px solid #a5d6a7', borderRadius: '8px', padding: '10px 12px'
-            }}>
-              <span>Comenzó a las</span>
-              <input
-                type="time"
-                value={new Date(horaInicioSesion).toTimeString().slice(0, 5)}
-                onChange={(e) => actualizarHoraInicioCelebracion(e.target.value)}
-                style={{
-                  border: '1px solid #a5d6a7', borderRadius: '4px', padding: '2px 6px',
-                  fontSize: '13px', fontWeight: '700', color: '#2e7d32', background: '#fff',
-                  fontFamily: 'inherit', cursor: 'pointer'
-                }}
-              />
+                );
+              })}
             </div>
-          )}
-          {horaFinSesion && (
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-              textAlign: 'center', fontSize: '13.5px', fontWeight: '700', color: '#b91c1c',
-              background: '#fde8e8', border: '1px solid #ef9a9a', borderRadius: '8px', padding: '10px 12px'
-            }}>
-              <span>Finalizó a las</span>
-              <input
-                type="time"
-                value={new Date(horaFinSesion).toTimeString().slice(0, 5)}
-                onChange={(e) => actualizarHoraFinCelebracion(e.target.value)}
-                style={{
-                  border: '1px solid #ef9a9a', borderRadius: '4px', padding: '2px 6px',
-                  fontSize: '13px', fontWeight: '700', color: '#b91c1c', background: '#fff',
-                  fontFamily: 'inherit', cursor: 'pointer'
-                }}
-              />
-            </div>
-          )}
+            <HorariosCelebracion
+              horaInicioSesion={horaInicioSesion}
+              horaFinSesion={horaFinSesion}
+              onCambiarInicio={actualizarHoraInicioCelebracion}
+              onCambiarFin={actualizarHoraFinCelebracion}
+            />
+        <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {!horaInicioSesion && (
             <button className="btn-nuevo-proyecto" style={{ margin: 0, width: '100%' }} onClick={comenzarSesionCelebracion}>
               Comenzar sesión
