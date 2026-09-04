@@ -7,7 +7,7 @@ import {
   cargarAsistentes, guardarAsistentes as persistirAsistentes
 } from '../utils/storage.js';
 import { conPuntosFijosAsegurados, conPunto2Actualizado, getInsertIndex } from '../utils/puntos.js';
-import { calcularFechaAnterior, formatearFechaES, hoyLocalISO, getTituloPunto, sumarDias, padNumber } from '../utils/fechas.js';
+import { calcularFechaAnterior, formatearFechaES, hoyLocalISO, getTituloPunto, sumarDias, padNumber, parsearFechaLocal } from '../utils/fechas.js';
 import {
   generarCalendarioAnual, aplicarExcepciones, limpiarSesionesInvalidas,
   recalcularNumerosSesion, obtenerProximaSesion, siguienteFechaSesion, esFechaSesionOrdinaria
@@ -394,6 +394,30 @@ export function ProyectoProvider({ children }) {
     });
     registrar('sesion', 'Restableció la sesión', '');
   }
+  function actualizarHoraInicioCelebracion(horaStr) {
+    if (!sesionActivaFecha) return;
+    setSesiones(prev => {
+      const sesion = prev[sesionActivaFecha];
+      if (!sesion) return prev;
+      const base = sesion.horaInicio ? new Date(sesion.horaInicio) : parsearFechaLocal(sesionActivaFecha);
+      const [h, m] = horaStr.split(':').map(Number);
+      base.setHours(h, m, 0, 0);
+      return { ...prev, [sesionActivaFecha]: { ...sesion, horaInicio: base.getTime() } };
+    });
+    registrar('sesion', 'Editó la hora de inicio', horaStr);
+  }
+  function actualizarHoraFinCelebracion(horaStr) {
+    if (!sesionActivaFecha) return;
+    setSesiones(prev => {
+      const sesion = prev[sesionActivaFecha];
+      if (!sesion) return prev;
+      const base = sesion.horaFin ? new Date(sesion.horaFin) : parsearFechaLocal(sesionActivaFecha);
+      const [h, m] = horaStr.split(':').map(Number);
+      base.setHours(h, m, 0, 0);
+      return { ...prev, [sesionActivaFecha]: { ...sesion, horaFin: base.getTime() } };
+    });
+    registrar('sesion', 'Editó la hora de fin', horaStr);
+  }
 
   const { cuentaActiva } = useAuth();
 
@@ -431,7 +455,8 @@ export function ProyectoProvider({ children }) {
     cargarSesion, eliminarSesion, regenerarCalendario, agregarVacacion, agregarAsueto, eliminarExcepcion,
     asistentes, agregarAsistente, eliminarAsistente, editarAsistente, toggleAsistentePresente,
     actualizarPunto, agregarActa, crearSesionExtraordinaria, adjuntarArchivoAPunto, setOneDriveFolder,
-    toggleListaCerrada, comenzarSesionCelebracion, finalizarSesionCelebracion, restablecerSesionCelebracion
+    toggleListaCerrada, comenzarSesionCelebracion, finalizarSesionCelebracion, restablecerSesionCelebracion,
+    actualizarHoraInicioCelebracion, actualizarHoraFinCelebracion
   };
 
   return <ProyectoContext.Provider value={value}>{children}</ProyectoContext.Provider>;

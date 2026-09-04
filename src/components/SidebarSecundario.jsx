@@ -65,8 +65,10 @@ export default function SidebarSecundario({ onAbrirCreacion }) {
               >
                 <input
                   type="checkbox" checked={!!sec.aprobado}
-                  onChange={(e) => { e.stopPropagation(); actualizarPunto(sec.id, { aprobado: e.target.checked }); }}
-                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) => {
+                    actualizarPunto(sec.id, { aprobado: e.target.checked });
+                    setPuntoPreviaSeleccionadoId(sec.id);
+                  }}
                 />
                 <label>{titulo}</label>
               </div>

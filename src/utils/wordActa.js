@@ -197,7 +197,9 @@ export async function generarWordActa(secciones, proyectoMeta, asistentes = [], 
       const lineasAcuerdo = acuerdo.split('\n').filter(l => l.trim() !== '');
       const esAcuerdoUnico = lineasAcuerdo.length === 1 && /^ÚNICO\.?\s*/i.test(lineasAcuerdo[0].trim());
 
-      const votacion = generarTextoVotacion(sec, asistentes);
+      const votacion = sec.votacionTextoManual !== undefined
+        ? limpiarAsteriscos(sec.votacionTextoManual)
+        : generarTextoVotacion(sec, asistentes);
       const tieneVotacion = !!votacion;
       const tieneAcuerdo = !!acuerdo && !esAcuerdoUnico;
 

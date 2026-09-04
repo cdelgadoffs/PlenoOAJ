@@ -21,7 +21,7 @@ const SECCIONES_VISIBLES = SECCIONES_DEL_DOCUMENTO.filter(sec => sec !== 'licenc
 
 export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalPuntos = 0 }) {
   const { vistaActual, setVistaActual, terminoBusqueda } = useUI();
-  const { proyectoMeta, secciones, seccionActual, setSeccionActual, setPuntoSeleccionadoId, sesiones, sesionActivaFecha, toggleAsistentePresente, asistentes, comenzarSesionCelebracion, finalizarSesionCelebracion, restablecerSesionCelebracion } = useProyecto();
+  const { proyectoMeta, secciones, seccionActual, setSeccionActual, setPuntoSeleccionadoId, sesiones, sesionActivaFecha, toggleAsistentePresente, asistentes, comenzarSesionCelebracion, finalizarSesionCelebracion, restablecerSesionCelebracion, actualizarHoraInicioCelebracion, actualizarHoraFinCelebracion } = useProyecto();
   const horaInicioSesion = sesionActivaFecha ? sesiones[sesionActivaFecha]?.horaInicio : null;
   const horaFinSesion = sesionActivaFecha ? sesiones[sesionActivaFecha]?.horaFin : null;
   const presentes = asistentes.filter(a => a.presente).length;
@@ -227,13 +227,41 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
         </div>
         <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {horaInicioSesion && (
-            <div style={{ textAlign: 'center', fontSize: '11.5px', color: '#2e7d32', fontWeight: '600' }}>
-              Comenzó a las {new Date(horaInicioSesion).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              textAlign: 'center', fontSize: '13.5px', fontWeight: '700', color: '#2e7d32',
+              background: '#e6f7ed', border: '1px solid #a5d6a7', borderRadius: '8px', padding: '10px 12px'
+            }}>
+              <span>Comenzó a las</span>
+              <input
+                type="time"
+                value={new Date(horaInicioSesion).toTimeString().slice(0, 5)}
+                onChange={(e) => actualizarHoraInicioCelebracion(e.target.value)}
+                style={{
+                  border: '1px solid #a5d6a7', borderRadius: '4px', padding: '2px 6px',
+                  fontSize: '13px', fontWeight: '700', color: '#2e7d32', background: '#fff',
+                  fontFamily: 'inherit', cursor: 'pointer'
+                }}
+              />
             </div>
           )}
           {horaFinSesion && (
-            <div style={{ textAlign: 'center', fontSize: '11.5px', color: '#b91c1c', fontWeight: '600' }}>
-              Finalizó a las {new Date(horaFinSesion).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              textAlign: 'center', fontSize: '13.5px', fontWeight: '700', color: '#b91c1c',
+              background: '#fde8e8', border: '1px solid #ef9a9a', borderRadius: '8px', padding: '10px 12px'
+            }}>
+              <span>Finalizó a las</span>
+              <input
+                type="time"
+                value={new Date(horaFinSesion).toTimeString().slice(0, 5)}
+                onChange={(e) => actualizarHoraFinCelebracion(e.target.value)}
+                style={{
+                  border: '1px solid #ef9a9a', borderRadius: '4px', padding: '2px 6px',
+                  fontSize: '13px', fontWeight: '700', color: '#b91c1c', background: '#fff',
+                  fontFamily: 'inherit', cursor: 'pointer'
+                }}
+              />
             </div>
           )}
           {!horaInicioSesion && (

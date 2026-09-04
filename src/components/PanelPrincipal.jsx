@@ -146,7 +146,7 @@ function VistaProyecto({ onEditar }) {
 
 function VistaSesionPrevia() {
   const { secciones, puntoPreviaSeleccionadoId, setPuntoPreviaSeleccionadoId, eliminarPunto, actualizarPunto, asistentes } = useProyecto();
-  const { terminoBusqueda } = useUI();
+  const { terminoBusqueda, setModalActivo, setPreviewArchivo, setPuntoAdjuntarId } = useUI();
 
   if (secciones.length === 0) {
     return <div className="placeholder-msg" style={{ marginTop: '60px' }}><strong>No hay un proyecto creado</strong><br />Genera un proyecto para revisar sus puntos.</div>;
@@ -281,7 +281,20 @@ function VistaSesionPrevia() {
             </>
           )}
         </div>
+        {sec.archivos && sec.archivos.length > 0 && (
+          <div className="archivos-adjuntos">
+            <span
+              className="archivo-item"
+              onClick={() => { setPreviewArchivo(sec.archivos[sec.archivos.length - 1]); setModalActivo('preview'); }}
+            >
+              {sec.archivos[sec.archivos.length - 1].nombre}
+            </span>
+          </div>
+        )}
         <div className="previa-footer">
+          <button className="btn-adjuntar" id="btnAdjuntarPrevia" title="Adjuntar archivo" onClick={() => { setPuntoAdjuntarId(sec.id); setModalActivo('adjuntar'); }}>
+            <i className="fas fa-paperclip"></i>
+          </button>
           <button className="btn-eliminar" id="btnEliminarPrevia" disabled={esFijo} onClick={eliminar}>{esFijo ? 'Fijo' : 'Eliminar'}</button>
           <button className="btn-mover" id="btnPreviaAnterior" disabled={!puedeAnterior} onClick={() => setPuntoPreviaSeleccionadoId(puntosFiltrados[idxFiltrado - 1].id)}>◀</button>
           <button className="btn-mover" id="btnPreviaSiguiente" disabled={!puedeSiguiente} onClick={() => setPuntoPreviaSeleccionadoId(puntosFiltrados[idxFiltrado + 1].id)}>▶</button>
