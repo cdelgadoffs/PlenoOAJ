@@ -36,9 +36,9 @@ function InputHoraEditable({ valorMs, onCambiar, color }) {
       onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
       placeholder="hhmm"
       style={{
-        border: `1px solid ${color}`, borderRadius: '4px', padding: '2px 6px',
-        fontSize: '13px', fontWeight: '700', color, background: '#fff',
-        fontFamily: "'DM Mono', monospace", cursor: 'text', textAlign: 'center', width: '54px'
+        border: `1px solid ${color}`, borderRadius: '4px', padding: '2px 6  px',
+        fontSize: '18px', fontWeight: '700', color, background: '#fff',
+        fontFamily: "'DM Mono', monospace", cursor: 'text', textAlign: 'center', width: '8  4px'
       }}
     />
   );
@@ -52,7 +52,7 @@ export default function HorariosCelebracion({ horaInicioSesion, horaFinSesion, o
       {horaInicioSesion && (
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-          textAlign: 'center', fontSize: '13.5px', fontWeight: '700', color: '#2e7d32',
+          textAlign: 'center', fontSize: '18px', fontWeight: '700', color: '#2e7d32',
           background: '#e6f7ed', border: '1px solid #a5d6a7', borderRadius: '8px', padding: '10px 12px'
         }}>
           <span>Comenzó a las</span>

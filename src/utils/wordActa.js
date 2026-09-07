@@ -197,11 +197,18 @@ export async function generarWordActa(secciones, proyectoMeta, asistentes = [], 
       const lineasAcuerdo = acuerdo.split('\n').filter(l => l.trim() !== '');
       const esAcuerdoUnico = lineasAcuerdo.length === 1 && /^ÚNICO\.?\s*/i.test(lineasAcuerdo[0].trim());
 
-      const votacion = sec.votacionTextoManual !== undefined
-        ? limpiarAsteriscos(sec.votacionTextoManual)
-        : generarTextoVotacion(sec, asistentes);
+      const esFijoAprobacion = sec.fijo === true && sec.seccion === 'aprobaciones';
+      const textoVotoFijo = sec.id === 'sec_fijo_1'
+        ? 'El Pleno, en votación económica, por unanimidad, aprueba el orden del día.'
+        : 'El Pleno, en votación económica, por unanimidad, aprueba el acta e instruye la elaboración y publicación de la versión pública.';
+
+      const votacion = esFijoAprobacion
+        ? textoVotoFijo
+        : (sec.votacionTextoManual !== undefined
+          ? limpiarAsteriscos(sec.votacionTextoManual)
+          : generarTextoVotacion(sec, asistentes));
       const tieneVotacion = !!votacion;
-      const tieneAcuerdo = !!acuerdo && !esAcuerdoUnico;
+      const tieneAcuerdo = !esFijoAprobacion && !!acuerdo && !esAcuerdoUnico;
 
       // 1. Punto de acuerdo (contenido)
       parrafos.push(new Paragraph({
