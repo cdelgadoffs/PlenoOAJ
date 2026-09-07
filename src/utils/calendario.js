@@ -142,3 +142,19 @@ export function obtenerProximaSesion(sesiones) {
 export function obtenerSesionesDelMes(sesiones, mesStr) {
   return Object.keys(sesiones).filter(f => f.startsWith(mesStr)).sort();
 }
+
+export function obtenerMiercolesSemana(fechaStr) {
+  const dia = parsearFechaLocal(fechaStr).getDay();
+  const offset = 3 - (dia === 0 ? 7 : dia); // 3 = miércoles
+  return sumarDias(fechaStr, offset);
+}
+
+export function obtenerSesionesDeLaSemana(sesiones, fechaAncla) {
+  const miercoles = obtenerMiercolesSemana(fechaAncla);
+  const fechas = [];
+  for (let i = -2; i <= 2; i++) {
+    const f = sumarDias(miercoles, i);
+    if (sesiones[f]) fechas.push(f);
+  }
+  return fechas;
+}

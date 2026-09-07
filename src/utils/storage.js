@@ -6,6 +6,7 @@ export const SESIONES_KEY = 'sesiones';
 export const DIA_SESION_KEY = 'diaSesion';
 export const EXCEPCIONES_KEY = 'excepcionesCalendario';
 export const ASISTENTES_KEY = 'asistentesQuorum';
+export const CINTA_FILTRO_KEY = 'cintaFiltro';
 
 function leerJSON(key, porDefecto) {
   const data = localStorage.getItem(key);
@@ -46,6 +47,12 @@ export const guardarExcepciones = (excepciones) => guardarJSON(EXCEPCIONES_KEY, 
 
 export const cargarSidebarDerechoOpen = () => localStorage.getItem(SIDEBAR_DERECHO_KEY) === 'true';
 export const guardarSidebarDerechoOpen = (v) => localStorage.setItem(SIDEBAR_DERECHO_KEY, v ? 'true' : 'false');
+
+export function cargarFiltroCinta() {
+  const v = localStorage.getItem(CINTA_FILTRO_KEY);
+  return (v === 'ordinaria' || v === 'extraordinaria' || v === 'semanal') ? v : 'todas';
+}
+export const guardarFiltroCinta = (v) => localStorage.setItem(CINTA_FILTRO_KEY, v);
 
 export const cargarNuevoSidebarOpen = () => localStorage.getItem(NUEVO_SIDEBAR_KEY) === 'true';
 export const guardarNuevoSidebarOpen = (v) => localStorage.setItem(NUEVO_SIDEBAR_KEY, v ? 'true' : 'false');
