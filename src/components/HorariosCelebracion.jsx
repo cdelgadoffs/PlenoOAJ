@@ -38,7 +38,7 @@ function InputHoraEditable({ valorMs, onCambiar, color }) {
       style={{
         border: `1px solid ${color}`, borderRadius: '4px', padding: '2px 6  px',
         fontSize: '18px', fontWeight: '700', color, background: '#fff',
-        fontFamily: "'DM Mono', monospace", cursor: 'text', textAlign: 'center', width: '8  4px'
+        fontFamily: "'DM Mono', monospace", cursor: 'text', textAlign: 'center', width: '84px'
       }}
     />
   );
