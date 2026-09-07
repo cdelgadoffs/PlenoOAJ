@@ -43,7 +43,7 @@ const estadoVacio = {
 };
 
 export default function SidebarTerciario() {
-  const { sidebarTerciarioAbierto, setSidebarTerciarioAbierto, vistaActual } = useUI();
+  const { sidebarTerciarioAbierto, setSidebarTerciarioAbierto, vistaActual, setArchivosTemporales, setEliminarArchivoTemporalFn } = useUI();
   const { secciones, seccionActual, puntoEditandoId, setPuntoEditandoId, agregarPunto, editarPuntoExistente, setPuntoSeleccionadoId, proyectoMeta, setOneDriveFolder, asistentes } = useProyecto();
   const { obtenerAccessToken } = useAuth();
   const [form, setForm] = useState(estadoVacio);
@@ -94,6 +94,18 @@ export default function SidebarTerciario() {
       setPuntoEditandoId(null);
     }
   }, [seccionActual]);
+
+  useEffect(() => {
+    setArchivosTemporales(form.archivos);
+  }, [form.archivos]);
+
+  useEffect(() => {
+    setEliminarArchivoTemporalFn(() => eliminarArchivoTemporal);
+  }, [form.archivos]);
+
+  useEffect(() => {
+    if (!sidebarTerciarioAbierto) setArchivosTemporales([]);
+  }, [sidebarTerciarioAbierto]);
 
   if (!sidebarTerciarioAbierto) {
     return <aside className="sidebar-terciario hidden" id="sidebarTerciario"></aside>;
@@ -259,11 +271,6 @@ export default function SidebarTerciario() {
         <div className="ter-field">
           <input type="file" id="archivosInput" multiple style={{ width: '100%', padding: '4px', border: '1px solid #ccc', borderRadius: '4px', background: '#fff', fontSize: '12px' }} onChange={adjuntarArchivos} />
           <div id="listaArchivosTemporales" style={{ marginTop: '6px', fontSize: '12px', color: '#555', maxHeight: '60px', overflowY: 'auto' }}>
-            {form.archivos.map((a, idx) => (
-              <span key={idx} className="archivo-item-temp">
-                {a.nombre} <span className="eliminar-archivo-temp" onClick={() => eliminarArchivoTemporal(idx)}>✕</span>
-              </span>
-            ))}
           </div>
           <div id="oneDriveStatus" className="onedrive-status">{oneDriveStatus}</div>
         </div>

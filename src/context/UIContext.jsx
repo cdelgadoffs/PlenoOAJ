@@ -14,6 +14,8 @@ export function UIProvider({ children }) {
   const [modalActivo, setModalActivo] = useState(null); 
   const [previewArchivo, setPreviewArchivo] = useState(null);
   const [puntoAdjuntarId, setPuntoAdjuntarId] = useState(null);
+  const [archivosTemporales, setArchivosTemporales] = useState([]);
+  const [eliminarArchivoTemporalFn, setEliminarArchivoTemporalFn] = useState(null);
 
   const value = {
     vistaActual, setVistaActual,
@@ -25,7 +27,9 @@ export function UIProvider({ children }) {
     terminoBusqueda, setTerminoBusqueda,
     modalActivo, setModalActivo,
     previewArchivo, setPreviewArchivo,
-    puntoAdjuntarId, setPuntoAdjuntarId
+    puntoAdjuntarId, setPuntoAdjuntarId,
+    archivosTemporales, setArchivosTemporales,
+    eliminarArchivoTemporalFn, setEliminarArchivoTemporalFn
   };
 
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>;

@@ -22,7 +22,7 @@ const VISTAS = [
 const SECCIONES_VISIBLES = SECCIONES_DEL_DOCUMENTO.filter(sec => sec !== 'licencias');
 
 export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalPuntos = 0 }) {
-  const { vistaActual, setVistaActual, terminoBusqueda } = useUI();
+  const { vistaActual, setVistaActual, terminoBusqueda, sidebarTerciarioAbierto, archivosTemporales, eliminarArchivoTemporalFn } = useUI();
   const { proyectoMeta, secciones, seccionActual, setSeccionActual, setPuntoSeleccionadoId, sesiones, sesionActivaFecha, toggleAsistentePresente, asistentes, comenzarSesionCelebracion, finalizarSesionCelebracion, restablecerSesionCelebracion, actualizarHoraInicioCelebracion, actualizarHoraFinCelebracion } = useProyecto();
   const horaInicioSesion = sesionActivaFecha ? sesiones[sesionActivaFecha]?.horaInicio : null;
   const horaFinSesion = sesionActivaFecha ? sesiones[sesionActivaFecha]?.horaFin : null;
@@ -172,13 +172,36 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
             </div>
           );
         })}
+        {sidebarTerciarioAbierto && (
+          <div style={{ marginTop: '4px' }}>
+            <div style={{ fontWeight: 600, fontSize: '11px', color: '#777', textTransform: 'uppercase', letterSpacing: '0.04em', padding: '6px 12px' }}>
+              Archivos adjuntos ({archivosTemporales.length})
+            </div>
+            <nav className="sb-nav" style={{ padding: 0, maxHeight: '380px', overflowY: 'auto' }}>
+              {archivosTemporales.length === 0 && (
+                <div style={{ padding: '6px 0', color: '#999', fontSize: '12px' }}>Ningún archivo adjuntado</div>
+              )}
+              {archivosTemporales.map((a, idx) => (
+                <div key={idx} className="nav-item" style={{ justifyContent: 'space-between' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span className="nav-dot"></span>{a.nombre}
+                  </span>
+                  <span
+                    style={{ cursor: 'pointer', color: '#ef4444', fontWeight: 'bold', flexShrink: 0 }}
+                    onClick={() => eliminarArchivoTemporalFn && eliminarArchivoTemporalFn(idx)}
+                  >✕</span>
+                </div>
+              ))}
+            </nav>
+          </div>
+        )}
       </nav>
       <div id="resumenClasificacion" style={{ display: (vistaActual === 'sesionPrevia') ? 'none' : 'block', padding: '12px 16px', borderTop: '1px solid #e0e0e0', marginTop: 'auto', fontSize: '12px', color: '#444' }}>
-        <div style={{ fontWeight: '600', marginBottom: '16px' }}>
+        <div style={{ fontWeight: '600', marginBottom: '5px' }}>
           {listaCerrada ? 'Lista de puntos cerrada' : 'Lista de puntos abierta'} · {secciones.length} punto{secciones.length === 1 ? '' : 's'}
         </div>
-        {vistaActual === 'proyecto' && <BotonListaCerrada />}
-        {vistaActual === 'proyecto' && listaCerrada && (
+        {vistaActual === 'proyecto' && !sidebarTerciarioAbierto && <BotonListaCerrada />}
+        {vistaActual === 'proyecto' && listaCerrada && !sidebarTerciarioAbierto && (
           <button
             className="btn-nuevo-proyecto"
             disabled={generandoWord || secciones.length === 0}
