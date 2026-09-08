@@ -78,7 +78,15 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
     if (secciones.length === 0) return;
     setGenerandoWord(true);
     try {
-      await generarWordOrdenDia(secciones, proyectoMeta);
+      const { blob, nombreArchivo } = await generarWordOrdenDia(secciones, proyectoMeta);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = nombreArchivo;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (err) {
       alert('No se pudo generar el documento Word: ' + err.message);
     } finally {

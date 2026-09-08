@@ -9,6 +9,7 @@ export default function VistaInicio() {
   const [generandoActa, setGenerandoActa] = useState(false);
 
   const sesionActiva = sesionActivaFecha ? sesiones[sesionActivaFecha] : null;
+  const listaCerrada = sesionActiva ? !!sesionActiva.listaCerrada : false;
   const sesionCelebrada = !!(sesionActiva?.horaInicio && sesionActiva?.horaFin);
 
   const presentes = asistentes.filter(a => a.presente).length;
@@ -31,12 +32,12 @@ export default function VistaInicio() {
   }
 
   const [generandoZip, setGenerandoZip] = useState(false);
-  const hayArchivos = secciones.some(s => s.archivos && s.archivos.length > 0);
+  const hayArchivos = secciones.some(s => s.archivos && s.archivos.length > 0) || (listaCerrada && secciones.length > 0);
 
   async function descargarZip() {
     setGenerandoZip(true);
     try {
-      await generarZipArchivosSesion(secciones, proyectoMeta);
+      await generarZipArchivosSesion(secciones, proyectoMeta, listaCerrada);
     } catch (err) {
       alert('No se pudo generar el ZIP: ' + err.message);
     } finally {
