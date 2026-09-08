@@ -55,6 +55,7 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
 
   function seleccionarVista(v) {
     if (sesionEnCurso && v.id !== 'sesionPrevia') return;
+    if (v.id === 'sesionPrevia' && !listaCerrada && !sesionEnCurso) return;
     if (v.acordeon) {
       if (vistaActual === v.id) {
         setAcordeonAbierto(prev => !prev);
@@ -117,7 +118,7 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
           if (v.id === 'sesionPrevia' && !esSesionProxima) return null;
           const activo = vistaActual === v.id;
           const expandido = v.acordeon && activo && acordeonAbierto;
-          const bloqueadoPorSesion = sesionEnCurso && v.id !== 'sesionPrevia';
+          const bloqueadoPorSesion = (sesionEnCurso && v.id !== 'sesionPrevia') || (v.id === 'sesionPrevia' && !listaCerrada && !sesionEnCurso);
           return (
             <div key={v.id}>
               <div
@@ -273,10 +274,15 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
               onCambiarFin={actualizarHoraFinCelebracion}
             />
         <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {!horaInicioSesion && (
+          {!horaInicioSesion && listaCerrada && (
             <button className="btn-nuevo-proyecto" style={{ margin: 0, width: '100%' }} onClick={comenzarSesionCelebracion}>
-              Comenzar sesión
+              Comenzar Sesión {tipo} N°{numero}
             </button>
+          )}
+          {!horaInicioSesion && !listaCerrada && (
+            <div style={{ fontSize: '16px', color: '#b91c1c', textAlign: 'center', padding: '8px 4px' }}>
+              Debes cerrar la lista de puntos antes de poder comenzar la sesión.
+            </div>
           )}
           {horaFinSesion && (
             <button

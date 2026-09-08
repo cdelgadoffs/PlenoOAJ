@@ -130,8 +130,9 @@ export default function SidebarTerciario() {
         continue;
       }
       const id = 'arch_' + Date.now() + '_' + i;
+      const rutaRelativa = file.webkitRelativePath || '';
       procesos.push(
-        guardarArchivo(id, file).then(() => ({ id, nombre: file.name, tipo: file.type, _file: file }))
+        guardarArchivo(id, file).then(() => ({ id, nombre: file.name, tipo: file.type, rutaRelativa, _file: file }))
       );
     }
     if (procesos.length === 0) return;
@@ -270,6 +271,15 @@ export default function SidebarTerciario() {
         </div>
         <div className="ter-field">
           <input type="file" id="archivosInput" multiple style={{ width: '100%', padding: '4px', border: '1px solid #ccc', borderRadius: '4px', background: '#fff', fontSize: '12px' }} onChange={adjuntarArchivos} />
+          <input
+            type="file"
+            id="carpetaInput"
+            webkitdirectory=""
+            directory=""
+            multiple
+            style={{ width: '100%', padding: '4px', border: '1px solid #ccc', borderRadius: '4px', background: '#fff', fontSize: '12px', marginTop: '6px' }}
+            onChange={adjuntarArchivos}
+          />
           <div id="listaArchivosTemporales" style={{ marginTop: '6px', fontSize: '12px', color: '#555', maxHeight: '60px', overflowY: 'auto' }}>
           </div>
           <div id="oneDriveStatus" className="onedrive-status">{oneDriveStatus}</div>

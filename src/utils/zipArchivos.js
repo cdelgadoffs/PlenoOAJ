@@ -34,7 +34,9 @@ export async function generarZipArchivosSesion(secciones, proyectoMeta, listaCer
 
     for (const archivo of sec.archivos) {
       const blob = await obtenerArchivo(archivo.id);
-      if (blob) carpeta.file(archivo.nombre, blob);
+      if (!blob) continue;
+      const rutaDentro = archivo.rutaRelativa || archivo.nombre;
+      carpeta.file(rutaDentro, blob);
     }
   }
 
