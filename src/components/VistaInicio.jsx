@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useProyecto } from '../context/ProyectoContext.jsx';
 import { SECCIONES_DEL_DOCUMENTO } from '../utils/puntos.js';
 import { generarWordActa } from '../utils/wordActa.js';
+import { generarZipArchivosSesion } from '../utils/zipArchivos.js'; 
 
 export default function VistaInicio() {
   const { secciones, sesiones, sesionActivaFecha, proyectoMeta, asistentes } = useProyecto();
@@ -28,6 +29,21 @@ export default function VistaInicio() {
       setGenerandoActa(false);
     }
   }
+
+  const [generandoZip, setGenerandoZip] = useState(false);
+  const hayArchivos = secciones.some(s => s.archivos && s.archivos.length > 0);
+
+  async function descargarZip() {
+    setGenerandoZip(true);
+    try {
+      await generarZipArchivosSesion(secciones, proyectoMeta);
+    } catch (err) {
+      alert('No se pudo generar el ZIP: ' + err.message);
+    } finally {
+      setGenerandoZip(false);
+    }
+  }
+
   return (
     <>
       <div className="doc-header">
@@ -53,6 +69,18 @@ export default function VistaInicio() {
               <span className="clas-conteo">{s.total}</span>
             </div>
           ))}
+        </div>
+      )}
+      {hayArchivos && (
+        <div style={{ marginTop: '20px' }}>
+          <button
+            className="btn-nuevo-proyecto"
+            style={{ margin: 0 }}
+            disabled={generandoZip}
+            onClick={descargarZip}
+          >
+            {generandoZip ? 'Generando ZIP...' : 'Descargar archivos adjuntos (ZIP)'}
+          </button>
         </div>
       )}
       {sesionCelebrada && (
