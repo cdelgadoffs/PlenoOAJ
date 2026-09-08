@@ -115,7 +115,7 @@ function VistaProyecto({ onEditar }) {
         )
       ) : (
         <div className="lista-puntos-expandida">
-          {pts.map(sec => {
+          {(sidebarTerciarioAbierto ? pts.slice().reverse() : pts).map(sec => {
             const idx = secciones.indexOf(sec);
             const puedeSubir = idx > 0 && secciones[idx - 1].seccion === sec.seccion;
             const puedeBajar = idx < secciones.length - 1 && secciones[idx + 1].seccion === sec.seccion;
