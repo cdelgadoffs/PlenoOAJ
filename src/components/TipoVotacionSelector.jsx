@@ -58,7 +58,6 @@ function TipoVotacionSelector({ value, onChange, nombresQuorum = [] }) {
     ) {
       setEstado(nuevo);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
   function emitir(nuevoEstado) {

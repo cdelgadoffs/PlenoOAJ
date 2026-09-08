@@ -167,11 +167,12 @@ const OPCIONES_FILTRO = [
     setMenuAbierto(false);
   }
   function irASesionActual() {
-    if (!mesProxima) return;
+    if (!mesProxima || !proximaGlobal) return;
     setMes(mesProxima);
-    if (filtroCinta === 'semanal' && proximaGlobal) {
+    if (filtroCinta === 'semanal') {
       setSemanaAncla(proximaGlobal);
     }
+    cargarSesion(proximaGlobal);
   }
   // Funciones para el calendario expandido
   function toggleCalendario() {
