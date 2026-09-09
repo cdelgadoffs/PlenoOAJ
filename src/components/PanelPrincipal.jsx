@@ -7,6 +7,7 @@ import VistaInicio from './VistaInicio.jsx';
 import VistaHistorial from './VistaHistorial.jsx';
 import { renderConOcultos, tieneTextoOculto } from '../utils/texto.js';
 import TipoVotacionSelector from './TipoVotacionSelector.jsx';
+import SelectorInforme from './SelectorInforme.jsx';
 
 function TarjetaPunto({ sec, idx, puedeSubir, puedeBajar, esSeleccionada, listaCerrada, onSeleccionar, onMover, onEditar, onEliminar, onToggleAnexo, onPreviewArchivo, onAdjuntar }) {
   const titulo = getTituloPunto(sec, idx);
@@ -335,11 +336,18 @@ function VistaSesionPrevia() {
             <>
               <div className="ter-field">
                 {aprobado ? (
-              <TipoVotacionSelector
-                value={sec.tipoVotacion || ''}
-                onChange={(nuevoValor) => actualizarPunto(sec.id, { tipoVotacion: nuevoValor, votacionTextoManual: undefined })}
-                nombresQuorum={asistentes.map(a => a.nombre)}
-              />
+                  sec.seccion === 'informes' ? (
+                    <SelectorInforme
+                      value={sec.tipoVotacion || ''}
+                      onChange={(nuevoValor) => actualizarPunto(sec.id, { tipoVotacion: nuevoValor, votacionTextoManual: nuevoValor })}
+                    />
+                  ) : (
+                    <TipoVotacionSelector
+                      value={sec.tipoVotacion || ''}
+                      onChange={(nuevoValor) => actualizarPunto(sec.id, { tipoVotacion: nuevoValor, votacionTextoManual: undefined })}
+                      nombresQuorum={asistentes.map(a => a.nombre)}
+                    />
+                  )
                 ) : (
                   <span className="email-vacio">Disponible solo si el punto está aprobado</span>
                 )}
