@@ -27,7 +27,7 @@ function TarjetaPunto({ sec, idx, puedeSubir, puedeBajar, esSeleccionada, listaC
       <thead>
         <tr>
           <th colSpan={3} className="punto-tabla-header">
-            <span className="punto-tabla-titulo">{titulo}</span>
+            <span className={'punto-tabla-titulo' + (sec.confidencial ? ' confidencial' : '')}>{titulo}</span>
             <span className="punto-tabla-dependencia">{dependenciaMostrada}</span>
             <div className="punto-tabla-acciones" onClick={(e) => e.stopPropagation()}>
               <button className="btn-tabla-accion" title="Adjuntar archivo" onClick={() => onAdjuntar(sec.id)}>

@@ -332,3 +332,7 @@
 .ag-grupo-separador:first-child {
   margin-top: 0;
 }
+.punto-tabla-titulo.confidencial {
+  color: #c0392b;
+  font-weight: 700;
+}

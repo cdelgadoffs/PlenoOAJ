@@ -143,7 +143,7 @@ export async function generarWordOrdenDia(secciones, proyectoMeta) {
   SECCIONES_DEL_DOCUMENTO.forEach(nombreSeccion => {
     const puntosDeLaSeccion = secciones
       .map((sec, idx) => ({ sec, idx }))
-      .filter(({ sec }) => sec.seccion === nombreSeccion);
+      .filter(({ sec }) => sec.seccion === nombreSeccion && !sec.confidencial)
 
     if (puntosDeLaSeccion.length === 0) return;
 

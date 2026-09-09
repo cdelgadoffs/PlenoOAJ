@@ -51,7 +51,6 @@ function numeroALetras(num) {
 
 // ========== CORRECCIÓN DE ACENTOS EN FECHAS ==========
 function corregirAcentosFecha(texto) {
-  // Reemplazar tanto mayúsculas como minúsculas
   return texto
     .replace(/VEINTISEIS/g, 'VEINTISÉIS')
     .replace(/veintiseis/g, 'veintiséis');
@@ -59,7 +58,6 @@ function corregirAcentosFecha(texto) {
 
 function convertirNumeroALetras(num) {
   let texto = numeroALetras(num);
-  // Aplicar corrección de acentos
   texto = corregirAcentosFecha(texto);
   return texto.toUpperCase();
 }
@@ -167,8 +165,13 @@ function generarTextoVotacion(sec, asistentes) {
 
 // ========== FUNCIÓN PRINCIPAL ==========
 export async function generarWordActa(secciones, proyectoMeta, asistentes = [], sesionData = {}) {
-  if (secciones.length === 0) {
-    alert('No hay puntos para generar el acta.');
+  // Filtrar para eliminar el punto de "Asuntos Generales"
+  const seccionesFiltradas = secciones.filter(sec =>
+    sec.seccion?.toLowerCase() !== 'asuntos generales' && !sec.confidencial
+  );
+    
+  if (seccionesFiltradas.length === 0) {
+    alert('No hay puntos para generar el acta (se excluyeron Asuntos Generales).');
     return;
   }
 
@@ -180,8 +183,6 @@ export async function generarWordActa(secciones, proyectoMeta, asistentes = [], 
   const diaLetras = convertirNumeroALetras(diaNum);
   const anioLetras = convertirNumeroALetras(anio);
 
-  // Fecha para el título y el texto introductorio (sin día de la semana)
-  // Aplicamos corrección de acentos por si acaso
   const fechaConDia = `${diaLetras} DE ${mes} DE ${anioLetras}`;
   const fechaConDiaCorregida = corregirAcentosFecha(fechaConDia);
 
@@ -223,7 +224,7 @@ export async function generarWordActa(secciones, proyectoMeta, asistentes = [], 
     ],
   }));
 
-  // ========== INTRODUCCIÓN (sin día de la semana) ==========
+  // ========== INTRODUCCIÓN ==========
   const horaInicio = sesionData.horaInicio
     ? new Date(sesionData.horaInicio).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
     : '<<hora>>';
@@ -262,10 +263,10 @@ export async function generarWordActa(secciones, proyectoMeta, asistentes = [], 
     ],
   }));
 
-  // ========== PUNTOS ==========
+  // ========== PUNTOS (sobre seccionesFiltradas) ==========
   let numeroGlobal = 1;
 
-  secciones.forEach(sec => {
+  seccionesFiltradas.forEach(sec => {
     const identificador = `${numeroGlobal}. PLE./${padNumber(numeroGlobal, 3)}.- `;
     
     // ----- CONTENIDO ESPECIAL PARA EL PRIMER PUNTO -----
@@ -276,7 +277,7 @@ export async function generarWordActa(secciones, proyectoMeta, asistentes = [], 
       const anioLetrasMin = anioLetras.toLowerCase();
       const fechaTexto = `${diaLetrasMin} de ${mesLetras} de ${anioLetrasMin}`;
       const fechaTextoCorregida = corregirAcentosFecha(fechaTexto);
-      const totalPuntos = secciones.length;
+      const totalPuntos = seccionesFiltradas.length; // ahora excluye Asuntos Generales
       const totalPuntosLetras = numeroALetras(totalPuntos).toLowerCase();
       contenido = `Se somete a consideración el orden del día de la sesión ${tipoSesion.toLowerCase()} de ${fechaTextoCorregida}, con ${totalPuntosLetras} puntos.`;
     }
@@ -299,7 +300,7 @@ export async function generarWordActa(secciones, proyectoMeta, asistentes = [], 
     const tieneVotacion = !!votacion;
     const tieneAcuerdo = !esFijoAprobacion && !!acuerdo && !esAcuerdoUnico;
 
-    // 1. Punto de acuerdo (contenido)
+    // 1. Punto de acuerdo
     parrafos.push(new Paragraph({
       indent: { left: 720, hanging: 360 },
       spacing: { before: 160, after: 240 },
@@ -325,7 +326,7 @@ export async function generarWordActa(secciones, proyectoMeta, asistentes = [], 
       }));
     }
 
-    // 3. Acuerdo (con formateo de números ordinales)
+    // 3. Acuerdo
     if (tieneAcuerdo) {
       lineasAcuerdo.forEach((linea, i) => {
         const children = formatearLineaAcuerdo(linea);

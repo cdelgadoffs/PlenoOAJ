@@ -41,7 +41,8 @@ const estadoVacio = {
   tipoVotacion: JSON.stringify({ voto: 0, votacion: 0, estado: true }),
   acuerdo: '',
   archivos: [],
-  seccionDestino: 'proyectos de acuerdo'
+  seccionDestino: 'proyectos de acuerdo',
+  confidencial: false,
 };
 
 export default function SidebarTerciario() {
@@ -75,7 +76,8 @@ export default function SidebarTerciario() {
       contenido: sec.contenido || '',
       tipoVotacion,
       acuerdo: sec.acuerdo || 'Se aprueba por unanimidad',
-      archivos: sec.archivos ? [...sec.archivos] : []
+      archivos: sec.archivos ? [...sec.archivos] : [],
+      confidencial: sec.confidencial || false
     });
   } else {
     setForm(estadoVacio);
@@ -164,6 +166,14 @@ export default function SidebarTerciario() {
     setForm(f => ({ ...f, archivos: f.archivos.filter((_, i) => i !== idx) }));
   }
 
+  function limpiarFormulario() {
+    setForm(estadoVacio);
+    const inputArchivos = document.getElementById('archivosInput');
+    const inputCarpeta = document.getElementById('carpetaInput');
+    if (inputArchivos) inputArchivos.value = '';
+    if (inputCarpeta) inputCarpeta.value = '';
+  }
+
   function cerrar() {
     setPuntoEditandoId(null);
     setSidebarTerciarioAbierto(false);
@@ -182,7 +192,8 @@ export default function SidebarTerciario() {
         dependencia: form.remitente,
         tipoVotacion: form.tipoVotacion,
         acuerdo,
-        archivos: form.archivos
+        archivos: form.archivos,
+        confidencial: form.confidencial
       });
       setPuntoSeleccionadoId(puntoEditandoId);
       setPuntoEditandoId(null);
@@ -202,7 +213,8 @@ export default function SidebarTerciario() {
       tipoVotacion: form.tipoVotacion,
       acuerdo,
       archivos: form.archivos,
-      origenAG: desdeAG
+      origenAG: desdeAG,
+      confidencial: form.confidencial
     });
 
     setPuntoSeleccionadoId(nuevoId);
@@ -335,8 +347,22 @@ export default function SidebarTerciario() {
         */}
 
         <div className="ter-acciones">
+          <div className="ter-field" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <input
+              type="checkbox"
+              id="checkConfidencial"
+              checked={form.confidencial}
+              onChange={(e) => setForm(f => ({ ...f, confidencial: e.target.checked }))}
+            />
+            <label htmlFor="checkConfidencial" style={{ fontSize: '12px', fontWeight: '600', color: '#c0392b', textTransform: 'uppercase', letterSpacing: '0.04em', cursor: 'pointer' }}>
+              Marcar como CONFIDENCIAL
+            </label>
+          </div>
           <button className="btn-cancel" id="btnCancelarCreacion" onClick={cerrar}>Cancelar</button>
           <button className="btn-confirm" id="btnConfirmarCreacion" disabled={!form.contenido.trim() || (seccionActual !== 'informes' && !form.acuerdo.trim())} onClick={confirmar}>{puntoEditandoId ? 'Guardar cambios' : 'Añadir'}</button>
+          <button className="btn-clear" id="btnLimpiarFormulario" title="Borrar formulario" onClick={limpiarFormulario}>
+            <i className="fas fa-eraser"></i>
+          </button>
         </div>
       </div>
     </aside>
