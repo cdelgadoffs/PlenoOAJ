@@ -147,7 +147,7 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
                     const conteo = puntosEnSeccion.filter(p => idsFiltrados.has(p.id)).length;
                     const oculto = conteo === 0 && terminoBusqueda;
                     const nombre = sec.charAt(0).toUpperCase() + sec.slice(1);
-                    const puedeAgregar = sec !== 'asuntos generales' && sec !== 'aprobaciones' && secciones.length > 0 && !listaCerrada;
+                    const puedeAgregar = sec !== 'aprobaciones' && secciones.length > 0 && !listaCerrada;
                     return (
                       <div
                         key={sec}
