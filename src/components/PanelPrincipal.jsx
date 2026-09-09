@@ -109,6 +109,17 @@ function VistaProyecto({ onEditar }) {
     setPuntoSeleccionadoId(id);
   }
 
+  function agruparPorSeccionDestino(puntos) {
+    const grupos = [];
+    puntos.forEach(sec => {
+      const clave = sec.id === 'sec_fijo_3' ? '__fijo__' : (sec.seccion || 'sin sección');
+      let grupo = grupos.find(g => g.clave === clave);
+      if (!grupo) { grupo = { clave, items: [] }; grupos.push(grupo); }
+      grupo.items.push(sec);
+    });
+    return grupos;
+  }
+
   return (
     <div className="panel-proyecto">
       {pts.length === 0 ? (
@@ -122,65 +133,102 @@ function VistaProyecto({ onEditar }) {
         )
       ) : (
         <div className="lista-puntos-expandida">
-          {(sidebarTerciarioAbierto ? pts.slice().reverse() : pts).map(sec => {
-            const idx = secciones.indexOf(sec);
-
-            // Punto fijo sec_fijo_3: solo título
-            if (sec.id === 'sec_fijo_3') {
-              return (
-                <div key={sec.id} className="ag-titulo-fijo">
-                  <span>{getTituloPunto(sec, idx)}</span>
-                  <span className="ag-titulo-label">Asuntos Generales</span>
-                </div>
-              );
-            }
-
-            // Punto de otra sección registrado desde AG: badge clickeable
-            if (sec.origenAG && seccionActual !== 'asuntos generales') {
-              const titulo = getTituloPunto(sec, idx);
-              return (
-                <div
-                  key={sec.id}
-                  className="badge-origen-ag"
-                  onClick={() => irAPuntoEnAG(sec.id)}
-                  title={`Registrado en Asuntos Generales · ${sec.dependencia || 'Pleno'}`}
-                >
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <span className="badge-origen-ag-codigo">{titulo}</span>
-                      <span className="badge-origen-ag-label">Registrado en Asuntos Generales</span>
-                    </div>
-                    <div style={{ fontSize: '13px', color: '#333', lineHeight: '1.4' }}>
-                      {sec.contenido ? sec.contenido.replace(/\*\*/g, '') : 'Sin contenido'}
-                    </div>
+          {seccionActual === 'asuntos generales' ? (
+            agruparPorSeccionDestino(sidebarTerciarioAbierto ? pts.slice().reverse() : pts).map(grupo => (
+              <div key={grupo.clave}>
+                {grupo.clave !== '__fijo__' && (
+                  <div className="ag-grupo-separador">
+                    {grupo.clave.charAt(0).toUpperCase() + grupo.clave.slice(1)}
                   </div>
-                  <span className="badge-origen-ag-dep">{sec.dependencia || 'Pleno'}</span>
-                </div>
+                )}
+                {grupo.items.map(sec => {
+                  const idx = secciones.indexOf(sec);
+                  if (sec.id === 'sec_fijo_3') {
+                    return (
+                      <div key={sec.id} className="ag-titulo-fijo">
+                        <span>{getTituloPunto(sec, idx)}</span>
+                        <span className="ag-titulo-label">Asuntos Generales</span>
+                      </div>
+                    );
+                  }
+                  const puedeSubir = idx > 0 && secciones[idx - 1].seccion === sec.seccion;
+                  const puedeBajar = idx < secciones.length - 1 && secciones[idx + 1].seccion === sec.seccion;
+                  return (
+                    <TarjetaPunto
+                      key={sec.id}
+                      sec={sec}
+                      idx={idx}
+                      puedeSubir={puedeSubir}
+                      puedeBajar={puedeBajar}
+                      esSeleccionada={sec.id === puntoSeleccionadoId}
+                      onSeleccionar={() => setPuntoSeleccionadoId(sec.id)}
+                      onMover={moverPunto}
+                      onEditar={onEditar}
+                      onEliminar={confirmarEliminar}
+                      onToggleAnexo={toggleAnexo}
+                      onPreviewArchivo={(a) => { setPreviewArchivo(a); setModalActivo('preview'); }}
+                      onAdjuntar={(id) => { setPuntoAdjuntarId(id); setModalActivo('adjuntar'); }}
+                      listaCerrada={listaCerrada}
+                    />
+                  );
+                })}
+              </div>
+            ))
+          ) : (
+            (sidebarTerciarioAbierto ? pts.slice().reverse() : pts).map(sec => {
+              const idx = secciones.indexOf(sec);
+              if (sec.id === 'sec_fijo_3') {
+                return (
+                  <div key={sec.id} className="ag-titulo-fijo">
+                    <span>{getTituloPunto(sec, idx)}</span>
+                    <span className="ag-titulo-label">Asuntos Generales</span>
+                  </div>
+                );
+              }
+              if (sec.origenAG && sec.seccion === seccionActual) {
+                const titulo = getTituloPunto(sec, idx);
+                return (
+                  <div
+                    key={sec.id}
+                    className="badge-origen-ag"
+                    onClick={() => irAPuntoEnAG(sec.id)}
+                    title={`Registrado en Asuntos Generales · ${sec.dependencia || 'Pleno'}`}
+                  >
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span className="badge-origen-ag-codigo">{titulo}</span>
+                        <span className="badge-origen-ag-label">Registrado en Asuntos Generales</span>
+                      </div>
+                      <div style={{ fontSize: '13px', color: '#333', lineHeight: '1.4' }}>
+                        {sec.contenido ? sec.contenido.replace(/\*\*/g, '') : 'Sin contenido'}
+                      </div>
+                    </div>
+                    <span className="badge-origen-ag-dep">{sec.dependencia || 'Pleno'}</span>
+                  </div>
+                );
+              }
+              const puedeSubir = idx > 0 && secciones[idx - 1].seccion === sec.seccion;
+              const puedeBajar = idx < secciones.length - 1 && secciones[idx + 1].seccion === sec.seccion;
+              return (
+                <TarjetaPunto
+                  key={sec.id}
+                  sec={sec}
+                  idx={idx}
+                  puedeSubir={puedeSubir}
+                  puedeBajar={puedeBajar}
+                  esSeleccionada={sec.id === puntoSeleccionadoId}
+                  onSeleccionar={() => setPuntoSeleccionadoId(sec.id)}
+                  onMover={moverPunto}
+                  onEditar={onEditar}
+                  onEliminar={confirmarEliminar}
+                  onToggleAnexo={toggleAnexo}
+                  onPreviewArchivo={(a) => { setPreviewArchivo(a); setModalActivo('preview'); }}
+                  onAdjuntar={(id) => { setPuntoAdjuntarId(id); setModalActivo('adjuntar'); }}
+                  listaCerrada={listaCerrada}
+                />
               );
-            }
-
-            // Render normal
-            const puedeSubir = idx > 0 && secciones[idx - 1].seccion === sec.seccion;
-            const puedeBajar = idx < secciones.length - 1 && secciones[idx + 1].seccion === sec.seccion;
-            return (
-              <TarjetaPunto
-                key={sec.id}
-                sec={sec}
-                idx={idx}
-                puedeSubir={puedeSubir}
-                puedeBajar={puedeBajar}
-                esSeleccionada={sec.id === puntoSeleccionadoId}
-                onSeleccionar={() => setPuntoSeleccionadoId(sec.id)}
-                onMover={moverPunto}
-                onEditar={onEditar}
-                onEliminar={confirmarEliminar}
-                onToggleAnexo={toggleAnexo}
-                onPreviewArchivo={(a) => { setPreviewArchivo(a); setModalActivo('preview'); }}
-                onAdjuntar={(id) => { setPuntoAdjuntarId(id); setModalActivo('adjuntar'); }}
-                listaCerrada={listaCerrada}
-              />
-            );
-          })}
+            })
+          )}
         </div>
       )}
     </div>
