@@ -190,7 +190,8 @@ export default function SidebarTerciario() {
       setSidebarTerciarioAbierto(false);
       return;
     }
-    const seccionFinal = seccionActual === 'asuntos generales'
+    const desdeAG = seccionActual === 'asuntos generales';
+    const seccionFinal = desdeAG
       ? (form.seccionDestino || 'proyectos de acuerdo')
       : seccionActual;
 
@@ -200,9 +201,10 @@ export default function SidebarTerciario() {
       seccion: seccionFinal,
       tipoVotacion: form.tipoVotacion,
       acuerdo,
-      archivos: form.archivos
+      archivos: form.archivos,
+      origenAG: desdeAG
     });
-    
+
     setPuntoSeleccionadoId(nuevoId);
     if (form.archivos.length > 0) {
       subirArchivosAOneDrive(nuevoId, form.archivos);

@@ -86,11 +86,13 @@ function TarjetaPunto({ sec, idx, puedeSubir, puedeBajar, esSeleccionada, listaC
 
 function VistaProyecto({ onEditar }) {
   const { terminoBusqueda, sidebarTerciarioAbierto, setModalActivo, setPreviewArchivo, setPuntoAdjuntarId } = useUI();
-  const { secciones, seccionActual, proyectoMeta, puntoSeleccionadoId, setPuntoSeleccionadoId, moverPunto, eliminarPunto, toggleAnexo, sesiones, sesionActivaFecha } = useProyecto();
+  const { secciones, seccionActual, setSeccionActual, proyectoMeta, puntoSeleccionadoId, setPuntoSeleccionadoId, moverPunto, eliminarPunto, toggleAnexo, sesiones, sesionActivaFecha } = useProyecto();
   const listaCerrada = sesionActivaFecha ? !!sesiones[sesionActivaFecha]?.listaCerrada : false;
 
   // === FILTRO POR SECCIÓN + BÚSQUEDA ===
-  const puntosDeSeccion = secciones.filter(s => s.seccion === seccionActual);
+  const puntosDeSeccion = seccionActual === 'asuntos generales'
+    ? secciones.filter(s => s.seccion === 'asuntos generales' || s.origenAG)
+    : secciones.filter(s => s.seccion === seccionActual);
   const pts = obtenerPuntosFiltrados(puntosDeSeccion, terminoBusqueda);
   const modoBusqueda = terminoBusqueda.trim().length > 0;
 
@@ -100,6 +102,11 @@ function VistaProyecto({ onEditar }) {
     if (confirm(`¿Eliminar "${getTituloPunto(sec, idx)}"?`)) {
       eliminarPunto(sec.id);
     }
+  }
+
+  function irAPuntoEnAG(id) {
+    setSeccionActual('asuntos generales');
+    setPuntoSeleccionadoId(id);
   }
 
   return (
@@ -117,6 +124,42 @@ function VistaProyecto({ onEditar }) {
         <div className="lista-puntos-expandida">
           {(sidebarTerciarioAbierto ? pts.slice().reverse() : pts).map(sec => {
             const idx = secciones.indexOf(sec);
+
+            // Punto fijo sec_fijo_3: solo título
+            if (sec.id === 'sec_fijo_3') {
+              return (
+                <div key={sec.id} className="ag-titulo-fijo">
+                  <span>{getTituloPunto(sec, idx)}</span>
+                  <span className="ag-titulo-label">Asuntos Generales</span>
+                </div>
+              );
+            }
+
+            // Punto de otra sección registrado desde AG: badge clickeable
+            if (sec.origenAG && seccionActual !== 'asuntos generales') {
+              const titulo = getTituloPunto(sec, idx);
+              return (
+                <div
+                  key={sec.id}
+                  className="badge-origen-ag"
+                  onClick={() => irAPuntoEnAG(sec.id)}
+                  title={`Registrado en Asuntos Generales · ${sec.dependencia || 'Pleno'}`}
+                >
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span className="badge-origen-ag-codigo">{titulo}</span>
+                      <span className="badge-origen-ag-label">Registrado en Asuntos Generales</span>
+                    </div>
+                    <div style={{ fontSize: '13px', color: '#333', lineHeight: '1.4' }}>
+                      {sec.contenido ? sec.contenido.replace(/\*\*/g, '') : 'Sin contenido'}
+                    </div>
+                  </div>
+                  <span className="badge-origen-ag-dep">{sec.dependencia || 'Pleno'}</span>
+                </div>
+              );
+            }
+
+            // Render normal
             const puedeSubir = idx > 0 && secciones[idx - 1].seccion === sec.seccion;
             const puedeBajar = idx < secciones.length - 1 && secciones[idx + 1].seccion === sec.seccion;
             return (

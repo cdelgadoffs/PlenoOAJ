@@ -204,7 +204,9 @@ export function ProyectoProvider({ children }) {
   }
 
   function agregarPunto(datos) {
-    if (sesiones[sesionActivaFecha]?.listaCerrada) return;
+    const seccion = datos.seccion || seccionActual;
+    const esDesdeAG = datos.origenAG || seccion === 'asuntos generales';
+    if (sesiones[sesionActivaFecha]?.listaCerrada && !esDesdeAG) return;
     const nuevoId = 'sec_' + Date.now();
     const nuevaSec = {
       id: nuevoId,
@@ -221,8 +223,10 @@ export function ProyectoProvider({ children }) {
       aprobado: true,
       dependencia: datos.dependencia || 'Pleno',
       asunto: datos.asunto || '',
-      archivos: datos.archivos || []
+      archivos: datos.archivos || [],
+      origenAG: datos.origenAG || false
     };
+
     const insertIdx = getInsertIndex(secciones, nuevaSec.seccion);
     setSecciones(prev => {
       const idx = getInsertIndex(prev, nuevaSec.seccion);
