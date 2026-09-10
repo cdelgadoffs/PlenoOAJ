@@ -33,6 +33,7 @@ export async function generarZipArchivosSesion(secciones, proyectoMeta, listaCer
     const carpeta = zip.folder(nombreCarpeta);
 
     for (const archivo of sec.archivos) {
+      if (archivo.adjuntadoEnSesion) continue;
       const blob = await obtenerArchivo(archivo.id);
       if (!blob) continue;
       const rutaDentro = archivo.rutaRelativa || archivo.nombre;

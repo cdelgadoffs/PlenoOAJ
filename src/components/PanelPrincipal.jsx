@@ -363,7 +363,7 @@ function VistaSesionPrevia() {
                   {textoVotacionMostrado}
                 </div>
               </div>
-              {!esAcuerdoUnico && (
+              {!esAcuerdoUnico && sec.seccion !== 'informes' && (
                 <div className="ter-field">
                   <label className="ter-label">Acuerdo</label>
                   <div className="acuerdo-texto">
@@ -380,14 +380,13 @@ function VistaSesionPrevia() {
             </>
           )}
         </div>
-        {sec.archivos && sec.archivos.length > 0 && (
+        {sec.archivos && sec.archivos.filter(a => a.adjuntadoEnSesion).length > 0 && (
           <div className="archivos-adjuntos">
-            <span
-              className="archivo-item"
-              onClick={() => { setPreviewArchivo(sec.archivos[sec.archivos.length - 1]); setModalActivo('preview'); }}
-            >
-              {sec.archivos[sec.archivos.length - 1].nombre}
-            </span>
+            {sec.archivos.filter(a => a.adjuntadoEnSesion).map((a, i) => (
+              <span key={i} className="archivo-item" onClick={() => { setPreviewArchivo(a); setModalActivo('preview'); }}>
+                {a.nombre}
+              </span>
+            ))}
           </div>
         )}
         <div className="previa-footer">

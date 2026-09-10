@@ -175,7 +175,7 @@ function ModalAdjuntar() {
     const id = 'arch_' + Date.now();
     try {
       await guardarArchivo(id, archivo);
-      adjuntarArchivoAPunto(puntoAdjuntarId, { id, nombre: archivo.name, tipo: archivo.type });
+      adjuntarArchivoAPunto(puntoAdjuntarId, { id, nombre: archivo.name, tipo: archivo.type, adjuntadoEnSesion: true });
       setModalActivo(null);
       setArchivo(null);
     } catch (err) {
