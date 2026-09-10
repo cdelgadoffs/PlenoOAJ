@@ -78,13 +78,11 @@ export default function Calendarizacion({ mostrarFormulario, setMostrarFormulari
 
   return (
     <div className="sb-nav nuevo-panel" id="panelCalendarizacion">
-      <button className="btn-volver-nuevo" id="btnVolverMenuCalendario" onClick={onVolver}>Volver</button>
-
       {mostrarFormulario ? (
-        <div id="panelCreacionCalendario" className="cal-form">
-
-
-          <div className="cal-form-seccion">
+        <>
+          <button className="btn-volver-nuevo" id="btnVolverMenuCalendario" onClick={onVolver}>Volver</button>
+          <div id="panelCreacionCalendario" className="cal-form">
+            <div className="cal-form-seccion">
             <div className="cal-form-seccion-titulo">
               <span className="cal-form-seccion-num">1</span>
               Día de sesión ordinaria
@@ -173,10 +171,12 @@ export default function Calendarizacion({ mostrarFormulario, setMostrarFormulari
 
           <button id="btnGenerarCalendario" className="btn-enviar-email cal-btn-generar" onClick={generarCalendario}>Generar calendario anual</button>
           <div id="calendarioStatus" className={'email-status' + (calendarioStatus.texto ? (calendarioStatus.ok ? ' ok' : ' error') : '')} style={{ marginTop: '10px' }}>{calendarioStatus.texto}</div>
-        </div>
+          </div>
+        </>
       ) : (
         <div id="panelControlAnual">
           <div className="control-anual-fijo">
+            <button className="btn-volver-nuevo" id="btnVolverMenuCalendario" onClick={onVolver}>Volver</button>
             <label className="email-label">Control anual de sesiones</label>
             <select id="controlMesSelect" className="ter-select" style={{ marginBottom: '8px' }} value={mesControl} onChange={(e) => setMesControl(e.target.value)}>
               {mesesDisponibles.map(m => {

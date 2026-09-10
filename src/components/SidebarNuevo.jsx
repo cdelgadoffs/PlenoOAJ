@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useUI } from '../context/UIContext.jsx';
 import { usePermisos } from '../hooks/usePermisos.js';
 import Calendarizacion from './Calendarizacion.jsx';
@@ -14,6 +14,14 @@ export default function SidebarNuevo() {
   const { sidebarNuevoAbierto, sidebarNuevoAncho, setSidebarNuevoAncho, panelNuevoActivo, setPanelNuevoActivo, mostrarFormularioCalendario, setMostrarFormularioCalendario } = useUI();
   const { puedeCalendarizacion, puedeEmail, puedeSync, puedeGestionarUsuarios } = usePermisos();
   const { cuentaActiva } = useAuth();
+
+  useEffect(() => {
+    if (!sidebarNuevoAbierto) {
+      setPanelNuevoActivo('menu');
+      setSidebarNuevoAncho(false);
+      setMostrarFormularioCalendario(false);
+    }
+  }, [sidebarNuevoAbierto, setPanelNuevoActivo, setSidebarNuevoAncho, setMostrarFormularioCalendario]);
 
   function abrirPanel(panel, ancho) {
     setPanelNuevoActivo(panel);

@@ -155,20 +155,44 @@
 }
 
 /* ===== Panel de Calendarización: control anual ===== */
+#panelCalendarizacion {
+  padding: 0;
+}
+#panelCalendarizacion .cal-form {
+  padding: 20px;
+}
+#panelCalendarizacion > .btn-volver-nuevo {
+  margin: 20px 20px 0;
+}
 .control-anual-fijo {
   position: sticky;
   top: 0;
   z-index: 5;
   background: #1a1a1a;
-  padding: 12px 0;
+  padding: 12px 20px;
   border-bottom: 1px solid #333;
   margin-bottom: 12px;
+}
+.control-anual-fijo .btn-volver-nuevo {
+  margin-bottom: 10px;
+}
+.control-anual-fijo .email-label {
+  display: block;
+  margin-bottom: 8px;
+}
+.control-anual-fijo .ter-select {
+  width: 100%;
+}
+.control-anual-fijo .control-resumen {
+  margin: 8px 0 0;
+}
+#panelControlAnual .email-field {
+  padding: 0 20px 20px;
 }
 .control-anual-grid {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-top: 12px;
   /* Sin max-height ni overflow: la lista se muestra completa sin barra de scroll */
 }
 .control-item {

@@ -4,7 +4,7 @@ import { formatearFechaES } from '../utils/fechas.js';
 import '../styles/NuevoSidebarSecundario.css';
 
 export default function NuevoSidebarSecundario() {
-  const { panelNuevoActivo, mostrarFormularioCalendario } = useUI();
+  const { panelNuevoActivo, mostrarFormularioCalendario, setSidebarNuevoAbierto } = useUI();
   const { excepciones, eliminarExcepcion } = useProyecto();
 
   if (panelNuevoActivo !== 'calendarizacion' || !mostrarFormularioCalendario) {
@@ -16,8 +16,18 @@ export default function NuevoSidebarSecundario() {
   return (
     <aside className="nuevo-sidebar-secundario" id="nuevoSidebarSecundario">
       <div className="nss-header">
-        <div className="nss-titulo">Días de asueto</div>
-        <div className="nss-subtitulo">{asuetos.length} registro{asuetos.length === 1 ? '' : 's'}</div>
+        <div className="nss-header-top">
+          <div>
+            <div className="nss-titulo">Días de asueto</div>
+            <div className="nss-subtitulo">{asuetos.length} registro{asuetos.length === 1 ? '' : 's'}</div>
+          </div>
+          <button
+            className="btn-close-nss"
+            id="btnCerrarNuevoSidebar"
+            title="Cerrar panel"
+            onClick={() => setSidebarNuevoAbierto(false)}
+          >✕</button>
+        </div>
       </div>
       <div className="nss-lista">
         {asuetos.length === 0 ? (
