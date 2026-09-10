@@ -96,6 +96,55 @@
 .badge-sesion.extraordinaria {
   border-radius: 999px;
 }
+/* Hover en cascada: cuando nav se expande, badges se contraen a "Día N" */
+.badge-sesion .badge-texto-corto {
+  display: none;
+}
+.badge-sesion .badge-texto-largo {
+  display: inline;
+}
+.cinta-sesiones.nav-expandida .cinta-fechas {
+  gap: 4px;
+}
+.cinta-sesiones.nav-expandida .badge-sesion {
+  padding: 3px 8px;
+  font-size: 11px;
+  min-width: 52px;
+  text-align: center;
+  white-space: nowrap;
+}
+.cinta-sesiones.nav-expandida .badge-sesion.activa-seleccionada {
+  padding: 3px 8px;
+  margin: 0;
+  font-size: 11px;
+  transform: scale(1);
+}
+.cinta-sesiones.nav-expandida .badge-sesion .badge-texto-largo {
+  display: none;
+}
+.cinta-sesiones.nav-expandida .badge-sesion .badge-texto-corto {
+  display: inline;
+}
+/* Fallback puro CSS por si el estado React no propaga: hover directo del grupo */
+.cinta-sesiones:has(.cinta-nav-group:hover) .badge-sesion {
+  padding: 3px 8px;
+  font-size: 11px;
+  min-width: 52px;
+  text-align: center;
+  white-space: nowrap;
+}
+.cinta-sesiones:has(.cinta-nav-group:hover) .badge-sesion.activa-seleccionada {
+  padding: 3px 8px;
+  margin: 0;
+  font-size: 11px;
+  transform: scale(1);
+}
+.cinta-sesiones:has(.cinta-nav-group:hover) .badge-sesion .badge-texto-largo {
+  display: none;
+}
+.cinta-sesiones:has(.cinta-nav-group:hover) .badge-sesion .badge-texto-corto {
+  display: inline;
+}
 
 /* Modo formulario: ocultar navegación y badges, mostrar título */
 .cinta-sesiones-wrap.modo-formulario .cinta-nav-group,
