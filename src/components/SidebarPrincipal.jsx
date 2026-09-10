@@ -23,16 +23,24 @@ const SECCIONES_VISIBLES = SECCIONES_DEL_DOCUMENTO.filter(sec => sec !== 'licenc
 
 export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalPuntos = 0 }) {
   const { vistaActual, setVistaActual, terminoBusqueda, sidebarTerciarioAbierto, archivosTemporales, eliminarArchivoTemporalFn } = useUI();
-  const { proyectoMeta, secciones, seccionActual, setSeccionActual, setPuntoSeleccionadoId, sesiones, sesionActivaFecha, toggleAsistentePresente, asistentes, comenzarSesionCelebracion, finalizarSesionCelebracion, restablecerSesionCelebracion, actualizarHoraInicioCelebracion, actualizarHoraFinCelebracion } = useProyecto();
+  const { proyectoMeta, secciones, seccionActual, setSeccionActual, setPuntoSeleccionadoId, sesiones, sesionActivaFecha, toggleAsistentePresente, asistentes, comenzarSesionCelebracion, finalizarSesionCelebracion, restablecerSesionCelebracion, actualizarHoraInicioCelebracion, actualizarHoraFinCelebracion, ajustarNumerosDesde } = useProyecto();
+
+  // ✅ Variables derivadas que se necesitan en los useState de abajo
+  const tipo = proyectoMeta.tipoSesion || 'Ordinaria';
+  const numero = proyectoMeta.numeroSesion || 1;
+
   const horaInicioSesion = sesionActivaFecha ? sesiones[sesionActivaFecha]?.horaInicio : null;
   const horaFinSesion = sesionActivaFecha ? sesiones[sesionActivaFecha]?.horaFin : null;
   const presentes = asistentes.filter(a => a.presente).length;
   const proximaSesionFecha = obtenerProximaSesion(sesiones);
   const esSesionProxima = sesionActivaFecha === proximaSesionFecha;
   const { esLector } = usePermisos();
+
   const [acordeonAbierto, setAcordeonAbierto] = useState(vistaActual === 'proyecto');
   const [generandoWord, setGenerandoWord] = useState(false);
   const [generandoActaQuorum, setGenerandoActaQuorum] = useState(false);
+  const [modalNumeroAbierto, setModalNumeroAbierto] = useState(false);
+  const [numeroEditado, setNumeroEditado] = useState(numero); // ✅ ahora `numero` ya existe
 
   const listaCerrada = sesionActivaFecha ? !!sesiones[sesionActivaFecha]?.listaCerrada : false;
   const sesionEnCurso = !!horaInicioSesion && !horaFinSesion;
@@ -41,8 +49,10 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
     if (vistaActual === 'proyecto') setAcordeonAbierto(true);
   }, [vistaActual]);
 
-  const tipo = proyectoMeta.tipoSesion || 'Ordinaria';
-  const numero = proyectoMeta.numeroSesion || 1;
+  // ⚠️ Estas dos líneas ya NO van aquí (se movieron arriba)
+  // const tipo = proyectoMeta.tipoSesion || 'Ordinaria';
+  // const numero = proyectoMeta.numeroSesion || 1;
+
   let fechaTexto = 'Fecha no definida';
   if (proyectoMeta.fecha) {
     const fechaObj = parsearFechaLocal(proyectoMeta.fecha);
@@ -94,7 +104,8 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
       setGenerandoWord(false);
     }
   }
-    async function generarActaDesdeQuorum() {
+
+  async function generarActaDesdeQuorum() {
     if (secciones.length === 0) { alert('No hay puntos para generar el acta.'); return; }
     setGenerandoActaQuorum(true);
     try {
@@ -109,9 +120,45 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
   return (
     <aside className={'sidebar-principal' + (vistaActual === 'sesionPrevia' ? ' ancho-quorum' : '')} id="sidebarPrincipal">
       <div className="sb-header">
-        <div className="sb-title" id="docTitleSidebar">Sesión {tipo} N° {numero}</div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+          <div className="sb-title" id="docTitleSidebar">Sesión {tipo} N° {numero}</div>
+          <button
+            className="btn-add"
+            title="Editar número de sesión"
+            onClick={() => { setNumeroEditado(numero); setModalNumeroAbierto(true); }}
+          >
+            <i className="fas fa-pen"></i>
+          </button>
+        </div>
         <div className="sb-subtitle" id="docSubSidebar">{fechaTexto}</div>
       </div>
+
+      <div className={'modal-overlay' + (modalNumeroAbierto ? ' active' : '')}>
+        <div className="modal-content" style={{ maxWidth: '360px' }}>
+          <h3>Editar número de sesión</h3>
+          <label>Nuevo número para esta sesión ({tipo})</label>
+          <input
+            type="number"
+            min={1}
+            value={numeroEditado}
+            onChange={(e) => setNumeroEditado(e.target.value)}
+            style={{ width: '100%', padding: '8px 10px', border: '1px solid #ccc', borderRadius: '5px', fontSize: '14px', marginBottom: '16px' }}
+          />
+          <div className="modal-actions">
+            <button className="btn-cancel" onClick={() => setModalNumeroAbierto(false)}>Cancelar</button>
+            <button
+              className="btn-confirm"
+              onClick={() => {
+                const nuevo = parseInt(numeroEditado, 10);
+                if (!nuevo || nuevo < 1) { alert('Ingresa un número válido.'); return; }
+                ajustarNumerosDesde(sesionActivaFecha, nuevo);
+                setModalNumeroAbierto(false);
+              }}
+            >Guardar</button>
+          </div>
+        </div>
+      </div>
+
       <nav className="sb-nav" id="navPrincipal" style={vistaActual === 'sesionPrevia' ? { flex: '0 0 10px', overflowY: 'visible' } : undefined}>
         {VISTAS.map(v => {
           if (esLector && (v.id === 'inicio' || v.id === 'proyecto')) return null;
@@ -141,7 +188,6 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
               </div>
               {v.acordeon && expandido && (
                 <div className="nav-acordeon">
-                  
                   {SECCIONES_VISIBLES.map(sec => {
                     const puntosEnSeccion = secciones.filter(s => s.seccion === sec);
                     const conteo = puntosEnSeccion.filter(p => idsFiltrados.has(p.id)).length;
@@ -181,6 +227,7 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
             </div>
           );
         })}
+
         {sidebarTerciarioAbierto && (
           <div style={{ marginTop: '4px' }}>
             <div style={{ fontWeight: 600, fontSize: '11px', color: '#777', textTransform: 'uppercase', letterSpacing: '0.04em', padding: '6px 12px' }}>
@@ -205,6 +252,7 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
           </div>
         )}
       </nav>
+
       <div id="resumenClasificacion" style={{ display: (vistaActual === 'sesionPrevia') ? 'none' : 'block', padding: '12px 16px', borderTop: '1px solid #e0e0e0', marginTop: 'auto', fontSize: '12px', color: '#444' }}>
         <div style={{ fontWeight: '600', marginBottom: '5px' }}>
           {listaCerrada ? 'Lista de puntos cerrada' : 'Lista de puntos abierta'} · {secciones.length} punto{secciones.length === 1 ? '' : 's'}
@@ -220,6 +268,7 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
           </button>
         )}
       </div>
+
       <div id="quorumContainer" style={{ display: (vistaActual === 'sesionPrevia') ? 'flex' : 'none', flexDirection: 'column', flex: '1', minHeight: 0, padding: '18px 22px', borderTop: '1px solid #e0e0e0' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '14px' }}>
           <span style={{ fontWeight: '700', fontSize: '15px', color: '#1a1a1a' }}>Quórum</span>
@@ -264,15 +313,17 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
                   style={{ width: '17px', height: '17px', flexShrink: 0, cursor: 'pointer' }}
                 />
               </label>
-                );
-              })}
-            </div>
-            <HorariosCelebracion
-              horaInicioSesion={horaInicioSesion}
-              horaFinSesion={horaFinSesion}
-              onCambiarInicio={actualizarHoraInicioCelebracion}
-              onCambiarFin={actualizarHoraFinCelebracion}
-            />
+            );
+          })}
+        </div>
+
+        <HorariosCelebracion
+          horaInicioSesion={horaInicioSesion}
+          horaFinSesion={horaFinSesion}
+          onCambiarInicio={actualizarHoraInicioCelebracion}
+          onCambiarFin={actualizarHoraFinCelebracion}
+        />
+
         <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {!horaInicioSesion && listaCerrada && (
             <button className="btn-nuevo-proyecto" style={{ margin: 0, width: '100%' }} onClick={comenzarSesionCelebracion}>
@@ -310,6 +361,7 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
           )}
         </div>
       </div>
+
       {(vistaActual === 'proyecto' || vistaActual === 'actaSesion') && (
         <button className="btn-nuevo-proyecto" id="btnGenerarPDFSidebar" onClick={onGenerarPDF}>Generar PDF</button>
       )}

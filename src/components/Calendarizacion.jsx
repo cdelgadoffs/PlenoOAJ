@@ -9,7 +9,7 @@ export default function Calendarizacion({ mostrarFormulario, setMostrarFormulari
   const {
     sesiones, diaSesion, excepciones, sesionActivaFecha,
     regenerarCalendario, agregarVacacion, agregarAsueto, eliminarExcepcion,
-    cargarSesion, eliminarSesion
+    cargarSesion, eliminarSesion, ajustarNumerosDesde
   } = useProyecto();
 
   const haySesiones = Object.keys(sesiones).length > 0;
@@ -189,7 +189,25 @@ export default function Calendarizacion({ mostrarFormulario, setMostrarFormulari
 
                 return (
                   <div key={f} className={clase} onClick={() => cargarSesion(f)}>
-                    <span className="control-fecha">Sesión {sesion.tipoSesion} {numeroTexto}</span>
+                    <span className="control-fecha" onClick={e => e.stopPropagation()}>
+                      Sesión {sesion.tipoSesion}{' '}
+                      <input
+                        type="number"
+                        defaultValue={sesion.numeroSesion || ''}
+                        min={1}
+                        style={{ width: '42px', fontSize: '12px', padding: '1px 3px', borderRadius: '3px', border: '1px solid #555', background: '#222', color: '#fff', marginLeft: '4px' }}
+                        onClick={e => e.stopPropagation()}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            const nuevo = parseInt(e.target.value, 10);
+                            if (!nuevo || nuevo < 1) return;
+                            if (confirm(`¿Ajustar numeración desde aquí? Esta sesión será N° ${nuevo} y las siguientes del mismo tipo se recalcularán.`)) {
+                              ajustarNumerosDesde(f, nuevo);
+                            }
+                          }
+                        }}
+                      />
+</span>
                     <span className="control-tipo">{formatearFechaCorta(f)}</span>
                     <span className="control-puntos">{totalPts} pts</span>
                     <span className="control-estado">{esSeleccionada ? 'Activa' : estado}</span>

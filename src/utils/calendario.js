@@ -103,30 +103,41 @@ export function limpiarSesionesInvalidas(sesiones, diaSesion, sesionActivaFecha)
 }
 
 
-export function recalcularNumerosSesion(sesiones) {
+export function recalcularNumerosSesion(sesiones, anclas = {}) {
   const hoy = hoyLocalISO();
-  const porAnioTipo = {};
+  const contadores = {};
+  const anclaAplicada = {};
   const nuevas = { ...sesiones };
 
   Object.keys(nuevas).sort().forEach(f => {
     const sesion = nuevas[f];
     if (!sesion) return;
+
     const anio = f.substring(0, 4);
     const tipo = sesion.tipoSesion || 'Ordinaria';
     const clave = anio + '_' + tipo;
+
+    if (contadores[clave] === undefined) contadores[clave] = 1;
+
+    // Aplicar ancla si existe y ya llegamos a su fecha
+    const ancla = anclas[clave];
+    if (ancla && !anclaAplicada[clave] && f >= ancla.fecha) {
+      contadores[clave] = ancla.numero;
+      anclaAplicada[clave] = true;
+    }
+
     const esPasada = f < hoy;
     const tieneContenido = sesion.secciones && sesion.secciones.some(s => !s.fijo);
     const noCelebrada = esPasada && !tieneContenido;
 
-    if (!porAnioTipo[clave]) porAnioTipo[clave] = 0;
-
     if (noCelebrada) {
       nuevas[f] = { ...sesion, numeroSesion: null };
     } else {
-      porAnioTipo[clave] += 1;
-      nuevas[f] = { ...sesion, numeroSesion: porAnioTipo[clave] };
+      nuevas[f] = { ...sesion, numeroSesion: contadores[clave] };
+      contadores[clave] += 1;
     }
   });
+
   return nuevas;
 }
 

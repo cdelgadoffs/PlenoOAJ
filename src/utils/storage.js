@@ -7,6 +7,9 @@ export const DIA_SESION_KEY = 'diaSesion';
 export const EXCEPCIONES_KEY = 'excepcionesCalendario';
 export const ASISTENTES_KEY = 'asistentesQuorum';
 export const CINTA_FILTRO_KEY = 'cintaFiltro';
+export const ANCLAS_NUMERACION_KEY = 'anclasNumeracion';
+export const cargarAnclasNumeracion = () => leerJSON(ANCLAS_NUMERACION_KEY, {});
+export const guardarAnclasNumeracion = (v) => guardarJSON(ANCLAS_NUMERACION_KEY, v);
 
 function leerJSON(key, porDefecto) {
   const data = localStorage.getItem(key);
