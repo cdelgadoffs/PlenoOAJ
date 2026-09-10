@@ -8,6 +8,7 @@ import LoginGate from './components/LoginGate.jsx';
 import Topbar from './components/Topbar.jsx';
 import CintaSesiones from './components/CintaSesiones.jsx';
 import SidebarNuevo from './components/SidebarNuevo.jsx';
+import NuevoSidebarSecundario from './components/NuevoSidebarSecundario.jsx';
 import SidebarPrincipal from './components/SidebarPrincipal.jsx';
 import SidebarSecundario from './components/SidebarSecundario.jsx';
 import SidebarTerciario from './components/SidebarTerciario.jsx';
@@ -62,6 +63,7 @@ export default function App() {
         <CintaSesiones />
         <div className="shell">
           <SidebarNuevo />
+          <NuevoSidebarSecundario />
           <SidebarPrincipal
             totalPuntos={secciones.length}
             onGenerarPDF={() => generarPDFConPrint(secciones, proyectoMeta)}

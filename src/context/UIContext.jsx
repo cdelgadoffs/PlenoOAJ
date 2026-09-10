@@ -9,6 +9,7 @@ export function UIProvider({ children }) {
   const [sidebarNuevoAbierto, setSidebarNuevoAbierto] = useState(cargarNuevoSidebarOpen);
   const [sidebarNuevoAncho, setSidebarNuevoAncho] = useState(false);
   const [panelNuevoActivo, setPanelNuevoActivo] = useState('menu'); 
+  const [mostrarFormularioCalendario, setMostrarFormularioCalendario] = useState(false);
   const [sidebarTerciarioAbierto, setSidebarTerciarioAbierto] = useState(false);
   const [terminoBusqueda, setTerminoBusqueda] = useState('');
   const [modalActivo, setModalActivo] = useState(null); 
@@ -23,6 +24,7 @@ export function UIProvider({ children }) {
     sidebarNuevoAbierto, setSidebarNuevoAbierto,
     sidebarNuevoAncho, setSidebarNuevoAncho,
     panelNuevoActivo, setPanelNuevoActivo,
+    mostrarFormularioCalendario, setMostrarFormularioCalendario,
     sidebarTerciarioAbierto, setSidebarTerciarioAbierto,
     terminoBusqueda, setTerminoBusqueda,
     modalActivo, setModalActivo,

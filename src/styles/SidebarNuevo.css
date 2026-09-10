@@ -76,6 +76,33 @@
 .sidebar-nuevo .sb-header .btn-add.oculto {
   display: none !important;
 }
+/* Botón expandible: muestra el texto al hacer hover (mismo efecto que "Nueva extraordinaria") */
+.sidebar-nuevo .sb-header .btn-add-expandible {
+  width: auto;
+  height: 28px;
+  padding: 0 8px;
+  gap: 0;
+  justify-content: center;
+}
+.sidebar-nuevo .sb-header .btn-add-expandible .btn-add-icono {
+  line-height: 1;
+  flex-shrink: 0;
+}
+.sidebar-nuevo .sb-header .btn-add-expandible .btn-add-label {
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  margin-left: 0;
+  font-size: 12px;
+  font-weight: 600;
+  transition: max-width 0.25s ease, opacity 0.2s ease, margin-left 0.25s ease;
+}
+.sidebar-nuevo .sb-header .btn-add-expandible:hover .btn-add-label {
+  max-width: 160px;
+  opacity: 1;
+  margin-left: 6px;
+}
 
 .btn-volver-nuevo {
   background: none;
@@ -127,62 +154,404 @@
   color: #fff;
 }
 
-/* ===== Panel Calendarización: control anual ===== */
+/* ===== Panel de Calendarización: control anual ===== */
+.control-anual-fijo {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: #1a1a1a;
+  padding: 12px 0;
+  border-bottom: 1px solid #333;
+  margin-bottom: 12px;
+}
 .control-anual-grid {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-top: 8px;
-  max-height: 280px;
-  overflow-y: auto;
+  gap: 10px;
+  margin-top: 12px;
+  /* Sin max-height ni overflow: la lista se muestra completa sin barra de scroll */
 }
 .control-item {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr 0.5fr auto;
-  align-items: center;
-  padding: 4px 8px;
+  background: #232323;
+  border: 1px solid #383838;
+  border-left: 4px solid #555;
   border-radius: 4px;
-  background: #2a2a2a;
-  font-size: 12px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   color: #ddd;
-  border-left: 3px solid #555;
   cursor: pointer;
-  transition: background 0.15s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s, border-color 0.2s;
 }
 .control-item:hover {
-  background: #3a3a3a;
+  background: #2d2d2d;
+  border-color: #555;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+  transform: translateY(-1px);
 }
 .control-item.celebrada { border-left-color: #4caf50; }
 .control-item.no-celebrada { border-left-color: #f44336; }
-.control-item.proxima { border-left-color: #ffc107; font-weight: 600; background: #3a3a3a; }
+.control-item.proxima {
+  border-left-color: #551ffa;
+  background: linear-gradient(135deg, rgba(255,193,7,0.10), #232323 55%);
+  border-color: rgba(255,193,7,0.35);
+}
 .control-item.pendiente { border-left-color: #888; }
-.control-item .control-fecha { font-weight: 500; }
-.control-item .control-tipo { color: #aaa; font-size: 11px; }
-.control-item .control-puntos { text-align: right; }
-.control-item .control-estado { text-align: right; font-size: 11px; }
+.control-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.control-item-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.control-titulo {
+  font-weight: 600;
+  font-size: 13px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+.control-tipo {
+  color: #aaa;
+  font-size: 12px;
+}
+.control-estado {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: #1c1c1c;
+  color: #aaa;
+}
+.control-estado.activa {
+  background: #2f7d31;
+  color: #fff;
+}
+.control-item.celebrada .control-estado { background: #1e3a22; color: #6fcf7a; }
+.control-item.no-celebrada .control-estado { background: #3a1e1e; color: #f47a6b; }
+.control-item.proxima .control-estado { background: #3a321e; color: #ffd54a; }
+.control-item.pendiente .control-estado { background: #262626; color: #bbb; }
 .btn-eliminar-sesion {
   background: transparent;
   border: none;
   color: #ef4444;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: bold;
-  padding: 0 4px;
-  transition: color 0.15s;
+  padding: 2px 8px;
+  border-radius: 4px;
+  transition: background 0.15s, color 0.15s;
 }
-.btn-eliminar-sesion:hover {
-  color: #b91c1c;
+.btn-eliminar-sesion:hover:not(:disabled) {
+  background: rgba(239,68,68,0.15);
+  color: #ff6b5e;
+}
+.btn-eliminar-sesion:disabled {
+  color: #555;
+  cursor: default;
 }
 .control-resumen {
   display: flex;
-  gap: 16px;
-  font-size: 12px;
+  gap: 18px;
+  font-size: 12.5px;
   color: #aaa;
   margin: 8px 0 4px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #333;
+  padding: 10px 14px;
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 8px;
 }
 .control-resumen span { font-weight: 600; color: #fff; }
+
+/* ===== Formulario de creación de calendario anual ===== */
+.cal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.cal-form-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #2a2a2a, #1f1f1f);
+  border: 1px solid #3a3a3a;
+  border-radius: 10px;
+}
+.cal-form-icon {
+  font-size: 26px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.cal-form-titulo {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.2px;
+}
+.cal-form-sub {
+  font-size: 11.5px;
+  color: #999;
+  margin-top: 2px;
+}
+.cal-form-seccion {
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cal-form-seccion-titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #eee;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.cal-form-seccion-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #3a3a3a;
+  color: #ffd54a;
+  font-size: 11px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.cal-select {
+  width: 100%;
+  background: #2a2a2a !important;
+  border: 1px solid #3a3a3a;
+  color: #f0f0f0 !important;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  transition: border-color 0.2s, background 0.2s;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.cal-select:focus {
+  outline: none;
+  border-color: #ffd54a;
+  background: #2d2d2d !important;
+  color: #f0f0f0 !important;
+}
+.cal-select::-webkit-datetime-edit {
+  color: #f0f0f0 !important;
+}
+.cal-select::-webkit-datetime-edit-fields-wrapper {
+  color: #f0f0f0 !important;
+}
+.cal-select::-webkit-datetime-edit-text {
+  color: #f0f0f0 !important;
+}
+.cal-select::-webkit-datetime-edit-month-field,
+.cal-select::-webkit-datetime-edit-day-field,
+.cal-select::-webkit-datetime-edit-year-field {
+  color: #f0f0f0 !important;
+}
+.cal-select::-webkit-calendar-picker-indicator {
+  filter: invert(0.8);
+  opacity: 0.85;
+}
+.cal-select:invalid::-webkit-datetime-edit {
+  color: #aaa !important;
+}
+.cal-select::placeholder {
+  color: #aaa !important;
+}
+.cal-select option {
+  color: #f0f0f0;
+  background: #2a2a2a;
+}
+.cal-select option:first-child {
+  color: #aaa;
+}
+.cal-select:invalid {
+  color: #aaa !important;
+}
+.cal-select:valid {
+  color: #f0f0f0 !important;
+}
+.cal-form-hint {
+  font-size: 11px;
+  color: #888;
+  line-height: 1.4;
+}
+.cal-form-fechas {
+  display: flex;
+  gap: 8px;
+}
+.cal-form-fecha {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cal-form-label {
+  font-size: 11px;
+  color: #aaa;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.cal-btn-agregar {
+  width: 100% !important;
+  background: #2a2a2a;
+  border: 1px dashed #4a4a4a;
+  color: #ccc;
+  border-radius: 4px;
+  padding: 7px 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
+}
+.cal-btn-agregar:hover {
+  background: #333;
+  border-color: #ffd54a;
+  color: #fff;
+}
+.cal-btn-cancelar {
+  width: 100% !important;
+  background: transparent;
+  border: 1px solid #4a4a4a;
+  color: #aaa;
+  border-radius: 4px;
+  padding: 7px 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
+}
+.cal-btn-cancelar:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: #888;
+  color: #fff;
+}
+.cal-form-checkbox-fuera {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: #ddd;
+  cursor: pointer;
+  user-select: none;
+  padding: 10px 16px;
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 4px;
+}
+.cal-form-checkbox-fuera input {
+  display: none;
+}
+.cal-form-checkbox-fuera .cal-form-checkbox-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: #2a2a2a;
+  color: transparent;
+  font-size: 12px;
+  font-weight: 800;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.cal-form-checkbox-fuera input:checked + .cal-form-checkbox-mark {
+  background: #2f7d31;
+  border-color: #2f7d31;
+  color: #fff;
+}
+.cal-form-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: #ddd;
+  cursor: pointer;
+  user-select: none;
+}
+.cal-form-checkbox input {
+  display: none;
+}
+.cal-form-checkbox-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid #555;
+  border-radius: 4px;
+  background: #2a2a2a;
+  color: transparent;
+  font-size: 12px;
+  font-weight: 800;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.cal-form-checkbox input:checked + .cal-form-checkbox-mark {
+  background: #2f7d31;
+  border-color: #2f7d31;
+  color: #fff;
+}
+.cal-form-confirmar {
+  flex-direction: row;
+  align-items: center;
+  padding: 10px 16px;
+}
+.cal-btn-generar {
+  width: 100%;
+  background: linear-gradient(135deg, #2f7d31, #256b28);
+  border: none;
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 700;
+  padding: 11px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  letter-spacing: 0.3px;
+  box-shadow: 0 2px 8px rgba(47,125,49,0.3);
+  transition: all 0.2s;
+}
+.cal-btn-generar:hover {
+  background: linear-gradient(135deg, #3a9440, #2f7d31);
+  box-shadow: 0 4px 14px rgba(47,125,49,0.45);
+  transform: translateY(-1px);
+}
+.cal-btn-generar:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(47,125,49,0.3);
+}
 
 /* ===== Panel Email: estado de subida a OneDrive (reutilizado por SidebarTerciario) ===== */
 .onedrive-status {
