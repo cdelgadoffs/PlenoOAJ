@@ -49,12 +49,10 @@ export function sumarDias(fechaStr, dias) {
   const d = String(fecha.getDate()).padStart(2, '0');
   return `${anio}-${mes}-${d}`;
 }
-export function getTituloPunto(sec, idx, todasSecciones) {
-  if (sec.confidencial) return 'CONFIDENCIAL';
-  const lista = todasSecciones || [];
-  const numeroPunto = lista.slice(0, idx + 1).filter(s => !s.confidencial).length || idx + 1;
-  const roman = toRoman(numeroPunto);
-  const codigo = 'PLE/' + padNumber(numeroPunto, 3);
+export function getTituloPunto(sec, idx) {
+  const roman = toRoman(idx + 1);
+  const num = idx + 1;
+  const codigo = 'PLE/' + padNumber(num, 3);
   return roman + '. ' + codigo;
 }
 const DIAS_SEMANA = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];

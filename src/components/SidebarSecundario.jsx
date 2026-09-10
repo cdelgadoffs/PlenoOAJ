@@ -55,7 +55,7 @@ export default function SidebarSecundario({ onAbrirCreacion }) {
         <nav className="sb-nav" id="navSecundario">
           {puntosFiltrados.map(sec => {
             const idxGlobal = secciones.indexOf(sec);
-            const titulo = getTituloPunto(sec, idxGlobal);
+            const titulo = getTituloPunto(sec, idxGlobal, secciones);
             const seleccionado = sec.id === puntoPreviaSeleccionadoId;
             return (
               <div

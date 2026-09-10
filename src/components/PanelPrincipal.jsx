@@ -9,8 +9,8 @@ import { renderConOcultos, tieneTextoOculto } from '../utils/texto.js';
 import TipoVotacionSelector from './TipoVotacionSelector.jsx';
 import SelectorInforme from './SelectorInforme.jsx';
 
-function TarjetaPunto({ sec, idx, puedeSubir, puedeBajar, esSeleccionada, listaCerrada, onSeleccionar, onMover, onEditar, onEliminar, onToggleAnexo, onPreviewArchivo, onAdjuntar }) {
-  const titulo = getTituloPunto(sec, idx);
+function TarjetaPunto({ sec, idx, secciones, puedeSubir, puedeBajar, esSeleccionada, listaCerrada, onSeleccionar, onMover, onEditar, onEliminar, onToggleAnexo, onPreviewArchivo, onAdjuntar }) {
+  const titulo = getTituloPunto(sec, idx, secciones);
   const esFijo = sec.fijo === true;
   const tieneArchivos = sec.archivos && sec.archivos.length > 0;
   const numeroAnexo = idx + 1;
@@ -94,7 +94,7 @@ function VistaProyecto({ onEditar }) {
   const puntosDeSeccion = seccionActual === 'asuntos generales'
     ? secciones.filter(s => s.seccion === 'asuntos generales' || s.origenAG)
     : secciones.filter(s => s.seccion === seccionActual);
-  const pts = obtenerPuntosFiltrados(puntosDeSeccion, terminoBusqueda);
+  const pts = ordenarPorSeccion(obtenerPuntosFiltrados(puntosDeSeccion, terminoBusqueda));
   const modoBusqueda = terminoBusqueda.trim().length > 0;
 
   function confirmarEliminar(sec) {
@@ -119,6 +119,15 @@ function VistaProyecto({ onEditar }) {
       grupo.items.push(sec);
     });
     return grupos;
+  }
+
+  function ordenarPorSeccion(puntos) {
+    return [...puntos].sort((a, b) => {
+      const idxA = SECCIONES_DEL_DOCUMENTO.indexOf(a.seccion);
+      const idxB = SECCIONES_DEL_DOCUMENTO.indexOf(b.seccion);
+      if (idxA !== idxB) return idxA - idxB;
+      return secciones.indexOf(a) - secciones.indexOf(b);
+    });
   }
 
   return (
@@ -159,6 +168,7 @@ function VistaProyecto({ onEditar }) {
                       key={sec.id}
                       sec={sec}
                       idx={idx}
+                      secciones={secciones}
                       puedeSubir={puedeSubir}
                       puedeBajar={puedeBajar}
                       esSeleccionada={sec.id === puntoSeleccionadoId}
@@ -187,7 +197,7 @@ function VistaProyecto({ onEditar }) {
                 );
               }
               if (sec.origenAG && sec.seccion === seccionActual) {
-                const titulo = getTituloPunto(sec, idx);
+                const titulo = getTituloPunto(sec, idx, secciones);
                 return (
                   <div
                     key={sec.id}
@@ -251,7 +261,7 @@ function VistaSesionPrevia() {
 
   const sec = secciones.find(s => s.id === puntoPreviaSeleccionadoId) || puntosFiltrados[0];
   const idxGlobal = secciones.indexOf(sec);
-  const titulo = getTituloPunto(sec, idxGlobal);
+  const titulo = getTituloPunto(sec, idxGlobal, secciones);
   const aprobado = sec.aprobado === true;
   const dependencia = sec.dependencia || 'Pleno';
   const idxFiltrado = puntosFiltrados.findIndex(s => s.id === sec.id);
