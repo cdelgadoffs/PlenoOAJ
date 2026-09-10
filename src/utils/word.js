@@ -143,7 +143,7 @@ export async function generarWordOrdenDia(secciones, proyectoMeta) {
   SECCIONES_DEL_DOCUMENTO.forEach(nombreSeccion => {
     const puntosDeLaSeccion = secciones
       .map((sec, idx) => ({ sec, idx }))
-      .filter(({ sec }) => sec.seccion === nombreSeccion);
+      .filter(({ sec }) => sec.seccion === nombreSeccion && !sec.confidencial)
 
     if (puntosDeLaSeccion.length === 0) return;
 
@@ -256,13 +256,5 @@ export async function generarWordOrdenDia(secciones, proyectoMeta) {
   });
 
   const blob = await Packer.toBlob(doc);
-  const url = URL.createObjectURL(blob);
-  const nombreArchivo = `Orden del dia - ${tituloBase}.docx`;
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = nombreArchivo;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return { blob, nombreArchivo: `Orden del dia - ${tituloBase}.docx` };
 }

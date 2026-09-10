@@ -50,7 +50,7 @@ export default function SidebarDerecho() {
           )}
           {puntosBase.map(sec => {
             const idxGlobal = secciones.indexOf(sec);
-            const titulo = getTituloPunto(sec, idxGlobal);
+            const titulo = getTituloPunto(sec, idxGlobal, secciones);
             return (
               <div
                 key={sec.id}

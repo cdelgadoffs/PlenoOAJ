@@ -8,6 +8,7 @@ import { guardarArchivo, obtenerArchivo, eliminarArchivo } from '../utils/archiv
 import { esArchivoWord, extraerTextoWord } from '../utils/extraccionWord.js';
 import EditorOcultable from './EditorOcultable.jsx';
 import '../styles/SidebarTerciario.css';
+import SelectorSeccionPunto from './SelectorSeccionPunto.jsx';
 // import TipoVotacionSelector from './TipoVotacionSelector.jsx';  // COMENTADO: ya no se usa
 import DropdownSelect from './DropdownSelect.jsx';
 
@@ -37,13 +38,15 @@ const estadoVacio = {
   categoria: 'pleno',
   remitente: 'Pleno',
   contenido: '',
-  tipoVotacion: JSON.stringify({ voto: 0, votacion: 0, estado: true }), // se mantiene para lógica
+  tipoVotacion: JSON.stringify({ voto: 0, votacion: 0, estado: true }),
   acuerdo: '',
-  archivos: []
+  archivos: [],
+  seccionDestino: 'proyectos de acuerdo',
+  confidencial: false,
 };
 
 export default function SidebarTerciario() {
-  const { sidebarTerciarioAbierto, setSidebarTerciarioAbierto, vistaActual } = useUI();
+  const { sidebarTerciarioAbierto, setSidebarTerciarioAbierto, vistaActual, setArchivosTemporales, setEliminarArchivoTemporalFn } = useUI();
   const { secciones, seccionActual, puntoEditandoId, setPuntoEditandoId, agregarPunto, editarPuntoExistente, setPuntoSeleccionadoId, proyectoMeta, setOneDriveFolder, asistentes } = useProyecto();
   const { obtenerAccessToken } = useAuth();
   const [form, setForm] = useState(estadoVacio);
@@ -73,7 +76,8 @@ export default function SidebarTerciario() {
       contenido: sec.contenido || '',
       tipoVotacion,
       acuerdo: sec.acuerdo || 'Se aprueba por unanimidad',
-      archivos: sec.archivos ? [...sec.archivos] : []
+      archivos: sec.archivos ? [...sec.archivos] : [],
+      confidencial: sec.confidencial || false
     });
   } else {
     setForm(estadoVacio);
@@ -94,6 +98,18 @@ export default function SidebarTerciario() {
       setPuntoEditandoId(null);
     }
   }, [seccionActual]);
+
+  useEffect(() => {
+    setArchivosTemporales(form.archivos);
+  }, [form.archivos]);
+
+  useEffect(() => {
+    setEliminarArchivoTemporalFn(() => eliminarArchivoTemporal);
+  }, [form.archivos]);
+
+  useEffect(() => {
+    if (!sidebarTerciarioAbierto) setArchivosTemporales([]);
+  }, [sidebarTerciarioAbierto]);
 
   if (!sidebarTerciarioAbierto) {
     return <aside className="sidebar-terciario hidden" id="sidebarTerciario"></aside>;
@@ -118,8 +134,9 @@ export default function SidebarTerciario() {
         continue;
       }
       const id = 'arch_' + Date.now() + '_' + i;
+      const rutaRelativa = file.webkitRelativePath || '';
       procesos.push(
-        guardarArchivo(id, file).then(() => ({ id, nombre: file.name, tipo: file.type, _file: file }))
+        guardarArchivo(id, file).then(() => ({ id, nombre: file.name, tipo: file.type, rutaRelativa, _file: file }))
       );
     }
     if (procesos.length === 0) return;
@@ -149,6 +166,14 @@ export default function SidebarTerciario() {
     setForm(f => ({ ...f, archivos: f.archivos.filter((_, i) => i !== idx) }));
   }
 
+  function limpiarFormulario() {
+    setForm(estadoVacio);
+    const inputArchivos = document.getElementById('archivosInput');
+    const inputCarpeta = document.getElementById('carpetaInput');
+    if (inputArchivos) inputArchivos.value = '';
+    if (inputCarpeta) inputCarpeta.value = '';
+  }
+
   function cerrar() {
     setPuntoEditandoId(null);
     setSidebarTerciarioAbierto(false);
@@ -157,7 +182,7 @@ export default function SidebarTerciario() {
   function confirmar() {
     const contenido = form.contenido.trim();
     const acuerdo = form.acuerdo.trim();
-    if (!contenido || !acuerdo) {
+    if (!contenido || (seccionActual !== 'informes' && !acuerdo)) {
       alert('Debes completar el punto de acuerdo y los acuerdos antes de añadir el punto.');
       return;
     }
@@ -167,7 +192,8 @@ export default function SidebarTerciario() {
         dependencia: form.remitente,
         tipoVotacion: form.tipoVotacion,
         acuerdo,
-        archivos: form.archivos
+        archivos: form.archivos,
+        confidencial: form.confidencial
       });
       setPuntoSeleccionadoId(puntoEditandoId);
       setPuntoEditandoId(null);
@@ -175,14 +201,22 @@ export default function SidebarTerciario() {
       setSidebarTerciarioAbierto(false);
       return;
     }
+    const desdeAG = seccionActual === 'asuntos generales';
+    const seccionFinal = desdeAG
+      ? (form.seccionDestino || 'proyectos de acuerdo')
+      : seccionActual;
+
     const nuevoId = agregarPunto({
       contenido,
       dependencia: form.remitente,
-      seccion: seccionActual,
+      seccion: seccionFinal,
       tipoVotacion: form.tipoVotacion,
       acuerdo,
-      archivos: form.archivos
+      archivos: form.archivos,
+      origenAG: desdeAG,
+      confidencial: form.confidencial
     });
+
     setPuntoSeleccionadoId(nuevoId);
     if (form.archivos.length > 0) {
       subirArchivosAOneDrive(nuevoId, form.archivos);
@@ -256,14 +290,30 @@ export default function SidebarTerciario() {
             />
           </div>
         </div>
+        {seccionActual === 'asuntos generales' && (
+          <SelectorSeccionPunto
+            valor={form.seccionDestino}
+            onChange={(v) => setForm(f => ({ ...f, seccionDestino: v }))}
+          />
+        )}
         <div className="ter-field">
-          <input type="file" id="archivosInput" multiple style={{ width: '100%', padding: '4px', border: '1px solid #ccc', borderRadius: '4px', background: '#fff', fontSize: '12px' }} onChange={adjuntarArchivos} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <label style={{ fontSize: '11px', fontWeight: '600', color: '#777', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Adjuntar archivos</label>
+            <input type="file" id="archivosInput" multiple style={{ width: '100%', padding: '4px', border: '1px solid #ccc', borderRadius: '4px', background: '#fff', fontSize: '12px' }} onChange={adjuntarArchivos} />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '6px' }}>
+            <label style={{ fontSize: '11px', fontWeight: '600', color: '#777', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Adjuntar carpetas</label>
+            <input
+              type="file"
+              id="carpetaInput"
+              webkitdirectory=""
+              directory=""
+              multiple
+              style={{ width: '100%', padding: '4px', border: '1px solid #ccc', borderRadius: '4px', background: '#fff', fontSize: '12px' }}
+              onChange={adjuntarArchivos}
+            />
+          </div>
           <div id="listaArchivosTemporales" style={{ marginTop: '6px', fontSize: '12px', color: '#555', maxHeight: '60px', overflowY: 'auto' }}>
-            {form.archivos.map((a, idx) => (
-              <span key={idx} className="archivo-item-temp">
-                {a.nombre} <span className="eliminar-archivo-temp" onClick={() => eliminarArchivoTemporal(idx)}>✕</span>
-              </span>
-            ))}
           </div>
           <div id="oneDriveStatus" className="onedrive-status">{oneDriveStatus}</div>
         </div>
@@ -275,15 +325,17 @@ export default function SidebarTerciario() {
             placeholder="Punto de acuerdo"
           />
         </div>
-        <div className="ter-field">
-          <label className="ter-label">Acuerdo</label>
-          <EditorOcultable
-            id="acuerdoSelect"
-            value={form.acuerdo}
-            onChange={(v) => setForm(f => ({ ...f, acuerdo: v }))}
-            placeholder="Acuerdos"
-          />
-        </div>
+        {seccionActual !== 'informes' && (
+          <div className="ter-field">
+            <label className="ter-label">Acuerdo</label>
+            <EditorOcultable
+              id="acuerdoSelect"
+              value={form.acuerdo}
+              onChange={(v) => setForm(f => ({ ...f, acuerdo: v }))}
+              placeholder="Acuerdos"
+            />
+          </div>
+        )}
         {/* COMENTADO: el selector de tipo de votación ya no se muestra
         <div className="ter-field">
           <TipoVotacionSelector
@@ -295,8 +347,22 @@ export default function SidebarTerciario() {
         */}
 
         <div className="ter-acciones">
+          <div className="ter-field" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <input
+              type="checkbox"
+              id="checkConfidencial"
+              checked={form.confidencial}
+              onChange={(e) => setForm(f => ({ ...f, confidencial: e.target.checked }))}
+            />
+            <label htmlFor="checkConfidencial" style={{ fontSize: '12px', fontWeight: '600', color: '#c0392b', textTransform: 'uppercase', letterSpacing: '0.04em', cursor: 'pointer' }}>
+              Marcar como CONFIDENCIAL
+            </label>
+          </div>
           <button className="btn-cancel" id="btnCancelarCreacion" onClick={cerrar}>Cancelar</button>
-          <button className="btn-confirm" id="btnConfirmarCreacion" disabled={!form.contenido.trim() || !form.acuerdo.trim()} onClick={confirmar}>{puntoEditandoId ? 'Guardar cambios' : 'Añadir'}</button>
+          <button className="btn-confirm" id="btnConfirmarCreacion" disabled={!form.contenido.trim() || (seccionActual !== 'informes' && !form.acuerdo.trim())} onClick={confirmar}>{puntoEditandoId ? 'Guardar cambios' : 'Añadir'}</button>
+          <button className="btn-clear" id="btnLimpiarFormulario" title="Borrar formulario" onClick={limpiarFormulario}>
+            <i className="fas fa-eraser"></i>
+          </button>
         </div>
       </div>
     </aside>

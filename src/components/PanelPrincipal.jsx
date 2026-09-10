@@ -7,9 +7,10 @@ import VistaInicio from './VistaInicio.jsx';
 import VistaHistorial from './VistaHistorial.jsx';
 import { renderConOcultos, tieneTextoOculto } from '../utils/texto.js';
 import TipoVotacionSelector from './TipoVotacionSelector.jsx';
+import SelectorInforme from './SelectorInforme.jsx';
 
-function TarjetaPunto({ sec, idx, puedeSubir, puedeBajar, esSeleccionada, listaCerrada, onSeleccionar, onMover, onEditar, onEliminar, onToggleAnexo, onPreviewArchivo, onAdjuntar }) {
-  const titulo = getTituloPunto(sec, idx);
+function TarjetaPunto({ sec, idx, secciones, puedeSubir, puedeBajar, esSeleccionada, listaCerrada, onSeleccionar, onMover, onEditar, onEliminar, onToggleAnexo, onPreviewArchivo, onAdjuntar }) {
+  const titulo = getTituloPunto(sec, idx, secciones);
   const esFijo = sec.fijo === true;
   const tieneArchivos = sec.archivos && sec.archivos.length > 0;
   const numeroAnexo = idx + 1;
@@ -26,7 +27,7 @@ function TarjetaPunto({ sec, idx, puedeSubir, puedeBajar, esSeleccionada, listaC
       <thead>
         <tr>
           <th colSpan={3} className="punto-tabla-header">
-            <span className="punto-tabla-titulo">{titulo}</span>
+            <span className={'punto-tabla-titulo' + (sec.confidencial ? ' confidencial' : '')}>{titulo}</span>
             <span className="punto-tabla-dependencia">{dependenciaMostrada}</span>
             <div className="punto-tabla-acciones" onClick={(e) => e.stopPropagation()}>
               <button className="btn-tabla-accion" title="Adjuntar archivo" onClick={() => onAdjuntar(sec.id)}>
@@ -86,12 +87,14 @@ function TarjetaPunto({ sec, idx, puedeSubir, puedeBajar, esSeleccionada, listaC
 
 function VistaProyecto({ onEditar }) {
   const { terminoBusqueda, sidebarTerciarioAbierto, setModalActivo, setPreviewArchivo, setPuntoAdjuntarId } = useUI();
-  const { secciones, seccionActual, proyectoMeta, puntoSeleccionadoId, setPuntoSeleccionadoId, moverPunto, eliminarPunto, toggleAnexo, sesiones, sesionActivaFecha } = useProyecto();
+  const { secciones, seccionActual, setSeccionActual, proyectoMeta, puntoSeleccionadoId, setPuntoSeleccionadoId, moverPunto, eliminarPunto, toggleAnexo, sesiones, sesionActivaFecha } = useProyecto();
   const listaCerrada = sesionActivaFecha ? !!sesiones[sesionActivaFecha]?.listaCerrada : false;
 
   // === FILTRO POR SECCIÓN + BÚSQUEDA ===
-  const puntosDeSeccion = secciones.filter(s => s.seccion === seccionActual);
-  const pts = obtenerPuntosFiltrados(puntosDeSeccion, terminoBusqueda);
+  const puntosDeSeccion = seccionActual === 'asuntos generales'
+    ? secciones.filter(s => s.seccion === 'asuntos generales' || s.origenAG)
+    : secciones.filter(s => s.seccion === seccionActual);
+  const pts = ordenarPorSeccion(obtenerPuntosFiltrados(puntosDeSeccion, terminoBusqueda));
   const modoBusqueda = terminoBusqueda.trim().length > 0;
 
   function confirmarEliminar(sec) {
@@ -100,6 +103,31 @@ function VistaProyecto({ onEditar }) {
     if (confirm(`¿Eliminar "${getTituloPunto(sec, idx)}"?`)) {
       eliminarPunto(sec.id);
     }
+  }
+
+  function irAPuntoEnAG(id) {
+    setSeccionActual('asuntos generales');
+    setPuntoSeleccionadoId(id);
+  }
+
+  function agruparPorSeccionDestino(puntos) {
+    const grupos = [];
+    puntos.forEach(sec => {
+      const clave = sec.id === 'sec_fijo_3' ? '__fijo__' : (sec.seccion || 'sin sección');
+      let grupo = grupos.find(g => g.clave === clave);
+      if (!grupo) { grupo = { clave, items: [] }; grupos.push(grupo); }
+      grupo.items.push(sec);
+    });
+    return grupos;
+  }
+
+  function ordenarPorSeccion(puntos) {
+    return [...puntos].sort((a, b) => {
+      const idxA = SECCIONES_DEL_DOCUMENTO.indexOf(a.seccion);
+      const idxB = SECCIONES_DEL_DOCUMENTO.indexOf(b.seccion);
+      if (idxA !== idxB) return idxA - idxB;
+      return secciones.indexOf(a) - secciones.indexOf(b);
+    });
   }
 
   return (
@@ -115,29 +143,103 @@ function VistaProyecto({ onEditar }) {
         )
       ) : (
         <div className="lista-puntos-expandida">
-          {pts.map(sec => {
-            const idx = secciones.indexOf(sec);
-            const puedeSubir = idx > 0 && secciones[idx - 1].seccion === sec.seccion;
-            const puedeBajar = idx < secciones.length - 1 && secciones[idx + 1].seccion === sec.seccion;
-            return (
-              <TarjetaPunto
-                key={sec.id}
-                sec={sec}
-                idx={idx}
-                puedeSubir={puedeSubir}
-                puedeBajar={puedeBajar}
-                esSeleccionada={sec.id === puntoSeleccionadoId}
-                onSeleccionar={() => setPuntoSeleccionadoId(sec.id)}
-                onMover={moverPunto}
-                onEditar={onEditar}
-                onEliminar={confirmarEliminar}
-                onToggleAnexo={toggleAnexo}
-                onPreviewArchivo={(a) => { setPreviewArchivo(a); setModalActivo('preview'); }}
-                onAdjuntar={(id) => { setPuntoAdjuntarId(id); setModalActivo('adjuntar'); }}
-                listaCerrada={listaCerrada}
-              />
-            );
-          })}
+          {seccionActual === 'asuntos generales' ? (
+            agruparPorSeccionDestino(sidebarTerciarioAbierto ? pts.slice().reverse() : pts).map(grupo => (
+              <div key={grupo.clave}>
+                {grupo.clave !== '__fijo__' && (
+                  <div className="ag-grupo-separador">
+                    {grupo.clave.charAt(0).toUpperCase() + grupo.clave.slice(1)}
+                  </div>
+                )}
+                {grupo.items.map(sec => {
+                  const idx = secciones.indexOf(sec);
+                  if (sec.id === 'sec_fijo_3') {
+                    return (
+                      <div key={sec.id} className="ag-titulo-fijo">
+                        <span>{getTituloPunto(sec, idx)}</span>
+                        <span className="ag-titulo-label">Asuntos Generales</span>
+                      </div>
+                    );
+                  }
+                  const puedeSubir = idx > 0 && secciones[idx - 1].seccion === sec.seccion;
+                  const puedeBajar = idx < secciones.length - 1 && secciones[idx + 1].seccion === sec.seccion;
+                  return (
+                    <TarjetaPunto
+                      key={sec.id}
+                      sec={sec}
+                      idx={idx}
+                      secciones={secciones}
+                      puedeSubir={puedeSubir}
+                      puedeBajar={puedeBajar}
+                      esSeleccionada={sec.id === puntoSeleccionadoId}
+                      onSeleccionar={() => setPuntoSeleccionadoId(sec.id)}
+                      onMover={moverPunto}
+                      onEditar={onEditar}
+                      onEliminar={confirmarEliminar}
+                      onToggleAnexo={toggleAnexo}
+                      onPreviewArchivo={(a) => { setPreviewArchivo(a); setModalActivo('preview'); }}
+                      onAdjuntar={(id) => { setPuntoAdjuntarId(id); setModalActivo('adjuntar'); }}
+                      listaCerrada={listaCerrada}
+                    />
+                  );
+                })}
+              </div>
+            ))
+          ) : (
+            (sidebarTerciarioAbierto ? pts.slice().reverse() : pts).map(sec => {
+              const idx = secciones.indexOf(sec);
+              if (sec.id === 'sec_fijo_3') {
+                return (
+                  <div key={sec.id} className="ag-titulo-fijo">
+                    <span>{getTituloPunto(sec, idx)}</span>
+                    <span className="ag-titulo-label">Asuntos Generales</span>
+                  </div>
+                );
+              }
+              if (sec.origenAG && sec.seccion === seccionActual) {
+                const titulo = getTituloPunto(sec, idx, secciones);
+                return (
+                  <div
+                    key={sec.id}
+                    className="badge-origen-ag"
+                    onClick={() => irAPuntoEnAG(sec.id)}
+                    title={`Registrado en Asuntos Generales · ${sec.dependencia || 'Pleno'}`}
+                  >
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span className="badge-origen-ag-codigo">{titulo}</span>
+                        <span className="badge-origen-ag-label">Registrado en Asuntos Generales</span>
+                      </div>
+                      <div style={{ fontSize: '13px', color: '#333', lineHeight: '1.4' }}>
+                        {sec.contenido ? sec.contenido.replace(/\*\*/g, '') : 'Sin contenido'}
+                      </div>
+                    </div>
+                    <span className="badge-origen-ag-dep">{sec.dependencia || 'Pleno'}</span>
+                  </div>
+                );
+              }
+              const puedeSubir = idx > 0 && secciones[idx - 1].seccion === sec.seccion;
+              const puedeBajar = idx < secciones.length - 1 && secciones[idx + 1].seccion === sec.seccion;
+              return (
+                <TarjetaPunto
+                  key={sec.id}
+                  sec={sec}
+                  idx={idx}
+                  puedeSubir={puedeSubir}
+                  puedeBajar={puedeBajar}
+                  esSeleccionada={sec.id === puntoSeleccionadoId}
+                  onSeleccionar={() => setPuntoSeleccionadoId(sec.id)}
+                  onMover={moverPunto}
+                  onEditar={onEditar}
+                  onEliminar={confirmarEliminar}
+                  onToggleAnexo={toggleAnexo}
+                  onPreviewArchivo={(a) => { setPreviewArchivo(a); setModalActivo('preview'); }}
+                  onAdjuntar={(id) => { setPuntoAdjuntarId(id); setModalActivo('adjuntar'); }}
+                  listaCerrada={listaCerrada}
+                />
+              );
+            })
+          )}
         </div>
       )}
     </div>
@@ -146,7 +248,7 @@ function VistaProyecto({ onEditar }) {
 
 function VistaSesionPrevia() {
   const { secciones, puntoPreviaSeleccionadoId, setPuntoPreviaSeleccionadoId, eliminarPunto, actualizarPunto, asistentes } = useProyecto();
-  const { terminoBusqueda } = useUI();
+  const { terminoBusqueda, setModalActivo, setPreviewArchivo, setPuntoAdjuntarId } = useUI();
 
   if (secciones.length === 0) {
     return <div className="placeholder-msg" style={{ marginTop: '60px' }}><strong>No hay un proyecto creado</strong><br />Genera un proyecto para revisar sus puntos.</div>;
@@ -159,7 +261,7 @@ function VistaSesionPrevia() {
 
   const sec = secciones.find(s => s.id === puntoPreviaSeleccionadoId) || puntosFiltrados[0];
   const idxGlobal = secciones.indexOf(sec);
-  const titulo = getTituloPunto(sec, idxGlobal);
+  const titulo = getTituloPunto(sec, idxGlobal, secciones);
   const aprobado = sec.aprobado === true;
   const dependencia = sec.dependencia || 'Pleno';
   const idxFiltrado = puntosFiltrados.findIndex(s => s.id === sec.id);
@@ -244,11 +346,18 @@ function VistaSesionPrevia() {
             <>
               <div className="ter-field">
                 {aprobado ? (
-              <TipoVotacionSelector
-                value={sec.tipoVotacion || ''}
-                onChange={(nuevoValor) => actualizarPunto(sec.id, { tipoVotacion: nuevoValor, votacionTextoManual: undefined })}
-                nombresQuorum={asistentes.map(a => a.nombre)}
-              />
+                  sec.seccion === 'informes' ? (
+                    <SelectorInforme
+                      value={sec.tipoVotacion || ''}
+                      onChange={(nuevoValor) => actualizarPunto(sec.id, { tipoVotacion: nuevoValor, votacionTextoManual: nuevoValor })}
+                    />
+                  ) : (
+                    <TipoVotacionSelector
+                      value={sec.tipoVotacion || ''}
+                      onChange={(nuevoValor) => actualizarPunto(sec.id, { tipoVotacion: nuevoValor, votacionTextoManual: undefined })}
+                      nombresQuorum={asistentes.map(a => a.nombre)}
+                    />
+                  )
                 ) : (
                   <span className="email-vacio">Disponible solo si el punto está aprobado</span>
                 )}
@@ -264,7 +373,7 @@ function VistaSesionPrevia() {
                   {textoVotacionMostrado}
                 </div>
               </div>
-              {!esAcuerdoUnico && (
+              {!esAcuerdoUnico && sec.seccion !== 'informes' && (
                 <div className="ter-field">
                   <label className="ter-label">Acuerdo</label>
                   <div className="acuerdo-texto">
@@ -281,7 +390,19 @@ function VistaSesionPrevia() {
             </>
           )}
         </div>
+        {sec.archivos && sec.archivos.filter(a => a.adjuntadoEnSesion).length > 0 && (
+          <div className="archivos-adjuntos">
+            {sec.archivos.filter(a => a.adjuntadoEnSesion).map((a, i) => (
+              <span key={i} className="archivo-item" onClick={() => { setPreviewArchivo(a); setModalActivo('preview'); }}>
+                {a.nombre}
+              </span>
+            ))}
+          </div>
+        )}
         <div className="previa-footer">
+          <button className="btn-adjuntar" id="btnAdjuntarPrevia" title="Adjuntar archivo" onClick={() => { setPuntoAdjuntarId(sec.id); setModalActivo('adjuntar'); }}>
+            <i className="fas fa-paperclip"></i>
+          </button>
           <button className="btn-eliminar" id="btnEliminarPrevia" disabled={esFijo} onClick={eliminar}>{esFijo ? 'Fijo' : 'Eliminar'}</button>
           <button className="btn-mover" id="btnPreviaAnterior" disabled={!puedeAnterior} onClick={() => setPuntoPreviaSeleccionadoId(puntosFiltrados[idxFiltrado - 1].id)}>◀</button>
           <button className="btn-mover" id="btnPreviaSiguiente" disabled={!puedeSiguiente} onClick={() => setPuntoPreviaSeleccionadoId(puntosFiltrados[idxFiltrado + 1].id)}>▶</button>

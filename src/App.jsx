@@ -43,7 +43,7 @@ export default function App() {
   function crearPuntoValidado(sec) {
     const destino = sec || seccionActual;
     if (secciones.length === 0) { alert('Primero genera un proyecto.'); return; }
-    if (destino === 'asuntos generales' || destino === 'aprobaciones') { alert('No se pueden agregar puntos a esta sección.'); return; }
+    if (destino === 'aprobaciones') { alert('No se pueden agregar puntos a esta sección.'); return; }
     setSeccionActual(destino);
     setPuntoEditandoId(null);
     setSidebarTerciarioAbierto(true);

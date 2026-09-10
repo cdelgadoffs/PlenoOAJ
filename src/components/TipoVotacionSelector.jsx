@@ -58,7 +58,6 @@ function TipoVotacionSelector({ value, onChange, nombresQuorum = [] }) {
     ) {
       setEstado(nuevo);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
   function emitir(nuevoEstado) {
@@ -150,7 +149,7 @@ function TipoVotacionSelector({ value, onChange, nombresQuorum = [] }) {
             className="precision-textarea"
             value={estado.precision}
             onChange={handlePrecisionChange}
-            placeholder="Escribe la precisión sobre la votación..."
+            placeholder="Con la presición de que..."
           />
         </div>
       )}

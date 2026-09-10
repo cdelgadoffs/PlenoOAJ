@@ -162,6 +162,38 @@
 #cintaIrActual:hover {
   padding: 0 12px;
 }
+.cinta-nav-expandible {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  overflow: hidden;
+  transition: padding 0.3s ease;
+  padding: 2px 10px;
+  min-width: 32px;
+  justify-content: center;
+}
+.cinta-nav-expandible .icono {
+  flex-shrink: 0;
+  line-height: 1;
+}
+.cinta-nav-expandible .texto {
+  display: inline-block;
+  max-width: 0;
+  opacity: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: max-width 0.3s ease, opacity 0.3s ease, margin 0.3s ease;
+  margin-left: 0;
+  font-size: 13px;
+}
+.cinta-nav-expandible:hover .texto {
+  max-width: 160px;
+  opacity: 1;
+  margin-left: 6px;
+}
+.cinta-nav-expandible:hover {
+  padding: 2px 12px;
+}
 /* Botón calendario (ícono sin borde) */
 .cinta-calendario-toggle {
   background: none;
@@ -169,7 +201,6 @@
   font-size: 20px;
   cursor: pointer;
   padding: 4px 8px;
-  margin-left: auto; /* Empuja a la derecha */
   border-radius: 4px;
   transition: background 0.2s, transform 0.1s;
   line-height: 1;
@@ -186,7 +217,10 @@
 .cinta-calendario-toggle:active {
   transform: scale(0.95);
 }
-
+.cinta-filtro-toggle {
+  margin-left: auto;
+  flex-shrink: 0;
+}
 /* Dropdown del calendario con animación */
 .cinta-calendario-dropdown {
   animation: fadeIn 0.15s ease;

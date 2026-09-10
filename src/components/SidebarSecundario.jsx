@@ -55,7 +55,7 @@ export default function SidebarSecundario({ onAbrirCreacion }) {
         <nav className="sb-nav" id="navSecundario">
           {puntosFiltrados.map(sec => {
             const idxGlobal = secciones.indexOf(sec);
-            const titulo = getTituloPunto(sec, idxGlobal);
+            const titulo = getTituloPunto(sec, idxGlobal, secciones);
             const seleccionado = sec.id === puntoPreviaSeleccionadoId;
             return (
               <div
@@ -65,8 +65,10 @@ export default function SidebarSecundario({ onAbrirCreacion }) {
               >
                 <input
                   type="checkbox" checked={!!sec.aprobado}
-                  onChange={(e) => { e.stopPropagation(); actualizarPunto(sec.id, { aprobado: e.target.checked }); }}
-                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) => {
+                    actualizarPunto(sec.id, { aprobado: e.target.checked });
+                    setPuntoPreviaSeleccionadoId(sec.id);
+                  }}
                 />
                 <label>{titulo}</label>
               </div>

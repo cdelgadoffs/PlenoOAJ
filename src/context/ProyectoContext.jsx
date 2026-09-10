@@ -4,10 +4,11 @@ import {
   cargarDiaSesion, cargarExcepciones, guardarEnLocalStorage,
   guardarSesiones as persistirSesiones, guardarProyectoMeta as persistirProyectoMeta,
   guardarDiaSesion as persistirDiaSesion, guardarExcepciones as persistirExcepciones,
-  cargarAsistentes, guardarAsistentes as persistirAsistentes
+  cargarAsistentes, guardarAsistentes as persistirAsistentes,
+  cargarAnclasNumeracion, guardarAnclasNumeracion as persistirAnclasNumeracion
 } from '../utils/storage.js';
 import { conPuntosFijosAsegurados, conPunto2Actualizado, getInsertIndex } from '../utils/puntos.js';
-import { calcularFechaAnterior, formatearFechaES, hoyLocalISO, getTituloPunto, sumarDias, padNumber } from '../utils/fechas.js';
+import { calcularFechaAnterior, formatearFechaES, hoyLocalISO, getTituloPunto, sumarDias, padNumber, parsearFechaLocal } from '../utils/fechas.js';
 import {
   generarCalendarioAnual, aplicarExcepciones, limpiarSesionesInvalidas,
   recalcularNumerosSesion, obtenerProximaSesion, siguienteFechaSesion, esFechaSesionOrdinaria
@@ -30,9 +31,11 @@ export function ProyectoProvider({ children }) {
   const [puntoSeleccionadoId, setPuntoSeleccionadoId] = useState(null);
   const [puntoEditandoId, setPuntoEditandoId] = useState(null);
   const [puntoPreviaSeleccionadoId, setPuntoPreviaSeleccionadoId] = useState(null);
-    const [asistentes, setAsistentes] = useState(() => cargarAsistentes());
+  const [asistentes, setAsistentes] = useState(() => cargarAsistentes());
+  // ✅ Fix B: anclas de numeración persistidas
+  const [anclasNumeracion, setAnclasNumeracion] = useState(() => cargarAnclasNumeracion());
 
-  
+
   useEffect(() => {
     guardarEnLocalStorage(secciones);
   }, [secciones]);
@@ -42,6 +45,13 @@ export function ProyectoProvider({ children }) {
   useEffect(() => { persistirDiaSesion(diaSesion); }, [diaSesion]);
   useEffect(() => { persistirExcepciones(excepciones); }, [excepciones]);
   useEffect(() => { persistirAsistentes(asistentes); }, [asistentes]);
+  // ✅ Fix B: persistir anclas
+  useEffect(() => { persistirAnclasNumeracion(anclasNumeracion); }, [anclasNumeracion]);
+
+  // ✅ Fix B: cuando cambian las anclas, recalcular los números de todas las sesiones
+  useEffect(() => {
+    setSesiones(prev => recalcularNumerosSesion(prev, anclasNumeracion));
+  }, [anclasNumeracion]);
 
 
   const primeraVezRef = useRef(true);
@@ -63,21 +73,20 @@ export function ProyectoProvider({ children }) {
   }, [secciones]);
 
   useEffect(() => {
-    setSesiones(prev => recalcularNumerosSesion(prev));
-    
+    setSesiones(prev => recalcularNumerosSesion(prev, anclasNumeracion));
   }, [diaSesion]);
 
 
   function cargarSesion(fecha) {
     if (!fecha) return;
-    primeraVezRef.current = true; 
+    primeraVezRef.current = true;
     setSesionActivaFecha(fecha);
     setSesiones(prev => {
       let nuevas = prev;
       if (!prev[fecha]) {
         const esOrdinaria = esFechaSesionOrdinaria(fecha, diaSesion);
         nuevas = { ...prev, [fecha]: { tipoSesion: esOrdinaria ? 'Ordinaria' : 'Extraordinaria', numeroSesion: 1, secciones: [], asistentes: [] } };
-        nuevas = recalcularNumerosSesion(nuevas);
+        nuevas = recalcularNumerosSesion(nuevas, anclasNumeracion);
       }
       const data = nuevas[fecha];
       setProyectoMeta({ tipoSesion: data.tipoSesion, numeroSesion: data.numeroSesion || 1, fecha });
@@ -101,7 +110,7 @@ export function ProyectoProvider({ children }) {
       base = aplicarExcepciones(base, excepciones, null);
       base = limpiarSesionesInvalidas(base, diaSesion, null);
     }
-    base = recalcularNumerosSesion(base);
+    base = recalcularNumerosSesion(base, anclasNumeracion);
     setSesiones(base);
 
     let fechaActiva = obtenerProximaSesion(base);
@@ -110,7 +119,7 @@ export function ProyectoProvider({ children }) {
       fechaActiva = todas.length > 0 ? todas[0] : siguienteFechaSesion(hoyLocalISO(), diaSesion, excepciones);
     }
     cargarSesion(fechaActiva);
-    
+
   }, []);
 
   function regenerarCalendario(nuevoDia) {
@@ -118,7 +127,7 @@ export function ProyectoProvider({ children }) {
     let base = generarCalendarioAnual({}, nuevoDia, excepciones, new Date().getFullYear());
     base = aplicarExcepciones(base, excepciones, sesionActivaFecha);
     base = limpiarSesionesInvalidas(base, nuevoDia, sesionActivaFecha);
-    base = recalcularNumerosSesion(base);
+    base = recalcularNumerosSesion(base, anclasNumeracion);
     setSesiones(base);
     const proxima = obtenerProximaSesion(base);
     if (proxima) cargarSesion(proxima);
@@ -130,7 +139,7 @@ export function ProyectoProvider({ children }) {
     let base = generarCalendarioAnual(sesiones, diaSesion, nuevasExcepciones, new Date().getFullYear());
     base = aplicarExcepciones(base, nuevasExcepciones, sesionActivaFecha);
     base = limpiarSesionesInvalidas(base, diaSesion, sesionActivaFecha);
-    setSesiones(recalcularNumerosSesion(base));
+    setSesiones(recalcularNumerosSesion(base, anclasNumeracion));
   }
 
   function agregarAsueto(fecha, destino) {
@@ -139,7 +148,7 @@ export function ProyectoProvider({ children }) {
     let base = generarCalendarioAnual(sesiones, diaSesion, nuevasExcepciones, new Date().getFullYear());
     base = aplicarExcepciones(base, nuevasExcepciones, sesionActivaFecha);
     base = limpiarSesionesInvalidas(base, diaSesion, sesionActivaFecha);
-    setSesiones(recalcularNumerosSesion(base));
+    setSesiones(recalcularNumerosSesion(base, anclasNumeracion));
   }
 
   function eliminarExcepcion(tipo, idx) {
@@ -151,7 +160,7 @@ export function ProyectoProvider({ children }) {
     let base = generarCalendarioAnual(sesiones, diaSesion, nuevasExcepciones, new Date().getFullYear());
     base = aplicarExcepciones(base, nuevasExcepciones, sesionActivaFecha);
     base = limpiarSesionesInvalidas(base, diaSesion, sesionActivaFecha);
-    setSesiones(recalcularNumerosSesion(base));
+    setSesiones(recalcularNumerosSesion(base, anclasNumeracion));
   }
 
   function eliminarSesion(fecha) {
@@ -173,7 +182,7 @@ export function ProyectoProvider({ children }) {
     setSesiones(prev => {
       const copia = { ...prev };
       delete copia[fecha];
-      return recalcularNumerosSesion(copia);
+      return recalcularNumerosSesion(copia, anclasNumeracion);
     });
   }
 
@@ -197,14 +206,16 @@ export function ProyectoProvider({ children }) {
     setSecciones(prev => {
       const index = prev.findIndex(s => s.id === id);
       if (index === -1 || prev[index].fijo) return prev;
-      const titulo = codigoPunto(index);    
+      const titulo = codigoPunto(index);
       registrar('punto_eliminar', `Eliminó el punto ${titulo}`, `${prev[index].dependencia || ''} · "${resumenTexto(prev[index].contenido)}"`);
       return prev.filter(s => s.id !== id);
     });
   }
 
   function agregarPunto(datos) {
-    if (sesiones[sesionActivaFecha]?.listaCerrada) return;
+    const seccion = datos.seccion || seccionActual;
+    const esDesdeAG = datos.origenAG || seccion === 'asuntos generales';
+    if (sesiones[sesionActivaFecha]?.listaCerrada && !esDesdeAG) return;
     const nuevoId = 'sec_' + Date.now();
     const nuevaSec = {
       id: nuevoId,
@@ -221,8 +232,11 @@ export function ProyectoProvider({ children }) {
       aprobado: true,
       dependencia: datos.dependencia || 'Pleno',
       asunto: datos.asunto || '',
-      archivos: datos.archivos || []
+      archivos: datos.archivos || [],
+      origenAG: datos.origenAG || false,
+      confidencial: datos.confidencial || false
     };
+
     const insertIdx = getInsertIndex(secciones, nuevaSec.seccion);
     setSecciones(prev => {
       const idx = getInsertIndex(prev, nuevaSec.seccion);
@@ -245,6 +259,7 @@ export function ProyectoProvider({ children }) {
       tipoVotacion: datos.tipoVotacion,
       acuerdo: datos.acuerdo,
       archivos: datos.archivos,
+      confidencial: datos.confidencial || false,
       anexo: (datos.archivos || []).length > 0 || s.anexo === true
     } : s));
     registrar('punto_editar', `Editó el punto ${tituloPrevio}`, `${datos.dependencia || ''} · "${resumenTexto(datos.contenido)}"`);
@@ -254,7 +269,7 @@ export function ProyectoProvider({ children }) {
     setSecciones(prev => prev.map(s => s.id === id ? { ...s, anexo: valor } : s));
   }
 
-  
+
   function agregarAsistente(datos) {
     if (asistentes.some(a => a.email === datos.email)) {
       alert('Ya existe un asistente con ese correo.');
@@ -285,7 +300,7 @@ export function ProyectoProvider({ children }) {
     setSecciones(prev => prev.map(s => s.id === id ? { ...s, ...cambios } : s));
   }
 
-  
+
   function agregarActa(tipo, fecha) {
     const contenido = `Aprobación, en su caso, del acta de la sesión ${tipo.toLowerCase()} del ${formatearFechaES(fecha)}.`;
     const nuevoId = 'sec_' + Date.now();
@@ -303,7 +318,7 @@ export function ProyectoProvider({ children }) {
     setPuntoSeleccionadoId(nuevoId);
   }
 
-  
+
   function crearSesionExtraordinaria(fecha) {
     const puntoOrdenDia = {
       id: 'sec_fijo_1',
@@ -322,26 +337,26 @@ export function ProyectoProvider({ children }) {
     };
 
     setSesiones(prev => {
-      const nuevas = { 
-        ...prev, 
-        [fecha]: { 
-          tipoSesion: 'Extraordinaria', 
-          numeroSesion: 1, 
-          secciones: [puntoOrdenDia], 
-          asistentes: [] 
-        } 
+      const nuevas = {
+        ...prev,
+        [fecha]: {
+          tipoSesion: 'Extraordinaria',
+          numeroSesion: 1,
+          secciones: [puntoOrdenDia],
+          asistentes: []
+        }
       };
-      return recalcularNumerosSesion(nuevas);
+      return recalcularNumerosSesion(nuevas, anclasNumeracion);
     });
 
-  // Actualizar estados locales
-  setSesionActivaFecha(fecha);
-  setProyectoMeta({ tipoSesion: 'Extraordinaria', numeroSesion: 1, fecha });
-  setSecciones([puntoOrdenDia]);
-  primeraVezRef.current = true;
-}
+    // Actualizar estados locales
+    setSesionActivaFecha(fecha);
+    setProyectoMeta({ tipoSesion: 'Extraordinaria', numeroSesion: 1, fecha });
+    setSecciones([puntoOrdenDia]);
+    primeraVezRef.current = true;
+  }
 
-  
+
   function adjuntarArchivoAPunto(id, archivo) {
     setSecciones(prev => prev.map(s => s.id === id ? { ...s, anexo: true, archivos: [...(s.archivos || []), archivo] } : s));
   }
@@ -394,7 +409,55 @@ export function ProyectoProvider({ children }) {
     });
     registrar('sesion', 'Restableció la sesión', '');
   }
+  function actualizarHoraInicioCelebracion(horaStr) {
+    if (!sesionActivaFecha) return;
+    setSesiones(prev => {
+      const sesion = prev[sesionActivaFecha];
+      if (!sesion || !sesion.horaInicio) return prev;
+      const base = new Date(sesion.horaInicio);
+      const [h, m] = horaStr.split(':').map(Number);
+      base.setHours(h, m, 0, 0);
+      if (sesion.horaFin && base.getTime() > sesion.horaFin) {
+        alert('La hora de inicio no puede ser posterior a la hora de fin.');
+        return prev;
+      }
+      return { ...prev, [sesionActivaFecha]: { ...sesion, horaInicio: base.getTime() } };
+    });
+  }
 
+  // ✅ Fix A + B: guarda un ancla de numeración y refleja el cambio en proyectoMeta
+  function ajustarNumerosDesde(fecha, nuevoNumero) {
+    const sesion = sesiones[fecha];
+    if (!sesion) return;
+
+    const tipo = sesion.tipoSesion || 'Ordinaria';
+    const anio = fecha.substring(0, 4);
+    const clave = anio + '_' + tipo;
+
+    // Guardar ancla: a partir de esta fecha, la numeración arranca en nuevoNumero
+    setAnclasNumeracion(prev => ({ ...prev, [clave]: { fecha, numero: nuevoNumero } }));
+
+    // Reflejar de inmediato en proyectoMeta si es la sesión activa
+    if (fecha === sesionActivaFecha) {
+      setProyectoMeta(prev => ({ ...prev, numeroSesion: nuevoNumero }));
+    }
+  }
+
+  function actualizarHoraFinCelebracion(horaStr) {
+    if (!sesionActivaFecha) return;
+    setSesiones(prev => {
+      const sesion = prev[sesionActivaFecha];
+      if (!sesion || !sesion.horaFin) return prev;
+      const base = new Date(sesion.horaFin);
+      const [h, m] = horaStr.split(':').map(Number);
+      base.setHours(h, m, 0, 0);
+      if (sesion.horaInicio && base.getTime() < sesion.horaInicio) {
+        alert('La hora de fin no puede ser anterior a la hora de inicio.');
+        return prev;
+      }
+      return { ...prev, [sesionActivaFecha]: { ...sesion, horaFin: base.getTime() } };
+    });
+  }
   const { cuentaActiva } = useAuth();
 
   function registrar(categoria, accion, detalle = '') {
@@ -431,7 +494,9 @@ export function ProyectoProvider({ children }) {
     cargarSesion, eliminarSesion, regenerarCalendario, agregarVacacion, agregarAsueto, eliminarExcepcion,
     asistentes, agregarAsistente, eliminarAsistente, editarAsistente, toggleAsistentePresente,
     actualizarPunto, agregarActa, crearSesionExtraordinaria, adjuntarArchivoAPunto, setOneDriveFolder,
-    toggleListaCerrada, comenzarSesionCelebracion, finalizarSesionCelebracion, restablecerSesionCelebracion
+    toggleListaCerrada, comenzarSesionCelebracion, finalizarSesionCelebracion, restablecerSesionCelebracion,
+    actualizarHoraInicioCelebracion, actualizarHoraFinCelebracion, ajustarNumerosDesde,
+    anclasNumeracion, setAnclasNumeracion
   };
 
   return <ProyectoContext.Provider value={value}>{children}</ProyectoContext.Provider>;

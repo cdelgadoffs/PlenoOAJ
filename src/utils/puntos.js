@@ -25,7 +25,7 @@ export function puntoCoincide(secciones, punto, termino) {
   const term = termino.toLowerCase().trim();
   if (!term) return true;
   const idx = secciones.indexOf(punto);
-  const titulo = getTituloPunto(punto, idx);
+  const titulo = getTituloPunto(punto, idx, secciones);
   const texto = (punto.contenido || '') + ' ' +
                 (punto.dependencia || '') + ' ' +
                 (punto.seccion || '') + ' ' +

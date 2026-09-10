@@ -74,6 +74,7 @@
   color: #1a56db;
   padding: 3px 10px;
   border-radius: 5px;
+  border: 1px solid #1a56db;
   position: relative;
   transition: transform 0.2s ease;
 }
@@ -256,4 +257,82 @@
   border: none;
   border-top: 1px dashed #ccc;
   margin: 6px 0;
+}
+.ag-titulo-fijo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  font-weight: 700;
+  font-size: 15px;
+  color: #1a1a1a;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  background: #f5f6f8;
+}
+.ag-titulo-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #888;
+}
+
+.badge-origen-ag {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border: 2px dashed #b0c4e8;
+  border-radius: 8px;
+  background: #f0f4ff;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  margin-bottom: 18px;
+}
+.badge-origen-ag:hover {
+  background: #e8f0fe;
+  border-color: #1a56db;
+}
+.badge-origen-ag-codigo {
+  font-weight: 700;
+  font-size: 15px;
+  color: #1a56db;
+}
+.badge-origen-ag-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #1a56db;
+  opacity: 0.7;
+}
+.badge-origen-ag-dep {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: #e8f0fe;
+  color: #1a56db;
+  padding: 3px 10px;
+  border-radius: 5px;
+}
+.ag-grupo-separador {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #888;
+  padding: 8px 4px 6px;
+  border-bottom: 1px solid #e0e0e0;
+  margin-bottom: 12px;
+  margin-top: 20px;
+}
+.ag-grupo-separador:first-child {
+  margin-top: 0;
+}
+.punto-tabla-titulo.confidencial {
+  color: #c0392b;
+  font-weight: 700;
 }
