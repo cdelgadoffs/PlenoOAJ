@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useUI } from '../context/UIContext.jsx';
 import { usePermisos } from '../hooks/usePermisos.js';
 import Calendarizacion from './Calendarizacion.jsx';
@@ -11,10 +11,17 @@ import DiccionarioPersonalizado from './DiccionarioPersonalizado.jsx';
 import { useAuth } from '../context/AuthContext';
 
 export default function SidebarNuevo() {
-  const { sidebarNuevoAbierto, sidebarNuevoAncho, setSidebarNuevoAncho, panelNuevoActivo, setPanelNuevoActivo } = useUI();
+  const { sidebarNuevoAbierto, sidebarNuevoAncho, setSidebarNuevoAncho, panelNuevoActivo, setPanelNuevoActivo, mostrarFormularioCalendario, setMostrarFormularioCalendario } = useUI();
   const { puedeCalendarizacion, puedeEmail, puedeSync, puedeGestionarUsuarios } = usePermisos();
-  const [mostrarFormularioCalendario, setMostrarFormularioCalendario] = useState(false);
   const { cuentaActiva } = useAuth();
+
+  useEffect(() => {
+    if (!sidebarNuevoAbierto) {
+      setPanelNuevoActivo('menu');
+      setSidebarNuevoAncho(false);
+      setMostrarFormularioCalendario(false);
+    }
+  }, [sidebarNuevoAbierto, setPanelNuevoActivo, setSidebarNuevoAncho, setMostrarFormularioCalendario]);
 
   function abrirPanel(panel, ancho) {
     setPanelNuevoActivo(panel);
@@ -32,11 +39,14 @@ export default function SidebarNuevo() {
           <div className="sb-title sb-title-nuevo">Panel de control</div>
           <button
             id="btnNuevoCalendario"
-            className="btn-add"
+            className="btn-add btn-add-expandible"
             title="Crear nuevo calendario anual"
             style={{ display: panelNuevoActivo === 'calendarizacion' ? 'flex' : 'none' }}
             onClick={() => setMostrarFormularioCalendario(v => !v)}
-          >+</button>
+          >
+            <span className="btn-add-icono">+</span>
+            <span className="btn-add-label">Nuevo calendario</span>
+          </button>
         </div>
         <div className="sb-subtitle sb-subtitle-nuevo" id="sidebarNuevoSubtitle">{cuentaActiva?.username}</div>
       </div>

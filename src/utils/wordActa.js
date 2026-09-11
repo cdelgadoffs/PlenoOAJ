@@ -1,3 +1,4 @@
+// src/utils/wordActa.js
 import { Document, Packer, Paragraph, TextRun, AlignmentType, ImageRun, Header, Footer, PageNumber, NumberFormat } from 'docx';
 import { parsearFechaLocal, padNumber } from './fechas.js';
 
@@ -68,27 +69,74 @@ function limpiarAsteriscos(texto) {
   return texto.replace(/\*\*/g, '').replace(/\*/g, '');
 }
 
-// ========== CARGAR IMAGEN CON DIMENSIONES REALES ==========
-async function cargarImagen(url) {
+// ========== OBTENER DIMENSIONES DE LA IMAGEN ==========
+async function obtenerDimensiones(blob, objectUrl) {
   try {
-    const response = await fetch(url, { mode: 'cors' });
-    if (!response.ok) throw new Error('No se pudo descargar la imagen');
-    const blob = await response.blob();
-    if (!blob.type.startsWith('image/')) throw new Error('El recurso no es una imagen');
-
-    const base64 = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result.split(',')[1]);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
+    if (typeof createImageBitmap === 'function') {
+      const bitmap = await createImageBitmap(blob);
+      const w = bitmap.width || 0;
+      const h = bitmap.height || 0;
+      if (typeof bitmap.close === 'function') bitmap.close();
+      if (w > 0 && h > 0) return { width: w, height: h };
+    }
+  } catch { /* fallback a Image */ }
+  try {
+    const dims = await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+      img.onerror = reject;
+      img.src = objectUrl;
     });
+    if (dims.width > 0 && dims.height > 0) return dims;
+  } catch { /* sin dimensiones */ }
+  return { width: 600, height: 200 };
+}
 
-    const bitmap = await createImageBitmap(blob);
-    return { base64, width: bitmap.width, height: bitmap.height };
-  } catch (error) {
-    console.warn('No se pudo cargar la imagen:', error);
-    return null;
+// ========== CARGAR IMAGEN DESDE /public ==========
+async function cargarImagen(url) {
+  const base = (import.meta.env.BASE_URL || '/');
+  const baseLimpia = base.endsWith('/') ? base.slice(0, -1) : base;
+
+  // /logo.png (tu caso) y variantes por si cambia el BASE_URL
+  const candidatos = [
+    url,
+    `${baseLimpia}/logo.png`,
+    '/logo.png',
+    'logo.png',
+  ];
+  const vistos = [...new Set(candidatos.filter(Boolean))];
+
+  for (const intento of vistos) {
+    try {
+      const response = await fetch(intento, { cache: 'no-store' });
+      if (!response.ok) {
+        console.warn(`Logo: status ${response.status} en ${intento}`);
+        continue;
+      }
+      const blob = await response.blob();
+      if (!blob.type || !blob.type.startsWith('image/')) {
+        console.warn(`Logo: contenido no es imagen en ${intento} (type=${blob.type})`);
+        continue;
+      }
+      const buffer = await blob.arrayBuffer();
+      const data = new Uint8Array(buffer);
+      const objectUrl = URL.createObjectURL(blob);
+      let width = 0, height = 0;
+      try {
+        const dims = await obtenerDimensiones(blob, objectUrl);
+        width = dims.width;
+        height = dims.height;
+      } finally {
+        URL.revokeObjectURL(objectUrl);
+      }
+      console.info(`Logo cargado desde ${intento} (${width}x${height}, ${data.length} bytes)`);
+      return { data, width, height };
+    } catch (error) {
+      console.warn(`No se pudo cargar el logo desde ${intento}:`, error);
+    }
   }
+  console.warn('No se pudo cargar el logo en ninguna ruta:', vistos);
+  return null;
 }
 
 // ========== FORMATEAR LÍNEA DE ACUERDO ==========
@@ -169,7 +217,7 @@ export async function generarWordActa(secciones, proyectoMeta, asistentes = [], 
   const seccionesFiltradas = secciones.filter(sec =>
     sec.seccion?.toLowerCase() !== 'asuntos generales' && !sec.confidencial
   );
-    
+
   if (seccionesFiltradas.length === 0) {
     alert('No hay puntos para generar el acta (se excluyeron Asuntos Generales).');
     return;
@@ -199,11 +247,12 @@ export async function generarWordActa(secciones, proyectoMeta, asistentes = [], 
   const interlineado115 = { line: 276, lineRule: 'auto' };
 
   // ========== CARGA DE IMAGEN ==========
+  // Tu logo está en public/logo.png → se sirve como /logo.png
   const imagenData = await cargarImagen('/logo.png');
-  let imagenBase64 = null;
+  let imagenDataBin = null;
   let imgWidth = 0, imgHeight = 0;
   if (imagenData) {
-    imagenBase64 = imagenData.base64;
+    imagenDataBin = imagenData.data;
     imgWidth = imagenData.width;
     imgHeight = imagenData.height;
   }
@@ -263,12 +312,12 @@ export async function generarWordActa(secciones, proyectoMeta, asistentes = [], 
     ],
   }));
 
-  // ========== PUNTOS (sobre seccionesFiltradas) ==========
+  // ========== PUNTOS ==========
   let numeroGlobal = 1;
 
   seccionesFiltradas.forEach(sec => {
     const identificador = `${numeroGlobal}. PLE./${padNumber(numeroGlobal, 3)}.- `;
-    
+
     // ----- CONTENIDO ESPECIAL PARA EL PRIMER PUNTO -----
     let contenido = limpiarAsteriscos(sec.contenido) || '';
     if (numeroGlobal === 1) {
@@ -277,7 +326,7 @@ export async function generarWordActa(secciones, proyectoMeta, asistentes = [], 
       const anioLetrasMin = anioLetras.toLowerCase();
       const fechaTexto = `${diaLetrasMin} de ${mesLetras} de ${anioLetrasMin}`;
       const fechaTextoCorregida = corregirAcentosFecha(fechaTexto);
-      const totalPuntos = seccionesFiltradas.length; // ahora excluye Asuntos Generales
+      const totalPuntos = seccionesFiltradas.length;
       const totalPuntosLetras = numeroALetras(totalPuntos).toLowerCase();
       contenido = `Se somete a consideración el orden del día de la sesión ${tipoSesion.toLowerCase()} de ${fechaTextoCorregida}, con ${totalPuntosLetras} puntos.`;
     }
@@ -286,7 +335,6 @@ export async function generarWordActa(secciones, proyectoMeta, asistentes = [], 
     const lineasAcuerdo = acuerdo.split('\n').filter(l => l.trim() !== '');
     const esAcuerdoUnico = lineasAcuerdo.length === 1 && /^ÚNICO\.?\s*/i.test(lineasAcuerdo[0].trim());
 
-    // Votación
     const esFijoAprobacion = sec.fijo === true && sec.seccion === 'aprobaciones';
     const textoVotoFijo = sec.id === 'sec_fijo_1'
       ? 'El Pleno, en votación económica, por unanimidad, aprueba el orden del día.'
@@ -382,23 +430,25 @@ export async function generarWordActa(secciones, proyectoMeta, asistentes = [], 
 
   // ========== ENCABEZADO Y PIE DE PÁGINA ==========
   const headerChildren = [];
-  if (imagenBase64 && imgWidth > 0 && imgHeight > 0) {
+  if (imagenDataBin && imgWidth > 0 && imgHeight > 0) {
     const targetWidth = 120;
     const aspectRatio = imgWidth / imgHeight;
-    const targetHeight = targetWidth / aspectRatio;
+    const targetHeight = Math.round(targetWidth / aspectRatio);
 
     headerChildren.push(
       new Paragraph({
         alignment: AlignmentType.LEFT,
         children: [
           new ImageRun({
-            data: imagenBase64,
+            data: imagenDataBin,
             transformation: { width: targetWidth, height: targetHeight },
             type: 'png',
           }),
         ],
       })
     );
+  } else {
+    console.warn('Encabezado sin logo: no se pudo cargar /logo.png', { imgWidth, imgHeight, tieneData: !!imagenDataBin });
   }
 
   const footerChildren = [

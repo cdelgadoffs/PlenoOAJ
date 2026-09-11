@@ -27,6 +27,7 @@ export default function CintaSesiones() {
   const calendarioBotonRef = useRef(null);
 
   const [filtroCinta, setFiltroCinta] = useState(() => cargarFiltroCinta());
+  const [navHover, setNavHover] = useState(false);
   const [filtroMenuAbierto, setFiltroMenuAbierto] = useState(false);
   const [filtroMenuPos, setFiltroMenuPos] = useState({ top: 0, left: 0 });
   const filtroBotonRef = useRef(null);
@@ -227,8 +228,8 @@ const OPCIONES_FILTRO = [
 
   return (
     <div className={'cinta-sesiones-wrap' + (oculto ? ' hidden' : '') + (modoFormulario ? ' modo-formulario' : '')} id="cintaSesionesWrap">
-      <div className="cinta-sesiones" id="cintaSesionesContainer">
-        <div className="cinta-nav-group">
+      <div className={'cinta-sesiones' + (navHover ? ' nav-expandida' : '')} id="cintaSesionesContainer">
+        <div className="cinta-nav-group" onMouseEnter={() => setNavHover(true)} onMouseLeave={() => setNavHover(false)}>
           <button className="cinta-nav cinta-nav-expandible" id="cintaAnterior" onClick={() => filtroCinta === 'semanal' ? cambiarSemana(-1) : cambiarMes(-1)}>
             <span className="icono">◀</span>
             <span className="texto">{filtroCinta === 'semanal' ? 'Semana anterior' : 'Mes anterior'}</span>
@@ -286,6 +287,8 @@ const OPCIONES_FILTRO = [
             const numeroTexto = sesion.numeroSesion ? ('N° ' + sesion.numeroSesion) : '(no celebrada)';
             const diaLabel = `Sesión ${sesion.tipoSesion || 'Ordinaria'} del ${diaMes}`;
             const label = esSeleccionada ? `${diaLabel} ${numeroTexto}` : diaLabel;
+            const diaNumero = parseInt(f.split('-')[2], 10);
+            const labelCorto = `Día ${diaNumero}`;
             const tooltip = `${sesion.tipoSesion || 'Ordinaria'} · ${totalPuntos} puntos (${puntosPropios} propios) · ${estado}`;
 
             return (
@@ -293,10 +296,12 @@ const OPCIONES_FILTRO = [
                 key={f}
                 className={clase}
                 title={tooltip}
+                data-corto={labelCorto}
                 onClick={() => { if (!modoFormulario) cargarSesion(f); }}
                 style={modoFormulario ? { pointerEvents: 'none', opacity: 0.5 } : undefined}
               >
-                {label}
+                <span className="badge-texto-largo">{label}</span>
+                <span className="badge-texto-corto">{labelCorto}</span>
               </span>
             );
           })}

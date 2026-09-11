@@ -12,6 +12,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
 }
 .cinta-nav {
   background: transparent;
@@ -41,10 +42,33 @@
 }
 .cinta-fechas {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 6px;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #ccc transparent;
 }
+.cinta-fechas::-webkit-scrollbar {
+  height: 1px;
+}
+.cinta-fechas::-webkit-scrollbar-track {
+  background: transparent;
+}
+.cinta-fechas::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 4px;
+}
+.cinta-fechas::-webkit-scrollbar-thumb:hover {
+  background: #aaa;
+}
+.badge-sesion {
+  flex-shrink: 0;
+}
+
 .badge-sesion {
   display: inline-block;
   padding: 3px 10px;
@@ -95,6 +119,55 @@
 }
 .badge-sesion.extraordinaria {
   border-radius: 999px;
+}
+/* Hover en cascada: cuando nav se expande, badges se contraen a "Día N" */
+.badge-sesion .badge-texto-corto {
+  display: none;
+}
+.badge-sesion .badge-texto-largo {
+  display: inline;
+}
+.cinta-sesiones.nav-expandida .cinta-fechas {
+  gap: 4px;
+}
+.cinta-sesiones.nav-expandida .badge-sesion {
+  padding: 3px 8px;
+  font-size: 11px;
+  min-width: 52px;
+  text-align: center;
+  white-space: nowrap;
+}
+.cinta-sesiones.nav-expandida .badge-sesion.activa-seleccionada {
+  padding: 3px 8px;
+  margin: 0;
+  font-size: 11px;
+  transform: scale(1);
+}
+.cinta-sesiones.nav-expandida .badge-sesion .badge-texto-largo {
+  display: none;
+}
+.cinta-sesiones.nav-expandida .badge-sesion .badge-texto-corto {
+  display: inline;
+}
+/* Fallback puro CSS por si el estado React no propaga: hover directo del grupo */
+.cinta-sesiones:has(.cinta-nav-group:hover) .badge-sesion {
+  padding: 3px 8px;
+  font-size: 11px;
+  min-width: 52px;
+  text-align: center;
+  white-space: nowrap;
+}
+.cinta-sesiones:has(.cinta-nav-group:hover) .badge-sesion.activa-seleccionada {
+  padding: 3px 8px;
+  margin: 0;
+  font-size: 11px;
+  transform: scale(1);
+}
+.cinta-sesiones:has(.cinta-nav-group:hover) .badge-sesion .badge-texto-largo {
+  display: none;
+}
+.cinta-sesiones:has(.cinta-nav-group:hover) .badge-sesion .badge-texto-corto {
+  display: inline;
 }
 
 /* Modo formulario: ocultar navegación y badges, mostrar título */

@@ -9,7 +9,7 @@ export default function Calendarizacion({ mostrarFormulario, setMostrarFormulari
   const {
     sesiones, diaSesion, excepciones, sesionActivaFecha,
     regenerarCalendario, agregarVacacion, agregarAsueto, eliminarExcepcion,
-    cargarSesion, eliminarSesion, ajustarNumerosDesde
+    cargarSesion, eliminarSesion
   } = useProyecto();
 
   const haySesiones = Object.keys(sesiones).length > 0;
@@ -69,43 +69,55 @@ export default function Calendarizacion({ mostrarFormulario, setMostrarFormulari
     hoy.substring(0, 7)
   ])).sort();
 
-  let totalPuntos = 0, celebradas = 0;
+  let celebradas = 0;
   fechasMes.forEach(f => {
     const s = sesiones[f];
     if (!s) return;
-    totalPuntos += s.secciones ? s.secciones.length : 0;
     if (f < hoy && s.secciones && s.secciones.some(p => !p.fijo)) celebradas++;
   });
 
   return (
     <div className="sb-nav nuevo-panel" id="panelCalendarizacion">
-      <button className="btn-volver-nuevo" id="btnVolverMenuCalendario" onClick={onVolver}>Volver</button>
-
       {mostrarFormulario ? (
-        <div id="panelCreacionCalendario">
-          <div className="email-field">
-            <label className="email-label">Día de la sesión ordinaria</label>
-            <select id="diaSesionSelect" className="ter-select" value={diaSeleccionado} onChange={(e) => setDiaSeleccionado(e.target.value)}>
+        <>
+          <button className="btn-volver-nuevo" id="btnVolverMenuCalendario" onClick={onVolver}>Volver</button>
+          <div id="panelCreacionCalendario" className="cal-form">
+            <div className="cal-form-seccion">
+            <div className="cal-form-seccion-titulo">
+              <span className="cal-form-seccion-num">1</span>
+              Día de sesión ordinaria
+            </div>
+            <select id="diaSesionSelect" className="ter-select cal-select" value={diaSeleccionado} onChange={(e) => setDiaSeleccionado(e.target.value)}>
               <option value="1">Lunes</option>
               <option value="2">Martes</option>
               <option value="3">Miércoles</option>
               <option value="4">Jueves</option>
               <option value="5">Viernes</option>
             </select>
+            <div className="cal-form-hint">Las sesiones ordinarias se programarán cada semana en este día.</div>
           </div>
 
-          <div className="email-field" style={{ marginTop: '10px', borderTop: '1px solid #333', paddingTop: '16px' }}>
-            <label className="email-label">Periodo vacacional (excluye sesiones)</label>
-            <div style={{ display: 'flex', gap: '6px' }}>
-              <input type="date" id="vacacionInicio" className="ter-select" style={{ flex: '1' }} value={vacInicio} onChange={(e) => setVacInicio(e.target.value)} />
-              <input type="date" id="vacacionFin" className="ter-select" style={{ flex: '1' }} value={vacFin} min={vacInicio} onChange={(e) => setVacFin(e.target.value)} />
+          <div className="cal-form-seccion">
+            <div className="cal-form-seccion-titulo">
+              <span className="cal-form-seccion-num">2</span>
+              Periodo vacacional
             </div>
-            <button id="btnAgregarVacacion" className="btn-add-invitado" style={{ width: '100%', marginTop: '6px' }} onClick={() => {
+            <div className="cal-form-fechas">
+              <div className="cal-form-fecha">
+                <label className="cal-form-label">Inicio</label>
+                <input type="date" id="vacacionInicio" className="ter-select cal-select" value={vacInicio} onChange={(e) => setVacInicio(e.target.value)} />
+              </div>
+              <div className="cal-form-fecha">
+                <label className="cal-form-label">Fin</label>
+                <input type="date" id="vacacionFin" className="ter-select cal-select" value={vacFin} min={vacInicio} onChange={(e) => setVacFin(e.target.value)} />
+              </div>
+            </div>
+            <button id="btnAgregarVacacion" className="btn-add-invitado cal-btn-agregar" onClick={() => {
               if (!vacInicio || !vacFin) { alert('Selecciona ambas fechas.'); return; }
               if (vacInicio > vacFin) { alert('La fecha de inicio debe ser anterior a la de fin.'); return; }
               agregarVacacion(vacInicio, vacFin);
               setVacInicio(''); setVacFin('');
-            }}>Agregar periodo</button>
+            }}>Agregar periodo vacacional</button>
             <div id="listaVacaciones" className="email-invitados-lista">
               {excepciones.vacaciones.length === 0
                 ? <span className="email-vacio">Ningún periodo agregado</span>
@@ -118,47 +130,53 @@ export default function Calendarizacion({ mostrarFormulario, setMostrarFormulari
             </div>
           </div>
 
-          <div className="email-field" style={{ marginTop: '16px', borderTop: '1px solid #333', paddingTop: '16px' }}>
-            <label className="email-label">Día de asueto (reprograma la sesión)</label>
-            <input type="date" id="asuetoFecha" className="ter-select" style={{ width: '100%' }} value={asuetoFecha} onChange={(e) => { setAsuetoFecha(e.target.value); setAsuetoDestino(''); }} />
+          <div className="cal-form-seccion">
+            <div className="cal-form-seccion-titulo">
+              <span className="cal-form-seccion-num">3</span>
+              Día de asueto
+            </div>
+            <div className="cal-form-fechas">
+              <div className="cal-form-fecha">
+                <label className="cal-form-label">Fecha</label>
+                <input type="date" id="asuetoFecha" className="ter-select cal-select" value={asuetoFecha} onChange={(e) => { setAsuetoFecha(e.target.value); setAsuetoDestino(''); }} />
+              </div>
+              {opcionesAsuetoActuales.length > 0 && (
+                <div className="cal-form-fecha">
+                  <label className="cal-form-label">Reprogramar a</label>
+                  <select id="asuetoDestino" className="ter-select cal-select" value={asuetoDestino} onChange={(e) => setAsuetoDestino(e.target.value)}>
+                    <option value="">Selecciona destino</option>
+                    {opcionesAsuetoActuales.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </div>
+              )}
+            </div>
+            <div className="cal-form-hint">Si un día de sesión cae en asueto, la sesión se reprograma al día hábil anterior o siguiente.</div>
             {opcionesAsuetoActuales.length > 0 && (
-              <div id="asuetoOpciones" style={{ marginTop: '6px' }}>
-                <select id="asuetoDestino" className="ter-select" style={{ width: '100%' }} value={asuetoDestino} onChange={(e) => setAsuetoDestino(e.target.value)}>
-                  <option value="">Selecciona destino</option>
-                  {opcionesAsuetoActuales.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </select>
-                <button id="btnAgregarAsueto" className="btn-add-invitado" style={{ width: '100%', marginTop: '6px' }} onClick={() => {
+              <>
+                <button id="btnAgregarAsueto" className="btn-add-invitado cal-btn-agregar" onClick={() => {
                   if (!asuetoFecha || !asuetoDestino) return;
                   agregarAsueto(asuetoFecha, asuetoDestino);
                   setAsuetoFecha(''); setAsuetoDestino('');
                 }}>Agregar asueto</button>
-              </div>
+                <button id="btnCancelarAsueto" className="cal-btn-cancelar" onClick={() => { setAsuetoFecha(''); setAsuetoDestino(''); }}>Cancelar</button>
+              </>
             )}
-            <div id="listaAsuetos" className="email-invitados-lista">
-              {excepciones.asuetos.length === 0
-                ? <span className="email-vacio">Ningún asueto agregado</span>
-                : excepciones.asuetos.map((a, idx) => (
-                  <span key={idx} className="email-invitado-chip">
-                    {formatearFechaES(a.fecha)} → {formatearFechaES(a.destino)}
-                    <span className="eliminar-invitado" onClick={() => eliminarExcepcion('asuetos', idx)}>✕</span>
-                  </span>
-                ))}
-            </div>
           </div>
 
-          <div className="email-field" style={{ marginTop: '16px', borderTop: '1px solid #333', paddingTop: '16px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', color: '#ddd', cursor: 'pointer' }}>
-              <input type="checkbox" id="confirmSobrescribir" checked={sobrescribir} onChange={(e) => setSobrescribir(e.target.checked)} />
-              Sobrescribir calendario existente
-            </label>
-          </div>
+          <label className="cal-form-checkbox cal-form-checkbox-fuera">
+            <input type="checkbox" id="confirmSobrescribir" checked={sobrescribir} onChange={(e) => setSobrescribir(e.target.checked)} />
+            <span className="cal-form-checkbox-mark">✓</span>
+            Sobrescribir calendario existente
+          </label>
 
-          <button id="btnGenerarCalendario" className="btn-enviar-email" style={{ marginTop: '16px' }} onClick={generarCalendario}>Generar calendario anual</button>
+          <button id="btnGenerarCalendario" className="btn-enviar-email cal-btn-generar" onClick={generarCalendario}>Generar calendario anual</button>
           <div id="calendarioStatus" className={'email-status' + (calendarioStatus.texto ? (calendarioStatus.ok ? ' ok' : ' error') : '')} style={{ marginTop: '10px' }}>{calendarioStatus.texto}</div>
-        </div>
+          </div>
+        </>
       ) : (
         <div id="panelControlAnual">
-          <div className="email-field">
+          <div className="control-anual-fijo">
+            <button className="btn-volver-nuevo" id="btnVolverMenuCalendario" onClick={onVolver}>Volver</button>
             <label className="email-label">Control anual de sesiones</label>
             <select id="controlMesSelect" className="ter-select" style={{ marginBottom: '8px' }} value={mesControl} onChange={(e) => setMesControl(e.target.value)}>
               {mesesDisponibles.map(m => {
@@ -168,19 +186,18 @@ export default function Calendarizacion({ mostrarFormulario, setMostrarFormulari
             </select>
             <div id="controlResumen" className="control-resumen">
               <span>Sesiones: {fechasMes.length}</span>
-              <span>Puntos totales: {totalPuntos}</span>
               <span>Celebradas: {celebradas}</span>
             </div>
+          </div>
+          <div className="email-field">
             <div id="controlAnualLista" className="control-anual-grid">
               {fechasMes.length === 0 && <div className="email-vacio">No hay sesiones en este mes</div>}
               {fechasMes.map(f => {
                 const sesion = sesiones[f];
                 if (!sesion) return null;
                 const tieneContenido = sesion.secciones && sesion.secciones.some(s => !s.fijo);
-                const totalPts = sesion.secciones ? sesion.secciones.length : 0;
                 const esSeleccionada = f === sesionActivaFecha;
                 const puedeEliminar = sesion.tipoSesion === 'Extraordinaria';
-                const numeroTexto = sesion.numeroSesion ? `N° ${sesion.numeroSesion}` : '(no celebrada)';
                 let clase = 'control-item';
                 let estado = '';
                 if (f === proximaGlobal) { clase += ' proxima'; estado = 'Próxima'; }
@@ -189,34 +206,21 @@ export default function Calendarizacion({ mostrarFormulario, setMostrarFormulari
 
                 return (
                   <div key={f} className={clase} onClick={() => cargarSesion(f)}>
-                    <span className="control-fecha" onClick={e => e.stopPropagation()}>
-                      Sesión {sesion.tipoSesion}{' '}
-                      <input
-                        type="number"
-                        defaultValue={sesion.numeroSesion || ''}
-                        min={1}
-                        style={{ width: '42px', fontSize: '12px', padding: '1px 3px', borderRadius: '3px', border: '1px solid #555', background: '#222', color: '#fff', marginLeft: '4px' }}
-                        onClick={e => e.stopPropagation()}
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') {
-                            const nuevo = parseInt(e.target.value, 10);
-                            if (!nuevo || nuevo < 1) return;
-                            if (confirm(`¿Ajustar numeración desde aquí? Esta sesión será N° ${nuevo} y las siguientes del mismo tipo se recalcularán.`)) {
-                              ajustarNumerosDesde(f, nuevo);
-                            }
-                          }
-                        }}
-                      />
-</span>
-                    <span className="control-tipo">{formatearFechaCorta(f)}</span>
-                    <span className="control-puntos">{totalPts} pts</span>
-                    <span className="control-estado">{esSeleccionada ? 'Activa' : estado}</span>
-                    <button
-                      className="btn-eliminar-sesion"
-                      title={puedeEliminar ? 'Eliminar sesión' : 'Las sesiones ordinarias no se pueden eliminar, solo editar'}
-                      disabled={!puedeEliminar}
-                      onClick={(e) => { e.stopPropagation(); eliminarSesion(f); }}
-                    >✕</button>
+                    <div className="control-item-top" onClick={e => e.stopPropagation()}>
+                      <span className="control-titulo">
+                        Sesión {sesion.tipoSesion} <span className="control-numero">N° {sesion.numeroSesion || '—'}</span>
+                      </span>
+                      <span className={'control-estado' + (esSeleccionada ? ' activa' : '')}>{esSeleccionada ? 'Activa' : estado}</span>
+                    </div>
+                    <div className="control-item-bottom">
+                      <span className="control-tipo">{formatearFechaCorta(f)}</span>
+                      <button
+                        className="btn-eliminar-sesion"
+                        title={puedeEliminar ? 'Eliminar sesión' : 'Las sesiones ordinarias no se pueden eliminar, solo editar'}
+                        disabled={!puedeEliminar}
+                        onClick={(e) => { e.stopPropagation(); eliminarSesion(f); }}
+                      >✕</button>
+                    </div>
                   </div>
                 );
               })}

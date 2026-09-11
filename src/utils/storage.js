@@ -38,7 +38,7 @@ export function cargarDiaSesion() {
     const d = parseInt(data, 10);
     if (d >= 1 && d <= 5) return d;
   }
-  return 2;
+  return 3;
 }
 export const guardarDiaSesion = (dia) => localStorage.setItem(DIA_SESION_KEY, String(dia));
 

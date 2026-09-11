@@ -94,10 +94,11 @@ async function fsEliminarArchivo(handle, nombre) {
 
 export default function Sync({ onVolver }) {
   const { cuentaActiva } = useAuth();
-  const { sesiones, sesionActivaFecha } = useProyecto();
+  const { sesiones, sesionActivaFecha, setSesiones } = useProyecto();
   const [handle, setHandle] = useState(null);
   const [nombreCarpeta, setNombreCarpeta] = useState(null);
   const [necesitaReconectar, setNecesitaReconectar] = useState(false);
+  const [restaurando, setRestaurando] = useState(false);
   const soportado = typeof window !== 'undefined' && 'showDirectoryPicker' in window;
   const claveUsuario = 'carpeta_' + (cuentaActiva?.username || 'default');
 
@@ -165,6 +166,61 @@ export default function Sync({ onVolver }) {
     }
   }
 
+  async function restaurarDesdeCarpeta() {
+    if (!soportado) { alert('Tu navegador no soporta la vinculación de carpetas locales. Usa Chrome o Edge de escritorio.'); return; }
+    if (!confirm('Se leerán los archivos de sesión (ord-*.json / ext-*.json) de la carpeta que elijas y se cargarán en la aplicación. ¿Continuar?')) return;
+    setRestaurando(true);
+    try {
+      const h = await window.showDirectoryPicker({ mode: 'readwrite' });
+      const ok = await fsVerificarPermiso(h, 'read');
+      if (!ok) { alert('No se otorgaron permisos de lectura sobre la carpeta.'); setRestaurando(false); return; }
+
+      const patron = /^(ord|ext)-(\d{4}-\d{2}-\d{2})\.json$/;
+      const restauradas = {};
+      let leidos = 0;
+
+      for await (const [nombre, entryHandle] of h.entries()) {
+        const match = nombre.match(patron);
+        if (!match || entryHandle.kind !== 'file') continue;
+        try {
+          const file = await entryHandle.getFile();
+          const texto = await file.text();
+          const data = JSON.parse(texto);
+          if (data && data.fecha) {
+            restauradas[data.fecha] = {
+              tipoSesion: data.tipoSesion || (match[1] === 'ext' ? 'Extraordinaria' : 'Ordinaria'),
+              numeroSesion: data.numeroSesion || 1,
+              secciones: data.secciones || []
+            };
+            leidos++;
+          }
+        } catch (errArchivo) {
+          console.error(`No se pudo leer ${nombre}:`, errArchivo);
+        }
+      }
+
+      if (leidos === 0) {
+        alert('No se encontraron archivos de sesión válidos en esa carpeta.');
+        setRestaurando(false);
+        return;
+      }
+
+      setSesiones(prev => ({ ...prev, ...restauradas }));
+      await fsLeerDiccionario(h);
+
+      setHandle(h);
+      setNombreCarpeta(h.name);
+      setNecesitaReconectar(false);
+      await fsGuardarHandle(claveUsuario, h);
+
+      alert(`Se restauraron ${leidos} sesión(es) desde "${h.name}" y la carpeta quedó vinculada.`);
+    } catch (err) {
+      if (err.name !== 'AbortError') { console.error('Error al restaurar desde carpeta:', err); alert('No se pudo restaurar el respaldo.'); }
+    } finally {
+      setRestaurando(false);
+    }
+  }
+
   async function desvincularCarpeta() {
     setHandle(null);
     setNombreCarpeta(null);
@@ -184,6 +240,17 @@ export default function Sync({ onVolver }) {
         <label className="email-label">Carpeta de respaldo local</label>
         <div id="syncStatus" className={estadoClase}>{estadoTexto}</div>
         <button id="btnVincularCarpeta" className="btn-enviar-email" style={{ marginTop: '8px' }} onClick={vincularCarpeta}>Seleccionar carpeta</button>
+        {!handle && !necesitaReconectar && (
+          <button
+            id="btnRestaurarRespaldo"
+            className="btn-add-invitado"
+            style={{ width: '100%', marginTop: '8px' }}
+            disabled={restaurando}
+            onClick={restaurarDesdeCarpeta}
+          >
+            {restaurando ? 'Restaurando...' : 'Restaurar desde respaldo'}
+          </button>
+        )}
         {(handle || necesitaReconectar) && (
           <button id="btnDesvincularCarpeta" className="btn-add-invitado" style={{ width: '100%', marginTop: '8px' }} onClick={desvincularCarpeta}>Desvincular carpeta</button>
         )}
