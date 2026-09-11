@@ -104,11 +104,11 @@ export function ProyectoProvider({ children }) {
     const anio = new Date().getFullYear();
     let base = generarCalendarioAnual(sesiones, diaSesion, excepciones, anio);
     base = aplicarExcepciones(base, excepciones, null);
-    base = limpiarSesionesInvalidas(base, diaSesion, null);
+    base = limpiarSesionesInvalidas(base, diaSesion, null, excepciones);
     if (!obtenerProximaSesion(base)) {
       base = generarCalendarioAnual(base, diaSesion, excepciones, anio + 1);
       base = aplicarExcepciones(base, excepciones, null);
-      base = limpiarSesionesInvalidas(base, diaSesion, null);
+      base = limpiarSesionesInvalidas(base, diaSesion, null, excepciones);
     }
     base = recalcularNumerosSesion(base, anclasNumeracion);
     setSesiones(base);
@@ -126,7 +126,7 @@ export function ProyectoProvider({ children }) {
     setDiaSesion(nuevoDia);
     let base = generarCalendarioAnual({}, nuevoDia, excepciones, new Date().getFullYear());
     base = aplicarExcepciones(base, excepciones, sesionActivaFecha);
-    base = limpiarSesionesInvalidas(base, nuevoDia, sesionActivaFecha);
+    base = limpiarSesionesInvalidas(base, nuevoDia, sesionActivaFecha, excepciones);
     base = recalcularNumerosSesion(base, anclasNumeracion);
     setSesiones(base);
     const proxima = obtenerProximaSesion(base);
@@ -138,7 +138,7 @@ export function ProyectoProvider({ children }) {
     setExcepciones(nuevasExcepciones);
     let base = generarCalendarioAnual(sesiones, diaSesion, nuevasExcepciones, new Date().getFullYear());
     base = aplicarExcepciones(base, nuevasExcepciones, sesionActivaFecha);
-    base = limpiarSesionesInvalidas(base, diaSesion, sesionActivaFecha);
+    base = limpiarSesionesInvalidas(base, diaSesion, sesionActivaFecha, nuevasExcepciones);
     setSesiones(recalcularNumerosSesion(base, anclasNumeracion));
   }
 
@@ -147,7 +147,7 @@ export function ProyectoProvider({ children }) {
     setExcepciones(nuevasExcepciones);
     let base = generarCalendarioAnual(sesiones, diaSesion, nuevasExcepciones, new Date().getFullYear());
     base = aplicarExcepciones(base, nuevasExcepciones, sesionActivaFecha);
-    base = limpiarSesionesInvalidas(base, diaSesion, sesionActivaFecha);
+    base = limpiarSesionesInvalidas(base, diaSesion, sesionActivaFecha, nuevasExcepciones);
     setSesiones(recalcularNumerosSesion(base, anclasNumeracion));
   }
 
@@ -159,7 +159,7 @@ export function ProyectoProvider({ children }) {
     setExcepciones(nuevasExcepciones);
     let base = generarCalendarioAnual(sesiones, diaSesion, nuevasExcepciones, new Date().getFullYear());
     base = aplicarExcepciones(base, nuevasExcepciones, sesionActivaFecha);
-    base = limpiarSesionesInvalidas(base, diaSesion, sesionActivaFecha);
+    base = limpiarSesionesInvalidas(base, diaSesion, sesionActivaFecha, nuevasExcepciones);
     setSesiones(recalcularNumerosSesion(base, anclasNumeracion));
   }
 

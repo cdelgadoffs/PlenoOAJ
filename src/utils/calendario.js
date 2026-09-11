@@ -83,8 +83,9 @@ export function aplicarExcepciones(sesiones, excepciones, sesionActivaFecha) {
 }
 
 
-export function limpiarSesionesInvalidas(sesiones, diaSesion, sesionActivaFecha) {
+export function limpiarSesionesInvalidas(sesiones, diaSesion, sesionActivaFecha, excepciones) {
   const nuevas = { ...sesiones };
+  const destinosAsueto = new Set((excepciones?.asuetos || []).map(a => a.destino));
   Object.keys(nuevas).forEach(fecha => {
     const sesion = nuevas[fecha];
     if (!sesion || fecha === sesionActivaFecha) return;
@@ -93,6 +94,7 @@ export function limpiarSesionesInvalidas(sesiones, diaSesion, sesionActivaFecha)
       if (sinAbrir) delete nuevas[fecha];
       return;
     }
+    if (destinosAsueto.has(fecha)) return;
     const fechaObj = parsearFechaLocal(fecha);
     if (!fechaObj || fechaObj.getDay() === diaSesion) return;
     const tieneContenido = sesion.secciones && sesion.secciones.some(s => !s.fijo);
