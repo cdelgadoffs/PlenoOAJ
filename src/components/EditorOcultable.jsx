@@ -104,11 +104,23 @@ export default function EditorOcultable({ id, value, onChange, placeholder, auto
     setBotonPos(null);
   }
 
+  // Dentro del componente, junto a ocultarSeleccion y agregarADiccionario, agregar:
+  function capitalizarSeleccion() {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || sel.rangeCount === 0) return;
+    const texto = sel.toString();
+    if (!texto.trim()) return;
+    const capitalizado = capitalizarPalabras(texto);
+    document.execCommand('insertText', false, capitalizado);
+    sincronizar();
+    setBotonPos(null);
+  }
+
   return (
     <div style={{ position: 'relative' }}>
       {botonPos && (
         <div
-          style={{ position: 'absolute', top: botonPos.top, left: botonPos.left, display: 'flex', gap: '4px' }}
+          style={{ position: 'absolute', top: botonPos.top, center: botonPos.left, display: 'flex', gap: '4px' }}
         >
           <button
             type="button"
@@ -117,6 +129,14 @@ export default function EditorOcultable({ id, value, onChange, placeholder, auto
             onMouseDown={(e) => { e.preventDefault(); ocultarSeleccion(); }}
           >
             <i className="fas fa-eye-slash"></i>
+          </button>
+          <button
+            type="button"
+            className="btn-ocultar-flotante"
+            title="Capitalizar (Aa)"
+            onMouseDown={(e) => { e.preventDefault(); capitalizarSeleccion(); }}
+          >
+            Aa
           </button>
           <button
             type="button"
@@ -149,4 +169,11 @@ function manejarPegado(e) {
   e.preventDefault();
   const texto = e.clipboardData.getData('text/plain');
   document.execCommand('insertText', false, texto);
+}
+
+// Agregar esta función junto a las demás funciones auxiliares (cerca de manejarPegado)
+function capitalizarPalabras(texto) {
+  return texto.replace(/\S+/g, palabra =>
+    palabra.charAt(0).toUpperCase() + palabra.slice(1).toLowerCase()
+  );
 }
