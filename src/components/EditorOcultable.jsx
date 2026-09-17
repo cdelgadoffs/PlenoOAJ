@@ -1,43 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { agregarNombrePropio } from '../utils/diccionarioPropios.js';
 import { aplicarPrefijosAcuerdo } from '../utils/ordinales.js';
-
-function escaparHtml(texto) {
-  return texto
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-}
-
-function markersAHtml(texto) {
-  const escapado = escaparHtml(texto || '');
-  const conNegritas = escapado.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  const conOcultos = conNegritas.replace(/%%(.+?)%%/g, '<span class="marca-oculta">$1</span>');
-  return conOcultos.replace(/\n/g, '<br>');
-}
-
-function nodoAMarkers(nodo) {
-  let resultado = '';
-  nodo.childNodes.forEach(hijo => {
-    if (hijo.nodeType === Node.TEXT_NODE) {
-      resultado += hijo.textContent;
-    } else if (hijo.nodeName === 'BR') {
-      resultado += '\n';
-    } else if (hijo.nodeName === 'STRONG' || hijo.nodeName === 'B') {
-      const interno = nodoAMarkers(hijo);
-      resultado += interno ? `**${interno}**` : '';
-    } else if (hijo.nodeName === 'SPAN' && hijo.classList.contains('marca-oculta')) {
-      const interno = nodoAMarkers(hijo);
-      resultado += interno ? `%%${interno}%%` : '';
-    } else if (hijo.nodeName === 'DIV' || hijo.nodeName === 'P') {
-      if (resultado && !resultado.endsWith('\n')) resultado += '\n';
-      resultado += nodoAMarkers(hijo);
-    } else {
-      resultado += nodoAMarkers(hijo);
-    }
-  });
-  return resultado;
-}
+import { markersAHtml, nodoAMarkers } from '../utils/texto.js';
 
 export default function EditorOcultable({ id, value, onChange, placeholder, autoAjustar, negritaTotal, modoAcuerdo, modoConsiderando, className, style }) {
   const ref = useRef(null);
@@ -125,18 +89,6 @@ export default function EditorOcultable({ id, value, onChange, placeholder, auto
     setBotonPos(null);
   }
 
-  // Dentro del componente, junto a ocultarSeleccion y agregarADiccionario, agregar:
-  function capitalizarSeleccion() {
-    const sel = window.getSelection();
-    if (!sel || sel.isCollapsed || sel.rangeCount === 0) return;
-    const texto = sel.toString();
-    if (!texto.trim()) return;
-    const capitalizado = capitalizarPalabras(texto);
-    document.execCommand('insertText', false, capitalizado);
-    sincronizar();
-    setBotonPos(null);
-  }
-
   return (
     <div style={{ position: 'relative' }}>
       {botonPos && (
@@ -150,14 +102,6 @@ export default function EditorOcultable({ id, value, onChange, placeholder, auto
             onMouseDown={(e) => { e.preventDefault(); ocultarSeleccion(); }}
           >
             <i className="fas fa-eye-slash"></i>
-          </button>
-          <button
-            type="button"
-            className="btn-ocultar-flotante"
-            title="Capitalizar (Aa)"
-            onMouseDown={(e) => { e.preventDefault(); capitalizarSeleccion(); }}
-          >
-            Aa
           </button>
           <button
             type="button"
@@ -196,11 +140,4 @@ function manejarPegado(e) {
   e.preventDefault();
   const texto = e.clipboardData.getData('text/plain');
   document.execCommand('insertText', false, texto);
-}
-
-// Agregar esta función junto a las demás funciones auxiliares (cerca de manejarPegado)
-function capitalizarPalabras(texto) {
-  return texto.replace(/\S+/g, palabra =>
-    palabra.charAt(0).toUpperCase() + palabra.slice(1).toLowerCase()
-  );
 }

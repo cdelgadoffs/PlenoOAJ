@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { renderConOcultos, markersAHtml, nodoAMarkers } from '../utils/texto.js';
+import { renderConOcultos, markersAHtml, nodoAMarkers, capitalizarPalabras } from '../utils/texto.js';
 import EditorOcultable from './EditorOcultable.jsx';
 
 const TIPOS_BLOQUE = [
@@ -56,6 +56,32 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef }
     setForm(f => ({ ...f, bloquesActa: (f.bloquesActa || []).filter(b => b.id !== id) }));
   }
 
+  // Los botones de formato viven fuera de los editores; con preventDefault en
+  // mousedown se evita el blur, así el execCommand actúa sobre la selección
+  // vigente del editor que estaba activo (Considerando, Antecedente, etc.).
+  function aplicarNegrita() {
+    document.execCommand('bold');
+  }
+  function aplicarItalica() {
+    document.execCommand('italic');
+  }
+  function aplicarListaNumerada() {
+    document.execCommand('insertOrderedList');
+  }
+  function capitalizarSeleccion() {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || sel.rangeCount === 0) return;
+    const texto = sel.toString();
+    if (!texto.trim()) return;
+    document.execCommand('insertText', false, capitalizarPalabras(texto));
+  }
+  function deshacer() {
+    document.execCommand('undo');
+  }
+  function rehacer() {
+    document.execCommand('redo');
+  }
+
   return (
     <div className="vista-previa-flotante" style={{ left: pos.left, top: pos.top, bottom: 0 }}>
       <div className="vista-previa-columna">
@@ -88,6 +114,26 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef }
           </button>
           <button type="button" className="vp-header-btn" title="Cargar plantilla (próximamente)" disabled>
             <i className="fas fa-file-import"></i>
+          </button>
+          <span className="vp-header-sep"></span>
+          <button type="button" className="vp-header-btn" title="Deshacer" onMouseDown={(e) => { e.preventDefault(); deshacer(); }}>
+            <i className="fas fa-undo"></i>
+          </button>
+          <button type="button" className="vp-header-btn" title="Rehacer" onMouseDown={(e) => { e.preventDefault(); rehacer(); }}>
+            <i className="fas fa-redo"></i>
+          </button>
+          <span className="vp-header-sep"></span>
+          <button type="button" className="vp-header-btn" title="Negrita" onMouseDown={(e) => { e.preventDefault(); aplicarNegrita(); }}>
+            <i className="fas fa-bold"></i>
+          </button>
+          <button type="button" className="vp-header-btn" title="Itálica" onMouseDown={(e) => { e.preventDefault(); aplicarItalica(); }}>
+            <i className="fas fa-italic"></i>
+          </button>
+          <button type="button" className="vp-header-btn" title="Viñeta numérica" onMouseDown={(e) => { e.preventDefault(); aplicarListaNumerada(); }}>
+            <i className="fas fa-list-ol"></i>
+          </button>
+          <button type="button" className="vp-header-btn" title="Capitalizar selección" onMouseDown={(e) => { e.preventDefault(); capitalizarSeleccion(); }}>
+            Aa
           </button>
         </div>
         <div className="vista-previa-hoja">

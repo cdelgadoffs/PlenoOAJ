@@ -15,10 +15,12 @@ export function limpiarPrefijo(parrafo) {
 
 export function aplicarPrefijosAcuerdo(textoPlano, sinUnico) {
   const parrafos = textoPlano.split('\n');
-  const total = parrafos.filter(p => p.trim() !== '').length;
+  // Las líneas de viñeta numérica manual (##li##) llevan su propia numeración
+  // y no deben recibir el prefijo ordinal automático (PRIMERO/SEGUNDO/...).
+  const total = parrafos.filter(p => p.trim() !== '' && !p.startsWith('##li##')).length;
   let indice = 0;
   return parrafos.map(p => {
-    if (p.trim() === '') return p;
+    if (p.trim() === '' || p.startsWith('##li##')) return p;
     const limpio = limpiarPrefijo(p).trimStart();
     const prefijo = obtenerPrefijo(indice, total, sinUnico);
     indice++;

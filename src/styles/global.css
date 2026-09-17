@@ -60,6 +60,18 @@ input[type="checkbox"] {
   accent-color: #2e7d32;
 }
 
+/* ===== LISTAS NUMÉRICAS (viñetas) ===== */
+/* El reset global (margin/padding: 0) deja los números de <ol> sin espacio; se restituye aquí. */
+.texto-lista-numerada,
+[contenteditable] ol {
+  margin: 4px 0;
+  padding-left: 22px;
+}
+.texto-lista-numerada li,
+[contenteditable] ol li {
+  margin-bottom: 2px;
+}
+
 /* ===== SCROLLBARS UNIFICADOS ===== */
 .sb-nav::-webkit-scrollbar,
 .sidebar-derecho .sb-nav::-webkit-scrollbar,

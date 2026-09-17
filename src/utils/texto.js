@@ -4,6 +4,12 @@ import { obtenerNombresPropios } from './diccionarioPropios.js';
 // Títulos que preceden un nombre propio de persona; se amplía esta lista según se necesite.
 const TITULOS_PERSONA = ['Magistrado', 'Magistrada', 'Licenciado', 'Licenciada', 'Juez', 'Jueza'];
 
+export function capitalizarPalabras(texto) {
+  return texto.replace(/\S+/g, palabra =>
+    palabra.charAt(0).toUpperCase() + palabra.slice(1).toLowerCase()
+  );
+}
+
 function capitalizarOracion(oracion) {
   const trimmed = oracion.trim();
   if (!trimmed) return '';
@@ -82,13 +88,17 @@ export function ocultarParaActa(texto) {
 }
 
 function procesarSegmentos(texto, prefijoKey) {
-  const partes = texto.split(/(\*\*.+?\*\*|%%.+?%%)/g).filter(p => p !== '');
+  const partes = texto.split(/(\*\*.+?\*\*|_.+?_|%%.+?%%)/g).filter(p => p !== '');
   return partes.map((parte, i) => {
     const key = `${prefijoKey}-${i}`;
     const negrita = parte.match(/^\*\*(.+)\*\*$/);
     if (negrita) {
-      // Recursivo: puede haber texto oculto (%%...%%) dentro de la negrita.
+      // Recursivo: puede haber itálica u oculto (%%...%%) dentro de la negrita.
       return React.createElement('strong', { key }, procesarSegmentos(negrita[1], key));
+    }
+    const italica = parte.match(/^_(.+)_$/);
+    if (italica) {
+      return React.createElement('em', { key }, procesarSegmentos(italica[1], key));
     }
     const oculto = parte.match(/^%%(.+)%%$/);
     if (oculto) {
@@ -98,14 +108,33 @@ function procesarSegmentos(texto, prefijoKey) {
   });
 }
 
+const PREFIJO_LISTA = '##li##';
+
 export function renderConOcultos(texto) {
   if (!texto) return texto;
   const lineas = texto.split('\n');
   const nodos = [];
+  let itemsLista = [];
+  let ultimaFueLista = false;
+
+  function cerrarLista(key) {
+    if (itemsLista.length === 0) return;
+    nodos.push(React.createElement('ol', { key: `ol-${key}`, className: 'texto-lista-numerada' }, itemsLista));
+    itemsLista = [];
+    ultimaFueLista = true;
+  }
+
   lineas.forEach((linea, li) => {
-    if (li > 0) nodos.push(React.createElement('br', { key: `br-${li}` }));
+    if (linea.startsWith(PREFIJO_LISTA)) {
+      itemsLista.push(React.createElement('li', { key: `li-${li}` }, procesarSegmentos(linea.slice(PREFIJO_LISTA.length), `l${li}`)));
+      return;
+    }
+    cerrarLista(li);
+    if (nodos.length > 0 && !ultimaFueLista) nodos.push(React.createElement('br', { key: `br-${li}` }));
+    ultimaFueLista = false;
     nodos.push(...procesarSegmentos(linea, `l${li}`));
   });
+  cerrarLista('fin');
   return nodos;
 }
 export function tieneTextoOculto(texto) {
@@ -120,11 +149,31 @@ function escaparHtml(texto) {
     .replace(/>/g, '&gt;');
 }
 
-export function markersAHtml(texto) {
-  const escapado = escaparHtml(texto || '');
+function formatearLineaInline(linea) {
+  const escapado = escaparHtml(linea);
   const conNegritas = escapado.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  const conOcultos = conNegritas.replace(/%%(.+?)%%/g, '<span class="marca-oculta">$1</span>');
-  return conOcultos.replace(/\n/g, '<br>');
+  const conItalica = conNegritas.replace(/_(.+?)_/g, '<em>$1</em>');
+  return conItalica.replace(/%%(.+?)%%/g, '<span class="marca-oculta">$1</span>');
+}
+
+export function markersAHtml(texto) {
+  const lineas = (texto || '').split('\n');
+  let html = '';
+  let enLista = false;
+  lineas.forEach((linea, i) => {
+    const esLi = linea.startsWith('##li##');
+    const contenidoLinea = formatearLineaInline(esLi ? linea.slice(6) : linea);
+    if (esLi) {
+      if (!enLista) { html += '<ol>'; enLista = true; }
+      html += `<li>${contenidoLinea}</li>`;
+    } else {
+      if (enLista) { html += '</ol>'; enLista = false; }
+      else if (i > 0) html += '<br>';
+      html += contenidoLinea;
+    }
+  });
+  if (enLista) html += '</ol>';
+  return html;
 }
 
 export function nodoAMarkers(nodo) {
@@ -137,9 +186,16 @@ export function nodoAMarkers(nodo) {
     } else if (hijo.nodeName === 'STRONG' || hijo.nodeName === 'B') {
       const interno = nodoAMarkers(hijo);
       resultado += interno ? `**${interno}**` : '';
+    } else if (hijo.nodeName === 'EM' || hijo.nodeName === 'I') {
+      const interno = nodoAMarkers(hijo);
+      resultado += interno ? `_${interno}_` : '';
     } else if (hijo.nodeName === 'SPAN' && hijo.classList.contains('marca-oculta')) {
       const interno = nodoAMarkers(hijo);
       resultado += interno ? `%%${interno}%%` : '';
+    } else if (hijo.nodeName === 'OL' || hijo.nodeName === 'UL') {
+      if (resultado && !resultado.endsWith('\n')) resultado += '\n';
+      const items = Array.from(hijo.children).filter(c => c.nodeName === 'LI');
+      resultado += items.map(li => '##li##' + nodoAMarkers(li)).join('\n');
     } else if (hijo.nodeName === 'DIV' || hijo.nodeName === 'P') {
       if (resultado && !resultado.endsWith('\n')) resultado += '\n';
       resultado += nodoAMarkers(hijo);
