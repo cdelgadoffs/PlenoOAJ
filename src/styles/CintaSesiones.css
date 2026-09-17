@@ -49,21 +49,6 @@
   min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: #ccc transparent;
-}
-.cinta-fechas::-webkit-scrollbar {
-  height: 1px;
-}
-.cinta-fechas::-webkit-scrollbar-track {
-  background: transparent;
-}
-.cinta-fechas::-webkit-scrollbar-thumb {
-  background: #ccc;
-  border-radius: 4px;
-}
-.cinta-fechas::-webkit-scrollbar-thumb:hover {
-  background: #aaa;
 }
 .badge-sesion {
   flex-shrink: 0;

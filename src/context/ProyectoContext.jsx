@@ -234,7 +234,8 @@ export function ProyectoProvider({ children }) {
       asunto: datos.asunto || '',
       archivos: datos.archivos || [],
       origenAG: datos.origenAG || false,
-      confidencial: datos.confidencial || false
+      confidencial: datos.confidencial || false,
+      bloquesActa: datos.bloquesActa || []
     };
 
     const insertIdx = getInsertIndex(secciones, nuevaSec.seccion);
@@ -260,6 +261,7 @@ export function ProyectoProvider({ children }) {
       acuerdo: datos.acuerdo,
       archivos: datos.archivos,
       confidencial: datos.confidencial || false,
+      bloquesActa: datos.bloquesActa || [],
       anexo: (datos.archivos || []).length > 0 || s.anexo === true
     } : s));
     registrar('punto_editar', `Editó el punto ${tituloPrevio}`, `${datos.dependencia || ''} · "${resumenTexto(datos.contenido)}"`);

@@ -5,7 +5,7 @@ import { SECCIONES_DEL_DOCUMENTO, obtenerPuntosFiltrados, describirVotacion } fr
 import '../styles/PanelPrincipal.css';
 import VistaInicio from './VistaInicio.jsx';
 import VistaHistorial from './VistaHistorial.jsx';
-import { renderConOcultos, tieneTextoOculto } from '../utils/texto.js';
+import { renderConOcultos } from '../utils/texto.js';
 import TipoVotacionSelector from './TipoVotacionSelector.jsx';
 import SelectorInforme from './SelectorInforme.jsx';
 
@@ -49,9 +49,6 @@ function TarjetaPunto({ sec, idx, secciones, puedeSubir, puedeBajar, esSeleccion
         <tr>
           <td className="punto-tabla-fila-titulo">
             <span>Punto de acuerdo</span>
-            <span className={'badge-publico' + (tieneTextoOculto(sec.contenido) ? ' pendiente' : ' listo')}>
-              {tieneTextoOculto(sec.contenido) ? 'Pendiente' : 'Listo'}
-            </span>
           </td>
           <td className="punto-tabla-contenido">
             {sec.contenido ? renderConOcultos(sec.contenido) : 'Sin contenido'}
@@ -70,9 +67,6 @@ function TarjetaPunto({ sec, idx, secciones, puedeSubir, puedeBajar, esSeleccion
           <tr>
             <td className="punto-tabla-fila-titulo">
               <span>Acuerdos</span>
-              <span className={'badge-publico' + (tieneTextoOculto(sec.acuerdo) ? ' pendiente' : ' listo')}>
-                {tieneTextoOculto(sec.acuerdo) ? 'Pendiente' : 'Listo'}
-              </span>
             </td>
             <td className="punto-tabla-acuerdo">
               {sec.acuerdo && renderConOcultos(sec.acuerdo)}

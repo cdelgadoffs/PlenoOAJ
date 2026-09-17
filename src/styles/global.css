@@ -60,13 +60,27 @@ input[type="checkbox"] {
   accent-color: #2e7d32;
 }
 
+/* ===== LISTAS NUMÉRICAS (viñetas) ===== */
+/* El reset global (margin/padding: 0) deja los números de <ol> sin espacio; se restituye aquí. */
+.texto-lista-numerada,
+[contenteditable] ol {
+  margin: 4px 0;
+  padding-left: 22px;
+}
+.texto-lista-numerada li,
+[contenteditable] ol li {
+  margin-bottom: 2px;
+}
+
 /* ===== SCROLLBARS UNIFICADOS ===== */
 .sb-nav::-webkit-scrollbar,
 .sidebar-derecho .sb-nav::-webkit-scrollbar,
 .main::-webkit-scrollbar,
 #controlAnualLista::-webkit-scrollbar,
 .email-dest-lista::-webkit-scrollbar,
-.email-doc-lista::-webkit-scrollbar {
+.email-doc-lista::-webkit-scrollbar,
+.vista-previa-flotante::-webkit-scrollbar,
+.cinta-fechas::-webkit-scrollbar {
   width: 4px;
   height: 4px;
 }
@@ -75,7 +89,9 @@ input[type="checkbox"] {
 .main::-webkit-scrollbar-track,
 #controlAnualLista::-webkit-scrollbar-track,
 .email-dest-lista::-webkit-scrollbar-track,
-.email-doc-lista::-webkit-scrollbar-track {
+.email-doc-lista::-webkit-scrollbar-track,
+.vista-previa-flotante::-webkit-scrollbar-track,
+.cinta-fechas::-webkit-scrollbar-track {
   background: transparent;
 }
 .sb-nav::-webkit-scrollbar-thumb,
@@ -83,7 +99,9 @@ input[type="checkbox"] {
 .main::-webkit-scrollbar-thumb,
 #controlAnualLista::-webkit-scrollbar-thumb,
 .email-dest-lista::-webkit-scrollbar-thumb,
-.email-doc-lista::-webkit-scrollbar-thumb {
+.email-doc-lista::-webkit-scrollbar-thumb,
+.vista-previa-flotante::-webkit-scrollbar-thumb,
+.cinta-fechas::-webkit-scrollbar-thumb {
   background: #ccc;
   border-radius: 4px;
 }
@@ -92,7 +110,9 @@ input[type="checkbox"] {
 .main::-webkit-scrollbar-thumb:hover,
 #controlAnualLista::-webkit-scrollbar-thumb:hover,
 .email-dest-lista::-webkit-scrollbar-thumb:hover,
-.email-doc-lista::-webkit-scrollbar-thumb:hover {
+.email-doc-lista::-webkit-scrollbar-thumb:hover,
+.vista-previa-flotante::-webkit-scrollbar-thumb:hover,
+.cinta-fechas::-webkit-scrollbar-thumb:hover {
   background: #aaa;
 }
 

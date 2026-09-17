@@ -1,41 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { agregarNombrePropio } from '../utils/diccionarioPropios.js';
+import { aplicarPrefijosAcuerdo } from '../utils/ordinales.js';
+import { markersAHtml, nodoAMarkers } from '../utils/texto.js';
 
-
-function escaparHtml(texto) {
-  return texto
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-}
-
-function markersAHtml(texto) {
-  const escapado = escaparHtml(texto || '');
-  const conNegritas = escapado.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  return conNegritas.replace(/\n/g, '<br>');
-}
-
-function nodoAMarkers(nodo) {
-  let resultado = '';
-  nodo.childNodes.forEach(hijo => {
-    if (hijo.nodeType === Node.TEXT_NODE) {
-      resultado += hijo.textContent;
-    } else if (hijo.nodeName === 'BR') {
-      resultado += '\n';
-    } else if (hijo.nodeName === 'STRONG' || hijo.nodeName === 'B') {
-      const interno = nodoAMarkers(hijo);
-      resultado += interno ? `**${interno}**` : '';
-    } else if (hijo.nodeName === 'DIV' || hijo.nodeName === 'P') {
-      if (resultado && !resultado.endsWith('\n')) resultado += '\n';
-      resultado += nodoAMarkers(hijo);
-    } else {
-      resultado += nodoAMarkers(hijo);
-    }
-  });
-  return resultado;
-}
-
-export default function EditorOcultable({ id, value, onChange, placeholder, autoAjustar }) {
+export default function EditorOcultable({ id, value, onChange, placeholder, autoAjustar, negritaTotal, modoAcuerdo, modoConsiderando, className, style }) {
   const ref = useRef(null);
   const [botonPos, setBotonPos] = useState(null);
   const [textoSeleccionado, setTextoSeleccionado] = useState('');
@@ -58,7 +26,17 @@ export default function EditorOcultable({ id, value, onChange, placeholder, auto
 
   function sincronizar() {
     if (!ref.current) return;
-    const markers = nodoAMarkers(ref.current);
+    let markers = nodoAMarkers(ref.current);
+    if (negritaTotal) {
+      const plano = markers.replace(/\*\*/g, '');
+      markers = plano.trim() ? `**${plano}**` : '';
+    }
+    if (modoAcuerdo) {
+      markers = aplicarPrefijosAcuerdo(markers);
+    }
+    if (modoConsiderando) {
+      markers = aplicarPrefijosAcuerdo(markers, true);
+    }
     ultimoValorExternoRef.current = markers;
     onChange(markers);
   }
@@ -87,7 +65,14 @@ export default function EditorOcultable({ id, value, onChange, placeholder, auto
   }
 
   function ocultarSeleccion() {
-    document.execCommand('bold', false, null);
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    const span = document.createElement('span');
+    span.className = 'marca-oculta';
+    span.appendChild(range.extractContents());
+    range.insertNode(span);
+    sel.removeAllRanges();
     sincronizar();
     setBotonPos(null);
   }
@@ -101,18 +86,6 @@ export default function EditorOcultable({ id, value, onChange, placeholder, auto
     } else if (resultado.motivo === 'duplicado') {
       alert(`"${texto}" ya está en el diccionario.`);
     }
-    setBotonPos(null);
-  }
-
-  // Dentro del componente, junto a ocultarSeleccion y agregarADiccionario, agregar:
-  function capitalizarSeleccion() {
-    const sel = window.getSelection();
-    if (!sel || sel.isCollapsed || sel.rangeCount === 0) return;
-    const texto = sel.toString();
-    if (!texto.trim()) return;
-    const capitalizado = capitalizarPalabras(texto);
-    document.execCommand('insertText', false, capitalizado);
-    sincronizar();
     setBotonPos(null);
   }
 
@@ -133,14 +106,6 @@ export default function EditorOcultable({ id, value, onChange, placeholder, auto
           <button
             type="button"
             className="btn-ocultar-flotante"
-            title="Capitalizar (Aa)"
-            onMouseDown={(e) => { e.preventDefault(); capitalizarSeleccion(); }}
-          >
-            Aa
-          </button>
-          <button
-            type="button"
-            className="btn-ocultar-flotante"
             title="Añadir al diccionario"
             onMouseDown={(e) => { e.preventDefault(); agregarADiccionario(); }}
           >
@@ -151,14 +116,20 @@ export default function EditorOcultable({ id, value, onChange, placeholder, auto
       <div
         id={id}
         ref={ref}
-        className={'ter-textarea ter-textarea-editable' + (autoAjustar ? ' ter-textarea-auto' : '')}
+        className={className ?? ('ter-textarea ter-textarea-editable' + (autoAjustar ? ' ter-textarea-auto' : ''))}
+        style={{ ...(negritaTotal ? { fontWeight: 700 } : null), ...style }}
         contentEditable
         suppressContentEditableWarning
         data-placeholder={placeholder}
         onInput={sincronizar}
         onMouseUp={manejarSeleccion}
         onKeyUp={manejarSeleccion}
-        onBlur={() => setBotonPos(null)}
+        onBlur={() => {
+          setBotonPos(null);
+          if (ref.current) {
+            ref.current.innerHTML = markersAHtml(ultimoValorExternoRef.current);
+          }
+        }}
         onPaste={manejarPegado}
       ></div>
     </div>
@@ -169,11 +140,4 @@ function manejarPegado(e) {
   e.preventDefault();
   const texto = e.clipboardData.getData('text/plain');
   document.execCommand('insertText', false, texto);
-}
-
-// Agregar esta función junto a las demás funciones auxiliares (cerca de manejarPegado)
-function capitalizarPalabras(texto) {
-  return texto.replace(/\S+/g, palabra =>
-    palabra.charAt(0).toUpperCase() + palabra.slice(1).toLowerCase()
-  );
 }

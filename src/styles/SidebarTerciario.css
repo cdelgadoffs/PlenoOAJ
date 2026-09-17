@@ -56,7 +56,7 @@
 .ter-form {
   padding: 14px 18px 18px;
   flex: 1;
-  min-height: 0;
+  min-height: 0; /* 🔥 restaurado: sin esto, overflow-y no se activa y las acciones se salen */
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -133,6 +133,9 @@
   gap: 8px;
   justify-content: flex-end;
   flex-shrink: 0;
+  padding: 12px 18px;
+  border-top: 1px solid #d0d0d0;
+  background: #eaeaea;
 }
 
 #listaDependencias {
@@ -180,7 +183,7 @@
   outline: none;
 }
 
-/* ===== Editor ocultable (EditorOcultable.jsx vive dentro de este sidebar) ===== */
+/* ===== Editor ocultable ===== */
 .ter-textarea-editable {
   overflow-y: auto;
   white-space: pre-wrap;
@@ -195,7 +198,6 @@
 .ter-textarea-editable strong,
 .ter-textarea-editable b {
   font-weight: 700;
-  color: #d32f2f;
 }
 .btn-ocultar-flotante {
   background: #b20101;
@@ -233,4 +235,8 @@
   max-height: none;
   height: auto;
   overflow-y: visible;
+}
+.ter-textarea-editable .marca-oculta {
+  color: #d32f2f;
+  font-weight: 700;
 }
