@@ -373,7 +373,7 @@ export default function SidebarTerciario() {
         </div>
       </aside>
 
-      <VistaPreviaFlotante form={form} visible={hayContenido} anclaRef={asideRef} />
+    <VistaPreviaFlotante form={form} setForm={setForm} visible={hayContenido} anclaRef={asideRef} />
     </>
   );
 }

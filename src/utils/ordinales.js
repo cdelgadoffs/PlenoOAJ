@@ -3,8 +3,8 @@ export const ORDINALES = [
   'SEXTO', 'SÉPTIMO', 'OCTAVO', 'NOVENO', 'DÉCIMO'
 ];
 
-export function obtenerPrefijo(indice, total) {
-  if (total <= 1) return 'ÚNICO';
+export function obtenerPrefijo(indice, total, sinUnico) {
+  if (total <= 1) return sinUnico ? 'PRIMERO' : 'ÚNICO';
   return ORDINALES[indice] || `DÉCIMO ${ORDINALES[indice - 10] || ''}`.trim();
 }
 
@@ -13,16 +13,14 @@ export function limpiarPrefijo(parrafo) {
   return parrafo.replace(/^\*{0,2}(ÚNICO|PRIMERO|SEGUNDO|TERCERO|CUARTO|QUINTO|SEXTO|SÉPTIMO|OCTAVO|NOVENO|DÉCIMO[A-ZÁÉÍÓÚ\s]*)\*{0,2}\.\s*/i, '');
 }
 
-// Recibe el texto crudo (ya sin prefijos, un párrafo por línea) y devuelve
-// el texto completo con prefijos en bold aplicados por posición.
-export function aplicarPrefijosAcuerdo(textoPlano) {
+export function aplicarPrefijosAcuerdo(textoPlano, sinUnico) {
   const parrafos = textoPlano.split('\n');
   const total = parrafos.filter(p => p.trim() !== '').length;
   let indice = 0;
   return parrafos.map(p => {
     if (p.trim() === '') return p;
     const limpio = limpiarPrefijo(p).trimStart();
-    const prefijo = obtenerPrefijo(indice, total);
+    const prefijo = obtenerPrefijo(indice, total, sinUnico);
     indice++;
     return `**${prefijo}.** ${limpio}`;
   }).join('\n');

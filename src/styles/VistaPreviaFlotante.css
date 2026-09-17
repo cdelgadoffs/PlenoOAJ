@@ -26,3 +26,12 @@
   /* La hoja sí recibe clics */
   pointer-events: auto;
 }
+
+.vista-previa-hoja [contenteditable]:empty::before {
+  content: attr(data-placeholder);
+  color: #aaa;
+  pointer-events: none;
+}
+.vista-previa-hoja .vp-contenido {
+  text-transform: uppercase;
+}

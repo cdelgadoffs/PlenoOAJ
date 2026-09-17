@@ -39,7 +39,7 @@ function nodoAMarkers(nodo) {
   return resultado;
 }
 
-export default function EditorOcultable({ id, value, onChange, placeholder, autoAjustar, negritaTotal, modoAcuerdo }) {
+export default function EditorOcultable({ id, value, onChange, placeholder, autoAjustar, negritaTotal, modoAcuerdo, modoConsiderando, className, style }) {
   const ref = useRef(null);
   const [botonPos, setBotonPos] = useState(null);
   const [textoSeleccionado, setTextoSeleccionado] = useState('');
@@ -69,6 +69,9 @@ export default function EditorOcultable({ id, value, onChange, placeholder, auto
     }
     if (modoAcuerdo) {
       markers = aplicarPrefijosAcuerdo(markers);
+    }
+    if (modoConsiderando) {
+      markers = aplicarPrefijosAcuerdo(markers, true);
     }
     ultimoValorExternoRef.current = markers;
     onChange(markers);
@@ -169,15 +172,20 @@ export default function EditorOcultable({ id, value, onChange, placeholder, auto
       <div
         id={id}
         ref={ref}
-        className={'ter-textarea ter-textarea-editable' + (autoAjustar ? ' ter-textarea-auto' : '')}
-        style={negritaTotal ? { fontWeight: 700 } : undefined}
+        className={className ?? ('ter-textarea ter-textarea-editable' + (autoAjustar ? ' ter-textarea-auto' : ''))}
+        style={{ ...(negritaTotal ? { fontWeight: 700 } : null), ...style }}
         contentEditable
         suppressContentEditableWarning
         data-placeholder={placeholder}
         onInput={sincronizar}
         onMouseUp={manejarSeleccion}
         onKeyUp={manejarSeleccion}
-        onBlur={() => setBotonPos(null)}
+        onBlur={() => {
+          setBotonPos(null);
+          if (ref.current) {
+            ref.current.innerHTML = markersAHtml(ultimoValorExternoRef.current);
+          }
+        }}
         onPaste={manejarPegado}
       ></div>
     </div>

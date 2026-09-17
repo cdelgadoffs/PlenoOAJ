@@ -96,3 +96,40 @@ export function tieneTextoOculto(texto) {
   if (!texto) return false;
   return /%%(.+?)%%/.test(texto);
 }
+
+function escaparHtml(texto) {
+  return texto
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+export function markersAHtml(texto) {
+  const escapado = escaparHtml(texto || '');
+  const conNegritas = escapado.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  const conOcultos = conNegritas.replace(/%%(.+?)%%/g, '<span class="marca-oculta">$1</span>');
+  return conOcultos.replace(/\n/g, '<br>');
+}
+
+export function nodoAMarkers(nodo) {
+  let resultado = '';
+  nodo.childNodes.forEach(hijo => {
+    if (hijo.nodeType === Node.TEXT_NODE) {
+      resultado += hijo.textContent;
+    } else if (hijo.nodeName === 'BR') {
+      resultado += '\n';
+    } else if (hijo.nodeName === 'STRONG' || hijo.nodeName === 'B') {
+      const interno = nodoAMarkers(hijo);
+      resultado += interno ? `**${interno}**` : '';
+    } else if (hijo.nodeName === 'SPAN' && hijo.classList.contains('marca-oculta')) {
+      const interno = nodoAMarkers(hijo);
+      resultado += interno ? `%%${interno}%%` : '';
+    } else if (hijo.nodeName === 'DIV' || hijo.nodeName === 'P') {
+      if (resultado && !resultado.endsWith('\n')) resultado += '\n';
+      resultado += nodoAMarkers(hijo);
+    } else {
+      resultado += nodoAMarkers(hijo);
+    }
+  });
+  return resultado;
+}
