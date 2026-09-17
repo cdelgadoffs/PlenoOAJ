@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { agregarNombrePropio } from '../utils/diccionarioPropios.js';
-
+import { aplicarPrefijosAcuerdo } from '../utils/ordinales.js';
 
 function escaparHtml(texto) {
   return texto
@@ -12,7 +12,8 @@ function escaparHtml(texto) {
 function markersAHtml(texto) {
   const escapado = escaparHtml(texto || '');
   const conNegritas = escapado.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  return conNegritas.replace(/\n/g, '<br>');
+  const conOcultos = conNegritas.replace(/%%(.+?)%%/g, '<span class="marca-oculta">$1</span>');
+  return conOcultos.replace(/\n/g, '<br>');
 }
 
 function nodoAMarkers(nodo) {
@@ -25,6 +26,9 @@ function nodoAMarkers(nodo) {
     } else if (hijo.nodeName === 'STRONG' || hijo.nodeName === 'B') {
       const interno = nodoAMarkers(hijo);
       resultado += interno ? `**${interno}**` : '';
+    } else if (hijo.nodeName === 'SPAN' && hijo.classList.contains('marca-oculta')) {
+      const interno = nodoAMarkers(hijo);
+      resultado += interno ? `%%${interno}%%` : '';
     } else if (hijo.nodeName === 'DIV' || hijo.nodeName === 'P') {
       if (resultado && !resultado.endsWith('\n')) resultado += '\n';
       resultado += nodoAMarkers(hijo);
@@ -35,7 +39,7 @@ function nodoAMarkers(nodo) {
   return resultado;
 }
 
-export default function EditorOcultable({ id, value, onChange, placeholder, autoAjustar }) {
+export default function EditorOcultable({ id, value, onChange, placeholder, autoAjustar, negritaTotal, modoAcuerdo }) {
   const ref = useRef(null);
   const [botonPos, setBotonPos] = useState(null);
   const [textoSeleccionado, setTextoSeleccionado] = useState('');
@@ -58,7 +62,14 @@ export default function EditorOcultable({ id, value, onChange, placeholder, auto
 
   function sincronizar() {
     if (!ref.current) return;
-    const markers = nodoAMarkers(ref.current);
+    let markers = nodoAMarkers(ref.current);
+    if (negritaTotal) {
+      const plano = markers.replace(/\*\*/g, '');
+      markers = plano.trim() ? `**${plano}**` : '';
+    }
+    if (modoAcuerdo) {
+      markers = aplicarPrefijosAcuerdo(markers);
+    }
     ultimoValorExternoRef.current = markers;
     onChange(markers);
   }
@@ -87,7 +98,14 @@ export default function EditorOcultable({ id, value, onChange, placeholder, auto
   }
 
   function ocultarSeleccion() {
-    document.execCommand('bold', false, null);
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    const span = document.createElement('span');
+    span.className = 'marca-oculta';
+    span.appendChild(range.extractContents());
+    range.insertNode(span);
+    sel.removeAllRanges();
     sincronizar();
     setBotonPos(null);
   }
@@ -152,6 +170,7 @@ export default function EditorOcultable({ id, value, onChange, placeholder, auto
         id={id}
         ref={ref}
         className={'ter-textarea ter-textarea-editable' + (autoAjustar ? ' ter-textarea-auto' : '')}
+        style={negritaTotal ? { fontWeight: 700 } : undefined}
         contentEditable
         suppressContentEditableWarning
         data-placeholder={placeholder}

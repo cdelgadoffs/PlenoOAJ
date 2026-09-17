@@ -78,14 +78,14 @@ export function normalizarTexto(textoOriginal) {
 }
 export function ocultarParaActa(texto) {
   if (!texto) return texto;
-  return texto.replace(/\*\*(.+?)\*\*/g, (_, contenido) => contenido.replace(/\S/g, '*'));
+  return texto.replace(/%%(.+?)%%/g, (_, contenido) => contenido.replace(/\S/g, '*'));
 }
 
 export function renderConOcultos(texto) {
   if (!texto) return texto;
-  const partes = texto.split(/(\*\*.+?\*\*)/g);
+  const partes = texto.split(/(%%.+?%%)/g);
   return partes.map((parte, i) => {
-    const match = parte.match(/^\*\*(.+)\*\*$/);
+    const match = parte.match(/^%%(.+)%%$/);
     if (match) {
       return React.createElement('span', { key: i, className: 'texto-oculto' }, match[1]);
     }
@@ -94,5 +94,5 @@ export function renderConOcultos(texto) {
 }
 export function tieneTextoOculto(texto) {
   if (!texto) return false;
-  return /\*\*(.+?)\*\*/.test(texto);
+  return /%%(.+?)%%/.test(texto);
 }
