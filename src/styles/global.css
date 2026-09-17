@@ -66,7 +66,8 @@ input[type="checkbox"] {
 .main::-webkit-scrollbar,
 #controlAnualLista::-webkit-scrollbar,
 .email-dest-lista::-webkit-scrollbar,
-.email-doc-lista::-webkit-scrollbar {
+.email-doc-lista::-webkit-scrollbar,
+.vista-previa-flotante::-webkit-scrollbar {
   width: 4px;
   height: 4px;
 }
@@ -75,7 +76,8 @@ input[type="checkbox"] {
 .main::-webkit-scrollbar-track,
 #controlAnualLista::-webkit-scrollbar-track,
 .email-dest-lista::-webkit-scrollbar-track,
-.email-doc-lista::-webkit-scrollbar-track {
+.email-doc-lista::-webkit-scrollbar-track,
+.vista-previa-flotante::-webkit-scrollbar-track {
   background: transparent;
 }
 .sb-nav::-webkit-scrollbar-thumb,
@@ -83,7 +85,8 @@ input[type="checkbox"] {
 .main::-webkit-scrollbar-thumb,
 #controlAnualLista::-webkit-scrollbar-thumb,
 .email-dest-lista::-webkit-scrollbar-thumb,
-.email-doc-lista::-webkit-scrollbar-thumb {
+.email-doc-lista::-webkit-scrollbar-thumb,
+.vista-previa-flotante::-webkit-scrollbar-thumb {
   background: #ccc;
   border-radius: 4px;
 }
@@ -92,7 +95,8 @@ input[type="checkbox"] {
 .main::-webkit-scrollbar-thumb:hover,
 #controlAnualLista::-webkit-scrollbar-thumb:hover,
 .email-dest-lista::-webkit-scrollbar-thumb:hover,
-.email-doc-lista::-webkit-scrollbar-thumb:hover {
+.email-doc-lista::-webkit-scrollbar-thumb:hover,
+.vista-previa-flotante::-webkit-scrollbar-thumb:hover {
   background: #aaa;
 }
 

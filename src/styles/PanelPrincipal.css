@@ -93,6 +93,9 @@
 .punto-tabla-contenido {
   white-space: pre-wrap;
   background: #ffffff;
+  font-weight: 700;
+  font-size: 15.5px;
+  text-transform: uppercase;
 }
 .punto-tabla-acuerdo {
   color: #666;
@@ -230,23 +233,6 @@
   margin-bottom: 4px;
 }
 
-.badge-publico {
-  display: inline-block;
-  font-size: 9.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  padding: 2px 8px;
-  border-radius: 10px;
-}
-.badge-publico.listo {
-  background: #c8e6c9;
-  color: #2e7d32;
-}
-.badge-publico.pendiente {
-  background: #ffcdd2;
-  color: #c62828;
-}
 .acuerdo-texto {
   font-size: 13.5px;
   color: #333;

@@ -81,16 +81,32 @@ export function ocultarParaActa(texto) {
   return texto.replace(/%%(.+?)%%/g, (_, contenido) => contenido.replace(/\S/g, '*'));
 }
 
-export function renderConOcultos(texto) {
-  if (!texto) return texto;
-  const partes = texto.split(/(%%.+?%%)/g);
+function procesarSegmentos(texto, prefijoKey) {
+  const partes = texto.split(/(\*\*.+?\*\*|%%.+?%%)/g).filter(p => p !== '');
   return partes.map((parte, i) => {
-    const match = parte.match(/^%%(.+)%%$/);
-    if (match) {
-      return React.createElement('span', { key: i, className: 'texto-oculto' }, match[1]);
+    const key = `${prefijoKey}-${i}`;
+    const negrita = parte.match(/^\*\*(.+)\*\*$/);
+    if (negrita) {
+      // Recursivo: puede haber texto oculto (%%...%%) dentro de la negrita.
+      return React.createElement('strong', { key }, procesarSegmentos(negrita[1], key));
+    }
+    const oculto = parte.match(/^%%(.+)%%$/);
+    if (oculto) {
+      return React.createElement('span', { key, className: 'texto-oculto' }, oculto[1]);
     }
     return parte;
   });
+}
+
+export function renderConOcultos(texto) {
+  if (!texto) return texto;
+  const lineas = texto.split('\n');
+  const nodos = [];
+  lineas.forEach((linea, li) => {
+    if (li > 0) nodos.push(React.createElement('br', { key: `br-${li}` }));
+    nodos.push(...procesarSegmentos(linea, `l${li}`));
+  });
+  return nodos;
 }
 export function tieneTextoOculto(texto) {
   if (!texto) return false;

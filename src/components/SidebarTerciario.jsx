@@ -6,6 +6,7 @@ import { formatearFechaES } from '../utils/fechas.js';
 import { crearCarpetaProyecto, crearCarpetaPunto, subirArchivoAOneDrive } from '../services/onedrive.js';
 import { guardarArchivo, obtenerArchivo, eliminarArchivo } from '../utils/archivosDB.js';
 import { esArchivoWord, extraerTextoWord } from '../utils/extraccionWord.js';
+import { generarWordPunto, WORD_MIME } from '../utils/wordPunto.js';
 import EditorOcultable from './EditorOcultable.jsx';
 import '../styles/SidebarTerciario.css';
 import SelectorSeccionPunto from './SelectorSeccionPunto.jsx';
@@ -45,6 +46,7 @@ const estadoVacio = {
   archivos: [],
   seccionDestino: 'proyectos de acuerdo',
   confidencial: false,
+  bloquesActa: [],
 };
 
 export default function SidebarTerciario() {
@@ -79,7 +81,8 @@ export default function SidebarTerciario() {
         tipoVotacion,
         acuerdo: sec.acuerdo || 'Se aprueba por unanimidad',
         archivos: sec.archivos ? [...sec.archivos] : [],
-        confidencial: sec.confidencial || false
+        confidencial: sec.confidencial || false,
+        bloquesActa: sec.bloquesActa ? sec.bloquesActa.map(b => ({ ...b })) : []
       });
     } else {
       setForm(estadoVacio);
@@ -119,7 +122,7 @@ export default function SidebarTerciario() {
 
   const opcionesRemitente = (REMITENTES_POR_CATEGORIA[form.categoria] || ['Pleno']).map(id => ({ id, label: id }));
   const categoriaActual = CATEGORIAS.find(c => c.id === form.categoria) || CATEGORIAS[0];
-  const hayContenido = !!(form.contenido.trim() || form.acuerdo.trim());
+  const hayContenido = !!(form.contenido.trim() || form.acuerdo.trim() || form.bloquesActa.some(b => b.texto.trim()));
 
   function cambiarCategoria(categoria) {
     const opciones = REMITENTES_POR_CATEGORIA[categoria] || ['Pleno'];
@@ -182,21 +185,36 @@ export default function SidebarTerciario() {
     setSidebarTerciarioAbierto(false);
   }
 
-  function confirmar() {
+  // Genera el .docx de respaldo del punto (mismo contenido que VistaPreviaFlotante)
+  // y lo mezcla con los archivos ya adjuntados, reemplazando la versión auto anterior si existía.
+  async function conArchivoAutoAdjunto(contenido, acuerdo) {
+    const anteriores = form.archivos.filter(a => !a.autogenerado);
+    const autoPrevio = form.archivos.filter(a => a.autogenerado);
+    const resultado = await generarWordPunto({ contenido, acuerdo, bloquesActa: form.bloquesActa }, proyectoMeta);
+    if (!resultado) return form.archivos;
+    autoPrevio.forEach(a => { eliminarArchivo(a.id).catch(() => {}); });
+    const archivoAutoId = 'arch_auto_' + Date.now();
+    await guardarArchivo(archivoAutoId, resultado.blob);
+    return [...anteriores, { id: archivoAutoId, nombre: resultado.nombreArchivo, tipo: WORD_MIME, autogenerado: true }];
+  }
+
+  async function confirmar() {
     const contenido = form.contenido.trim();
     const acuerdo = form.acuerdo.trim();
     if (!contenido || (seccionActual !== 'informes' && !acuerdo)) {
       alert('Debes completar el punto de acuerdo y los acuerdos antes de añadir el punto.');
       return;
     }
+    const archivosConAuto = await conArchivoAutoAdjunto(contenido, acuerdo);
     if (puntoEditandoId) {
       editarPuntoExistente(puntoEditandoId, {
         contenido,
         dependencia: form.remitente,
         tipoVotacion: form.tipoVotacion,
         acuerdo,
-        archivos: form.archivos,
-        confidencial: form.confidencial
+        archivos: archivosConAuto,
+        confidencial: form.confidencial,
+        bloquesActa: form.bloquesActa
       });
       setPuntoSeleccionadoId(puntoEditandoId);
       setPuntoEditandoId(null);
@@ -215,16 +233,17 @@ export default function SidebarTerciario() {
       seccion: seccionFinal,
       tipoVotacion: form.tipoVotacion,
       acuerdo,
-      archivos: form.archivos,
+      archivos: archivosConAuto,
       origenAG: desdeAG,
-      confidencial: form.confidencial
+      confidencial: form.confidencial,
+      bloquesActa: form.bloquesActa
     });
 
     setPuntoSeleccionadoId(nuevoId);
     if (form.archivos.length > 0) {
       subirArchivosAOneDrive(nuevoId, form.archivos);
     }
-    setForm(f => ({ ...f, contenido: '', acuerdo: '', archivos: [] }));
+    setForm(f => ({ ...f, contenido: '', acuerdo: '', archivos: [], bloquesActa: [] }));
   }
 
   async function subirArchivosAOneDrive(puntoId, archivos) {
