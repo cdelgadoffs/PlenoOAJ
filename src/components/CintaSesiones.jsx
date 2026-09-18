@@ -27,7 +27,6 @@ export default function CintaSesiones() {
   const calendarioBotonRef = useRef(null);
 
   const [filtroCinta, setFiltroCinta] = useState(() => cargarFiltroCinta());
-  const [navHover, setNavHover] = useState(false);
   const [filtroMenuAbierto, setFiltroMenuAbierto] = useState(false);
   const [filtroMenuPos, setFiltroMenuPos] = useState({ top: 0, left: 0 });
   const filtroBotonRef = useRef(null);
@@ -228,8 +227,8 @@ const OPCIONES_FILTRO = [
 
   return (
     <div className={'cinta-sesiones-wrap' + (oculto ? ' hidden' : '') + (modoFormulario ? ' modo-formulario' : '')} id="cintaSesionesWrap">
-      <div className={'cinta-sesiones' + (navHover ? ' nav-expandida' : '')} id="cintaSesionesContainer">
-        <div className="cinta-nav-group" onMouseEnter={() => setNavHover(true)} onMouseLeave={() => setNavHover(false)}>
+      <div className="cinta-sesiones" id="cintaSesionesContainer">
+        <div className="cinta-nav-group">
           <button className="cinta-nav cinta-nav-expandible" id="cintaAnterior" onClick={() => filtroCinta === 'semanal' ? cambiarSemana(-1) : cambiarMes(-1)}>
             <span className="icono">◀</span>
             <span className="texto">{filtroCinta === 'semanal' ? 'Semana anterior' : 'Mes anterior'}</span>
@@ -312,7 +311,7 @@ const OPCIONES_FILTRO = [
           className={'cinta-mes cinta-filtro-toggle dropdown-toggle' + (filtroMenuAbierto ? ' abierto' : '')}
           onClick={toggleFiltroMenu}
         >
-          {OPCIONES_FILTRO.find(o => o.id === filtroCinta)?.label}
+          <span className="cinta-filtro-texto">{OPCIONES_FILTRO.find(o => o.id === filtroCinta)?.label}</span>
           <span className="dropdown-chevron">▾</span>
         </div>
 

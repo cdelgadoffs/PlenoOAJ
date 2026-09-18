@@ -8,9 +8,15 @@ export function obtenerPrefijo(indice, total, sinUnico) {
   return ORDINALES[indice] || `DÉCIMO ${ORDINALES[indice - 10] || ''}`.trim();
 }
 
-// Quita cualquier prefijo previo (con o sin bold) al inicio de un párrafo
+// Quita cualquier prefijo previo (con o sin bold) al inicio de un párrafo.
+// aplicarPrefijosAcuerdo genera el prefijo como `**PRIMERO.** ` (el cierre
+// de negrita "**" va DESPUÉS del punto, no antes), así que el "**" opcional
+// debe poder matchear en cualquiera de los dos lados del punto. Con el
+// "**" opcional solo antes del punto, el cierre real ("**" tras el punto)
+// quedaba sin consumir y se acumulaba como texto suelto en cada re-render
+// (p. ej. "**PRIMERO.** ** resto", visible como "** resto").
 export function limpiarPrefijo(parrafo) {
-  return parrafo.replace(/^\*{0,2}(ÚNICO|PRIMERO|SEGUNDO|TERCERO|CUARTO|QUINTO|SEXTO|SÉPTIMO|OCTAVO|NOVENO|DÉCIMO[A-ZÁÉÍÓÚ\s]*)\*{0,2}\.\s*/i, '');
+  return parrafo.replace(/^\*{0,2}(ÚNICO|PRIMERO|SEGUNDO|TERCERO|CUARTO|QUINTO|SEXTO|SÉPTIMO|OCTAVO|NOVENO|DÉCIMO[A-ZÁÉÍÓÚ\s]*)\*{0,2}\.\*{0,2}\s*/i, '');
 }
 
 export function aplicarPrefijosAcuerdo(textoPlano, sinUnico) {

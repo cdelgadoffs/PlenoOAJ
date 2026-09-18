@@ -1,9 +1,11 @@
 .cinta-sesiones-wrap {
   background: #fafafa;
   border-bottom: 1px solid #e0e0e0;
-  padding: 10px 24px;
+  padding: 12px 24px;
   flex-shrink: 0;
-  overflow-x: auto;
+  /* El scroll horizontal lo maneja .cinta-fechas; aquí solo evitamos una
+     segunda barra. No clipa los dropdown (position: fixed). */
+  overflow: hidden;
 }
 .cinta-sesiones-wrap.hidden {
   display: none;
@@ -18,7 +20,11 @@
   background: transparent;
   border: 1px solid #ccc;
   border-radius: 4px;
-  padding: 2px 10px;
+  /* +1px de padding vertical respecto al original: hace que este sea el
+     hermano más alto de la fila, lo que empuja el alto de toda la cinta
+     ~2px (ver .cinta-fechas) y le da aire al hover de los badges sin
+     tocar su tamaño. */
+  padding: 3px 10px;
   cursor: pointer;
   font-size: 16px;
   line-height: 1.4;
@@ -49,6 +55,40 @@
   min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;
+  /* Aire antes del primer y después del último badge: sin esto, al hacer
+     hover (scale) o con el margen del badge seleccionado quedan pegados
+     al borde del contenedor con scroll y se cortan. */
+  padding-left: 6px;
+  padding-right: 6px;
+  /* Estira la caja hasta el borde inferior de la cinta (se come el
+     padding-bottom del wrap) para que la barra de scroll se dibuje sobre ese
+     borde y no pegada a los badges. Los badges siguen centrados porque la
+     barra reduce el área de contenido desde abajo. */
+  align-self: stretch;
+  margin-bottom: -12px;
+  /* Reserva el hueco de la barra aunque no haya overflow, para que los badges
+     no bailen 5px al aparecer/desaparecer el scroll. */
+  scrollbar-gutter: stable;
+  /* Estándar (Firefox y Chrome 121+). Donde aplica, deja sin efecto las reglas
+     ::-webkit-scrollbar de abajo, que quedan como fallback para Chromium viejo. */
+  scrollbar-width: thin;
+  scrollbar-color: #c4c4c4 transparent;
+}
+.cinta-fechas::-webkit-scrollbar {
+  height: 10px;
+}
+.cinta-fechas::-webkit-scrollbar-track {
+  background: transparent;
+}
+.cinta-fechas::-webkit-scrollbar-thumb {
+  background: #c4c4c4;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  border-radius: 999px;
+}
+.cinta-fechas::-webkit-scrollbar-thumb:hover {
+  background: #9e9e9e;
+  background-clip: padding-box;
 }
 .badge-sesion {
   flex-shrink: 0;
@@ -56,9 +96,9 @@
 
 .badge-sesion {
   display: inline-block;
-  padding: 3px 10px;
+  padding: 2px 8px;
   border-radius: 4px;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 500;
   background: #e8e8e8;
   color: #555;
@@ -68,8 +108,8 @@
   font-family: 'DM Mono', monospace;
 }
 .badge-sesion:hover {
-  transform: scale(1.05);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  transform: scale(1.03);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
 }
 .badge-sesion.celebrada {
   background: #c8e6c9;
@@ -93,65 +133,24 @@
   border-color: #ccc;
 }
 .badge-sesion.activa-seleccionada {
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 700;
-  padding: 5px 14px;
-  margin: 0 6px;
-  transform: scale(1.05);
+  padding: 4px 11px;
+  margin: 0 4px;
+  transform: scale(1.03);
 }
 .badge-sesion.activa-seleccionada:hover {
-  transform: scale(1.08);
+  transform: scale(1.05);
 }
 .badge-sesion.extraordinaria {
   border-radius: 999px;
 }
-/* Hover en cascada: cuando nav se expande, badges se contraen a "Día N" */
+/* El texto largo del badge siempre visible: se quitó el efecto que lo
+   contraía a "Día N" al pasar el cursor por los botones ◀/▶. */
 .badge-sesion .badge-texto-corto {
   display: none;
 }
 .badge-sesion .badge-texto-largo {
-  display: inline;
-}
-.cinta-sesiones.nav-expandida .cinta-fechas {
-  gap: 4px;
-}
-.cinta-sesiones.nav-expandida .badge-sesion {
-  padding: 3px 8px;
-  font-size: 11px;
-  min-width: 52px;
-  text-align: center;
-  white-space: nowrap;
-}
-.cinta-sesiones.nav-expandida .badge-sesion.activa-seleccionada {
-  padding: 3px 8px;
-  margin: 0;
-  font-size: 11px;
-  transform: scale(1);
-}
-.cinta-sesiones.nav-expandida .badge-sesion .badge-texto-largo {
-  display: none;
-}
-.cinta-sesiones.nav-expandida .badge-sesion .badge-texto-corto {
-  display: inline;
-}
-/* Fallback puro CSS por si el estado React no propaga: hover directo del grupo */
-.cinta-sesiones:has(.cinta-nav-group:hover) .badge-sesion {
-  padding: 3px 8px;
-  font-size: 11px;
-  min-width: 52px;
-  text-align: center;
-  white-space: nowrap;
-}
-.cinta-sesiones:has(.cinta-nav-group:hover) .badge-sesion.activa-seleccionada {
-  padding: 3px 8px;
-  margin: 0;
-  font-size: 11px;
-  transform: scale(1);
-}
-.cinta-sesiones:has(.cinta-nav-group:hover) .badge-sesion .badge-texto-largo {
-  display: none;
-}
-.cinta-sesiones:has(.cinta-nav-group:hover) .badge-sesion .badge-texto-corto {
   display: inline;
 }
 
@@ -170,7 +169,7 @@
   flex: 1;
 }
 .cinta-sesiones-wrap.modo-formulario {
-  padding: 10px 24px;
+  padding: 12px 24px;
   background: #fafafa;
 }
 
@@ -226,7 +225,7 @@
   gap: 0;
   overflow: hidden;
   transition: padding 0.3s ease;
-  padding: 2px 10px;
+  padding: 3px 10px;
   min-width: 32px;
   justify-content: center;
 }
@@ -250,10 +249,13 @@
   margin-left: 6px;
 }
 .cinta-nav-expandible:hover {
-  padding: 2px 12px;
+  padding: 3px 12px;
 }
 /* Botón calendario (ícono sin borde) */
 .cinta-calendario-toggle {
+  /* Oculto de momento: no es necesario por ahora. Quitar este display:none
+     para reactivar el botón y el calendario ampliado. */
+  display: none;
   background: none;
   border: none;
   font-size: 20px;
@@ -278,6 +280,9 @@
 .cinta-filtro-toggle {
   margin-left: auto;
   flex-shrink: 0;
+}
+.cinta-filtro-texto {
+  font-size: 12px;
 }
 /* Dropdown del calendario con animación */
 .cinta-calendario-dropdown {
