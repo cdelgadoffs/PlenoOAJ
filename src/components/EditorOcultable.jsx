@@ -27,9 +27,20 @@ export default function EditorOcultable({ id, value, onChange, placeholder, auto
   function sincronizar() {
     if (!ref.current) return;
     let markers = nodoAMarkers(ref.current);
+    // Las líneas de tabla (##tabla##<html codificado>) van completas: envolverlas
+    // en ** o mezclarlas con el prefijo ordinal rompería su marcador y el HTML
+    // codificado, así que quedan fuera de estas transformaciones. Las líneas
+    // alineadas (##align-<valor>##texto) mantienen su prefijo intacto y solo
+    // se envuelve en ** el texto que sigue.
     if (negritaTotal) {
-      const plano = markers.replace(/\*\*/g, '');
-      markers = plano.trim() ? `**${plano}**` : '';
+      markers = markers.split('\n').map(linea => {
+        if (linea.startsWith('##tabla##')) return linea;
+        const alineada = linea.match(/^(##align-[a-z]+##)(.*)$/s);
+        const prefijo = alineada ? alineada[1] : '';
+        const cuerpo = alineada ? alineada[2] : linea;
+        const plano = cuerpo.replace(/\*\*/g, '');
+        return prefijo + (plano.trim() ? `**${plano}**` : plano);
+      }).join('\n');
     }
     if (modoAcuerdo) {
       markers = aplicarPrefijosAcuerdo(markers);

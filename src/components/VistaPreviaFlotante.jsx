@@ -5,11 +5,11 @@ import { PLANTILLAS, PLANTILLA_POR_DEFECTO, SECCIONES_POR_DEFECTO, crearBloquesP
 import EditorOcultable from './EditorOcultable.jsx';
 
 const TIPOS_BLOQUE = [
-  { id: 'considerando', label: 'Considerando', titulo: 'CONSIDERANDO', placeholder: 'Considerandos...' },
-  { id: 'antecedente', label: 'Antecedente', titulo: 'ANTECEDENTES', placeholder: 'Antecedentes...' },
-  { id: 'personalizada', label: 'Personalizada...', titulo: null, placeholder: 'Escribe el contenido...' }
+  { id: 'considerando', label: 'Considerando', titulo: 'CONSIDERANDO', placeholder: 'Considerandos...', icon: 'fa-scale-balanced' },
+  { id: 'antecedente', label: 'Antecedente', titulo: 'ANTECEDENTES', placeholder: 'Antecedentes...', icon: 'fa-clock-rotate-left' },
+  { id: 'personalizada', label: 'Personalizada...', titulo: null, placeholder: 'Escribe el contenido...', icon: 'fa-pen' }
 ];
-const PLACEHOLDER_SECCION = { id: '', label: 'Seleccionar sección...' };
+const PLACEHOLDER_SECCION = { id: '', label: 'Seleccionar sección...', icon: 'fa-list' };
 
 // Tipos de sección que puede ofrecer el selector dado el estado actual de
 // bloques: considerando/antecedente desaparecen en cuanto ya están
@@ -23,6 +23,9 @@ function tiposDisponiblesPara(bloques) {
   return fijosLibres.length > 0 ? [...fijosLibres, personalizada] : [PLACEHOLDER_SECCION, personalizada];
 }
 
+const TABLA_MAX_FILAS = 8;
+const TABLA_MAX_COLS = 10;
+
 export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef }) {
   const [pos, setPos] = useState(null);
   const plantilla = form.plantilla || PLANTILLA_POR_DEFECTO;
@@ -30,6 +33,10 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef }
   const [tipoNuevoBloque, setTipoNuevoBloque] = useState(TIPOS_BLOQUE[0].id);
   const [tituloPersonalizado, setTituloPersonalizado] = useState('');
   const bloques = form.bloquesActa || [];
+  const [selectorTablaAbierto, setSelectorTablaAbierto] = useState(false);
+  const [tablaHover, setTablaHover] = useState({ filas: 0, cols: 0 });
+  const [rangoGuardado, setRangoGuardado] = useState(null);
+  const [dropdownAbierto, setDropdownAbierto] = useState(null);
 
   useEffect(() => {
     if (!visible || !anclaRef.current) { setPos(null); return; }
@@ -78,10 +85,29 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bloques, tipoNuevoBloque]);
 
+  useEffect(() => {
+    if (!selectorTablaAbierto) return;
+    function cerrar(e) {
+      if (!e.target.closest('.vp-tabla-wrapper')) setSelectorTablaAbierto(false);
+    }
+    document.addEventListener('mousedown', cerrar);
+    return () => document.removeEventListener('mousedown', cerrar);
+  }, [selectorTablaAbierto]);
+
+  useEffect(() => {
+    if (!dropdownAbierto) return;
+    function cerrar(e) {
+      if (!e.target.closest('.vp-dropdown-wrapper')) setDropdownAbierto(null);
+    }
+    document.addEventListener('mousedown', cerrar);
+    return () => document.removeEventListener('mousedown', cerrar);
+  }, [dropdownAbierto]);
+
   if (!visible || !pos) return null;
 
   const esPersonalizada = tipoNuevoBloque === 'personalizada';
   const tiposDisponibles = tiposDisponiblesPara(bloques);
+  const seccionActual = tiposDisponibles.find(t => t.id === tipoNuevoBloque) || PLACEHOLDER_SECCION;
 
   function agregarBloque() {
     if (esPersonalizada) {
@@ -121,11 +147,77 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef }
     if (!texto.trim()) return;
     document.execCommand('insertText', false, capitalizarPalabras(texto));
   }
+  function cambiarTamanoFuente(delta) {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    let elemento = range.commonAncestorContainer;
+    if (elemento.nodeType === Node.TEXT_NODE) elemento = elemento.parentElement;
+    // Extraer y reinsertar contenido dentro de una celda (range.extractContents
+    // sobre una selección que toca estructura de tabla) puede romper filas/columnas,
+    // así que esta función queda deshabilitada mientras la selección esté en una tabla.
+    if (elemento.closest('table')) return;
+    const tamanoActual = parseFloat(window.getComputedStyle(elemento).fontSize) || 13;
+    const nuevoTamano = Math.min(72, Math.max(8, Math.round(tamanoActual + delta)));
+    const span = document.createElement('span');
+    span.style.fontSize = `${nuevoTamano}px`;
+    span.appendChild(range.extractContents());
+    range.insertNode(span);
+    const nuevoRange = document.createRange();
+    nuevoRange.selectNodeContents(span);
+    sel.removeAllRanges();
+    sel.addRange(nuevoRange);
+    span.closest('[contenteditable]')?.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  function aumentarFuente() {
+    cambiarTamanoFuente(2);
+  }
+  function disminuirFuente() {
+    cambiarTamanoFuente(-2);
+  }
+  function alinearIzquierda() {
+    document.execCommand('justifyLeft');
+  }
+  function alinearCentro() {
+    document.execCommand('justifyCenter');
+  }
+  function alinearDerecha() {
+    document.execCommand('justifyRight');
+  }
   function deshacer() {
     document.execCommand('undo');
   }
   function rehacer() {
     document.execCommand('redo');
+  }
+  function abrirSelectorTabla() {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      setRangoGuardado(sel.getRangeAt(0).cloneRange());
+    }
+    setTablaHover({ filas: 0, cols: 0 });
+    setSelectorTablaAbierto(true);
+  }
+  function insertarTabla(filas, cols) {
+    if (rangoGuardado) {
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(rangoGuardado);
+    }
+    let filasHtml = '';
+    for (let f = 0; f < filas; f++) {
+      let celdasHtml = '';
+      for (let c = 0; c < cols; c++) {
+        celdasHtml += f === 0
+          ? '<th style="border:1px solid #999;padding:1px 2px;background:#d9d9d9;font-weight:700;">&nbsp;</th>'
+          : '<td style="border:1px solid #999;padding:1px 2px;">&nbsp;</td>';
+      }
+      filasHtml += `<tr>${celdasHtml}</tr>`;
+    }
+    const tablaHtml = `<table style="border-collapse:collapse;width:100%;margin:10px 0;">${filasHtml}</table><p><br></p>`;
+    document.execCommand('insertHTML', false, tablaHtml);
+    setSelectorTablaAbierto(false);
+    setRangoGuardado(null);
   }
 
   return (
@@ -141,13 +233,31 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef }
             {PLANTILLAS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
           </select>
           {/* Selector de secciones: visible para ambas plantillas */}
-          <select
-            className="vp-header-select"
-            value={tipoNuevoBloque}
-            onChange={e => setTipoNuevoBloque(e.target.value)}
-          >
-            {tiposDisponibles.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
-          </select>
+          <div className="vp-dropdown-wrapper">
+            <button
+              type="button"
+              className="vp-header-btn"
+              title={`Sección: ${seccionActual.label}`}
+              onClick={() => setDropdownAbierto(d => d === 'seccion' ? null : 'seccion')}
+            >
+              <i className={`fas ${seccionActual.icon}`}></i>
+            </button>
+            {dropdownAbierto === 'seccion' && (
+              <div className="vp-dropdown-menu">
+                {tiposDisponibles.map(t => (
+                  <button
+                    type="button"
+                    key={t.id}
+                    className={`vp-dropdown-item${t.id === tipoNuevoBloque ? ' activo' : ''}`}
+                    onClick={() => { setTipoNuevoBloque(t.id); setDropdownAbierto(null); }}
+                  >
+                    <i className={`fas ${t.icon}`}></i>
+                    <span>{t.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           {esPersonalizada && (
             <input
               type="text"
@@ -176,6 +286,37 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef }
           <button type="button" className="vp-header-btn" title="Rehacer" onMouseDown={(e) => { e.preventDefault(); rehacer(); }}>
             <i className="fas fa-redo"></i>
           </button>
+          <div className="vp-tabla-wrapper">
+            <button
+              type="button"
+              className="vp-header-btn"
+              title="Insertar tabla"
+              onMouseDown={(e) => { e.preventDefault(); abrirSelectorTabla(); }}
+            >
+              <i className="fas fa-table"></i>
+            </button>
+            {selectorTablaAbierto && (
+              <div className="vp-tabla-selector" onMouseLeave={() => setTablaHover({ filas: 0, cols: 0 })}>
+                <div className="vp-tabla-grid">
+                  {Array.from({ length: TABLA_MAX_FILAS }).map((_, f) => (
+                    <div key={f} className="vp-tabla-fila">
+                      {Array.from({ length: TABLA_MAX_COLS }).map((_, c) => (
+                        <div
+                          key={c}
+                          className={`vp-tabla-celda ${f < tablaHover.filas && c < tablaHover.cols ? 'activa' : ''}`}
+                          onMouseEnter={() => setTablaHover({ filas: f + 1, cols: c + 1 })}
+                          onMouseDown={(e) => { e.preventDefault(); insertarTabla(f + 1, c + 1); }}
+                        />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+                <div className="vp-tabla-etiqueta">
+                  {tablaHover.filas > 0 ? `${tablaHover.filas} x ${tablaHover.cols}` : 'Selecciona tamaño'}
+                </div>
+              </div>
+            )}
+          </div>
           <span className="vp-header-sep"></span>
           <button type="button" className="vp-header-btn" title="Negrita" onMouseDown={(e) => { e.preventDefault(); aplicarNegrita(); }}>
             <i className="fas fa-bold"></i>
@@ -188,6 +329,22 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef }
           </button>
           <button type="button" className="vp-header-btn" title="Capitalizar selección" onMouseDown={(e) => { e.preventDefault(); capitalizarSeleccion(); }}>
             Aa
+          </button>
+          <button type="button" className="vp-header-btn" title="Aumentar tamaño de fuente" onMouseDown={(e) => { e.preventDefault(); aumentarFuente(); }}>
+            A<sup>+</sup>
+          </button>
+          <button type="button" className="vp-header-btn" title="Disminuir tamaño de fuente" onMouseDown={(e) => { e.preventDefault(); disminuirFuente(); }}>
+            A<sup>-</sup>
+          </button>
+          <span className="vp-header-sep"></span>
+          <button type="button" className="vp-header-btn" title="Alinear izquierda" onMouseDown={(e) => { e.preventDefault(); alinearIzquierda(); }}>
+            <i className="fas fa-align-left"></i>
+          </button>
+          <button type="button" className="vp-header-btn" title="Centrar" onMouseDown={(e) => { e.preventDefault(); alinearCentro(); }}>
+            <i className="fas fa-align-center"></i>
+          </button>
+          <button type="button" className="vp-header-btn" title="Alinear derecha" onMouseDown={(e) => { e.preventDefault(); alinearDerecha(); }}>
+            <i className="fas fa-align-right"></i>
           </button>
         </div>
         <div className="vista-previa-hoja">
@@ -237,9 +394,7 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef }
           })}
           {plantilla === 'introduccion' && (
             <>
-              <div>&nbsp;</div>
-              <div style={{ textAlign: 'justify' }}>{PUENTE_ACTA_TEXTO}</div>
-              <div style={{ marginBottom: '20px' }}>&nbsp;</div>
+              <div style={{ textAlign: 'justify', margin: '10px 0' }}>{PUENTE_ACTA_TEXTO}</div>
               <EditorOcultable
                 value={form.contenido}
                 onChange={(v) => setForm(f => ({ ...f, contenido: v }))}
