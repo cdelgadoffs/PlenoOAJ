@@ -406,10 +406,28 @@ export function ProyectoProvider({ children }) {
     setSesiones(prev => {
       const sesion = prev[sesionActivaFecha];
       if (!sesion) return prev;
-      const { horaInicio, horaFin, ...resto } = sesion;
+      const { horaInicio, horaFin, terminada, ...resto } = sesion;
       return { ...prev, [sesionActivaFecha]: resto };
     });
     registrar('sesion', 'Restableció la sesión', '');
+  }
+  // Cierra formalmente la sesión activa: la marca con `terminada: true`, la
+  // señal que usan obtenerProximaSesion (para dejar de considerarla "próxima")
+  // y los badges de celebrada en la cinta/calendario. Es independiente de
+  // `horaFin`, que solo indica que se pulsó "Finalizar sesión" (habilita el
+  // widget de hora de fin y el botón de descargar acta) sin ocultar
+  // secciones ni marcar la sesión como celebrada por sí solo.
+  function terminarSesionCelebracion() {
+    if (!sesionActivaFecha) return;
+    setSesiones(prev => {
+      const sesion = prev[sesionActivaFecha];
+      if (!sesion || sesion.terminada) return prev;
+      return {
+        ...prev,
+        [sesionActivaFecha]: { ...sesion, horaFin: sesion.horaFin || Date.now(), terminada: true }
+      };
+    });
+    registrar('sesion', 'Terminó la sesión', '');
   }
   function actualizarHoraInicioCelebracion(horaStr) {
     if (!sesionActivaFecha) return;
@@ -496,7 +514,7 @@ export function ProyectoProvider({ children }) {
     cargarSesion, eliminarSesion, regenerarCalendario, agregarVacacion, agregarAsueto, eliminarExcepcion,
     asistentes, agregarAsistente, eliminarAsistente, editarAsistente, toggleAsistentePresente,
     actualizarPunto, agregarActa, crearSesionExtraordinaria, adjuntarArchivoAPunto, setOneDriveFolder,
-    toggleListaCerrada, comenzarSesionCelebracion, finalizarSesionCelebracion, restablecerSesionCelebracion,
+    toggleListaCerrada, comenzarSesionCelebracion, finalizarSesionCelebracion, restablecerSesionCelebracion, terminarSesionCelebracion,
     actualizarHoraInicioCelebracion, actualizarHoraFinCelebracion, ajustarNumerosDesde,
     anclasNumeracion, setAnclasNumeracion
   };

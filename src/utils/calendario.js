@@ -147,7 +147,9 @@ export function obtenerProximaSesion(sesiones) {
   const hoy = hoyLocalISO();
   const fechas = Object.keys(sesiones).sort();
   for (const f of fechas) {
-    if (f >= hoy) return f;
+    if (f < hoy) continue;
+    if (sesiones[f]?.terminada) continue;
+    return f;
   }
   return null;
 }

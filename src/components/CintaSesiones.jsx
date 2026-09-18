@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useUI } from '../context/UIContext.jsx';
 import { useProyecto } from '../context/ProyectoContext.jsx';
 import { hoyLocalISO, formatearFechaES, sumarDias } from '../utils/fechas.js';
-import { obtenerSesionesDelMes, obtenerSesionesDeLaSemana, obtenerMiercolesSemana } from '../utils/calendario.js';
+import { obtenerSesionesDelMes, obtenerSesionesDeLaSemana, obtenerMiercolesSemana, obtenerProximaSesion } from '../utils/calendario.js';
 import CalendarioInteractivo from './CalendarioInteractivo.jsx';
 import '../styles/CintaSesiones.css';
 import { cargarFiltroCinta, guardarFiltroCinta } from '../utils/storage.js';
@@ -107,11 +107,8 @@ export default function CintaSesiones() {
       ? fechasDelMes.filter(f => sesiones[f]?.tipoSesion?.toLowerCase() === filtroCinta)
       : fechasDelMes;
     const hoy = hoyLocalISO();
-  
-  let proximaGlobal = null;
-  for (const f of Object.keys(sesiones).sort()) {
-    if (f >= hoy) { proximaGlobal = f; break; }
-  }
+
+  const proximaGlobal = obtenerProximaSesion(sesiones);
 
   const mesProxima = proximaGlobal ? proximaGlobal.substring(0, 7) : null;
   const mostrarBotonIrActual = mesProxima && (
@@ -274,10 +271,13 @@ const OPCIONES_FILTRO = [
             const puntosPropios = sesion.secciones ? sesion.secciones.filter(s => !s.fijo).length : 0;
             const esSeleccionada = f === sesionActivaFecha;
 
+            const celebrada = !!sesion.terminada || (f < hoy && tieneContenido);
+
             let clase = 'badge-sesion';
             let estado = '';
             if (f === proximaGlobal) { clase += ' proxima'; estado = 'Próxima'; }
-            else if (f < hoy) { clase += tieneContenido ? ' celebrada' : ' no-celebrada'; estado = tieneContenido ? 'Celebrada' : 'No celebrada'; }
+            else if (celebrada) { clase += ' celebrada'; estado = 'Celebrada'; }
+            else if (f < hoy) { clase += ' no-celebrada'; estado = 'No celebrada'; }
             else { clase += ' pendiente'; estado = 'Pendiente'; }
             if (esSeleccionada) clase += ' activa-seleccionada';
             if (sesion.tipoSesion === 'Extraordinaria') clase += ' extraordinaria';

@@ -38,10 +38,10 @@ export default function CalendarioInteractivo({
   const getEstado = (fecha, sesion) => {
     if (!sesion) return null;
     const tieneContenido = sesion.secciones && sesion.secciones.some(s => !s.fijo);
+    const celebrada = !!sesion.terminada || (fecha < hoy && tieneContenido);
     if (fecha === proximaGlobal) return 'proxima';
-    if (fecha < hoy) {
-      return tieneContenido ? 'celebrada' : 'no-celebrada';
-    }
+    if (celebrada) return 'celebrada';
+    if (fecha < hoy) return 'no-celebrada';
     return 'pendiente';
   };
 
