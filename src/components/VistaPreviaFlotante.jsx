@@ -26,7 +26,7 @@ function tiposDisponiblesPara(bloques) {
 const TABLA_MAX_FILAS = 8;
 const TABLA_MAX_COLS = 10;
 
-export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef }) {
+export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, soloLectura, codigoLectura, remitenteLectura, onCerrarLectura }) {
   const [pos, setPos] = useState(null);
   const plantilla = form.plantilla || PLANTILLA_POR_DEFECTO;
   const setPlantilla = (id) => setForm(f => ({ ...f, plantilla: id }));
@@ -223,6 +223,16 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef }
   return (
     <div className="vista-previa-flotante" style={{ left: pos.left, top: pos.top, bottom: 0 }}>
       <div className="vista-previa-columna">
+        {soloLectura && (
+          <div className="vista-previa-header vp-header-lectura">
+            <div className="vp-lectura-info">
+              {codigoLectura && <span className="vp-lectura-codigo">{codigoLectura}</span>}
+              {remitenteLectura && <span className="vp-lectura-remitente">{remitenteLectura}</span>}
+            </div>
+            <button type="button" className="btn-close-derecho" title="Cerrar vista previa" onClick={onCerrarLectura}>✕</button>
+          </div>
+        )}
+        {!soloLectura && (
         <div className="vista-previa-header">
           <select
             className="vp-header-select"
@@ -347,6 +357,7 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef }
             <i className="fas fa-align-right"></i>
           </button>
         </div>
+        )}
         <div className="vista-previa-hoja">
           <div style={{ textAlign: 'left', marginBottom: '10px' }}>
             <img src="/logo.png" alt="Logo" style={{ height: '100px', marginBottom: '0px' }} />
@@ -368,6 +379,7 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef }
               negritaTotal
               className="vp-contenido"
               style={{ marginBottom: '20px', outline: 'none' }}
+              soloLectura={soloLectura}
             />
           )}
           {bloques.map(bloque => {
@@ -377,9 +389,11 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef }
               <div key={bloque.id} className="vp-bloque">
                 <div className="vp-bloque-titulo">
                   {titulo}
-                  <button type="button" className="vp-bloque-quitar" title="Quitar sección" onClick={() => eliminarBloque(bloque.id)}>
-                    <i className="fas fa-times"></i>
-                  </button>
+                  {!soloLectura && (
+                    <button type="button" className="vp-bloque-quitar" title="Quitar sección" onClick={() => eliminarBloque(bloque.id)}>
+                      <i className="fas fa-times"></i>
+                    </button>
+                  )}
                 </div>
                 <EditorOcultable
                   value={bloque.texto}
@@ -388,6 +402,7 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef }
                   modoConsiderando
                   className=""
                   style={{ outline: 'none' }}
+                  soloLectura={soloLectura}
                 />
               </div>
             );
@@ -402,6 +417,7 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef }
                 negritaTotal
                 className="vp-contenido"
                 style={{ marginBottom: '20px', outline: 'none' }}
+                soloLectura={soloLectura}
               />
             </>
           )}
@@ -412,6 +428,7 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef }
             modoAcuerdo
             className=""
             style={{ outline: 'none' }}
+            soloLectura={soloLectura}
           />
         </div>
       </div>

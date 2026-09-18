@@ -1,15 +1,25 @@
+import { useEffect, useRef, useState } from 'react';
 import { useUI } from '../context/UIContext.jsx';
 import { useProyecto } from '../context/ProyectoContext.jsx';
 import { SECCIONES_DEL_DOCUMENTO, obtenerPuntosFiltrados } from '../utils/puntos.js';
 import { getTituloPunto } from '../utils/fechas.js';
+import { PLANTILLA_POR_DEFECTO } from '../utils/plantillasActa.js';
+import VistaPreviaFlotante from './VistaPreviaFlotante.jsx';
+import '../styles/VistaPreviaFlotante.css';
 import '../styles/SidebarSecundario.css';
 
 export default function SidebarSecundario({ onAbrirCreacion }) {
   const { vistaActual, terminoBusqueda } = useUI();
   const {
     secciones, seccionActual, setSeccionActual, setPuntoSeleccionadoId,
-    puntoPreviaSeleccionadoId, setPuntoPreviaSeleccionadoId, actualizarPunto
+    puntoPreviaSeleccionadoId, setPuntoPreviaSeleccionadoId, actualizarPunto, eliminarPunto
   } = useProyecto();
+  const [puntoVistaPreviaId, setPuntoVistaPreviaId] = useState(null);
+  const asideRef = useRef(null);
+
+  useEffect(() => {
+    if (vistaActual !== 'sesionPrevia') setPuntoVistaPreviaId(null);
+  }, [vistaActual]);
 
   if (vistaActual !== 'sesionPrevia') {
     return <aside className="sidebar-secundario hidden" id="sidebarSecundario"></aside>;
@@ -36,8 +46,19 @@ export default function SidebarSecundario({ onAbrirCreacion }) {
     }
     const totalAprobados = puntosFiltrados.filter(s => s.aprobado === true).length;
     const todosAprobados = puntosFiltrados.length > 0 && puntosFiltrados.every(s => s.aprobado === true);
+    const puntoVistaPrevia = secciones.find(s => s.id === puntoVistaPreviaId) || null;
+    const formVistaPrevia = {
+      contenido: puntoVistaPrevia?.contenido || '',
+      acuerdo: puntoVistaPrevia?.acuerdo || '',
+      bloquesActa: puntoVistaPrevia?.bloquesActa || [],
+      plantilla: puntoVistaPrevia?.plantilla || PLANTILLA_POR_DEFECTO
+    };
+    const codigoVistaPrevia = puntoVistaPrevia
+      ? getTituloPunto(puntoVistaPrevia, secciones.indexOf(puntoVistaPrevia), secciones)
+      : '';
     return (
-      <aside className="sidebar-secundario" id="sidebarSecundario">
+      <>
+      <aside className="sidebar-secundario" id="sidebarSecundario" ref={asideRef}>
         <div className="sb-header">
           <div className="sb-header-top">
             <div className="sb-badge" id="secBadgeLabel">Sesión en curso</div>
@@ -71,11 +92,56 @@ export default function SidebarSecundario({ onAbrirCreacion }) {
                   }}
                 />
                 <label>{titulo}</label>
+                {!sec.fijo && (
+                  <div className="sb-item-acciones">
+                    {sec.aprobado ? (
+                      <button
+                        type="button"
+                        className="sb-ojo-btn"
+                        title="Ver vista previa (solo lectura)"
+                        onClick={(e) => { e.stopPropagation(); setPuntoVistaPreviaId(id => id === sec.id ? null : sec.id); }}
+                      >
+                        <i className="fas fa-eye"></i>
+                      </button>
+                    ) : (
+                      <>
+                        <button type="button" className="sb-ojo-btn sb-ban-btn" title="No incluido en la sesión" disabled>
+                          <i className="fas fa-ban"></i>
+                        </button>
+                        <button
+                          type="button"
+                          className="sb-ojo-btn sb-delete-btn"
+                          title="Eliminar punto"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!confirm(`¿Eliminar "${titulo}"?`)) return;
+                            eliminarPunto(sec.id);
+                            if (puntoVistaPreviaId === sec.id) setPuntoVistaPreviaId(null);
+                            if (puntoPreviaSeleccionadoId === sec.id) setPuntoPreviaSeleccionadoId(null);
+                          }}
+                        >
+                          <i className="fas fa-times"></i>
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
         </nav>
       </aside>
+      <VistaPreviaFlotante
+        form={formVistaPrevia}
+        setForm={() => {}}
+        visible={!!puntoVistaPrevia}
+        anclaRef={asideRef}
+        soloLectura
+        codigoLectura={codigoVistaPrevia}
+        remitenteLectura={puntoVistaPrevia?.dependencia || ''}
+        onCerrarLectura={() => setPuntoVistaPreviaId(null)}
+      />
+      </>
     );
   }
 

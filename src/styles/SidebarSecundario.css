@@ -1,6 +1,6 @@
 .sidebar-secundario {
-  width: 220px;
-  min-width: 220px;
+  width: 250px;
+  min-width: 250px;
   border-right: 1px solid #e8e8e8;
   background: #fafafa;
   display: flex;
@@ -19,8 +19,49 @@
   pointer-events: none;
 }
 
+.sb-item-acciones {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  margin-right: -8px;
+}
+.sb-ojo-btn {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+  color: #333;
+  padding: 0;
+  margin: 0;
+  font-size: 9px;
+  cursor: pointer;
+}
+.sb-ojo-btn:hover {
+  background: #f0f0f0;
+}
+.sb-ban-btn {
+  color: #999;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.sb-ban-btn:hover {
+  background: #fff;
+}
+.sb-delete-btn:hover {
+  background: #fdecea;
+  border-color: #e57373;
+  color: #c0392b;
+}
+
 @media (max-width: 900px) {
-  .sidebar-secundario { width: 180px; min-width: 180px; }
+  .sidebar-secundario { width: 210px; min-width: 210px; }
 }
 @media (max-width: 640px) {
   .sidebar-secundario {

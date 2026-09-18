@@ -1,7 +1,9 @@
 .vista-previa-flotante {
   position: fixed;
   width: 650px;
-  background: #ddd;
+  background: rgba(221, 221, 221, 0.55);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
   z-index: 998;
   display: flex;
   justify-content: center;
@@ -31,9 +33,48 @@
   z-index: 5;
   padding: 8px 10px;
   margin-bottom: 6px;
-  background: #ddd;
+  background: rgba(255, 255, 255, 0.55);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  backdrop-filter: blur(18px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: 6px;
   box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+}
+.vp-header-lectura {
+  justify-content: space-between;
+}
+.vp-header-lectura .btn-close-derecho {
+  background: none;
+  border: none;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  color: #1a1a1a;
+  padding: 0 4px;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+.vp-header-lectura .btn-close-derecho:hover {
+  color: #555;
+}
+.vp-lectura-info {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+.vp-lectura-codigo {
+  font-weight: 700;
+  font-size: 13px;
+  color: #1a1a1a;
+  white-space: nowrap;
+}
+.vp-lectura-remitente {
+  font-size: 12px;
+  color: #666;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .vp-header-select {
   height: 26px;
