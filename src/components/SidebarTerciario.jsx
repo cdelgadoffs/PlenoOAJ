@@ -7,6 +7,7 @@ import { crearCarpetaProyecto, crearCarpetaPunto, subirArchivoAOneDrive } from '
 import { guardarArchivo, obtenerArchivo, eliminarArchivo } from '../utils/archivosDB.js';
 import { esArchivoWord, extraerTextoWord } from '../utils/extraccionWord.js';
 import { generarWordPunto, WORD_MIME } from '../utils/wordPunto.js';
+import { PLANTILLA_POR_DEFECTO, crearBloquesPorDefecto } from '../utils/plantillasActa.js';
 import EditorOcultable from './EditorOcultable.jsx';
 import '../styles/SidebarTerciario.css';
 import SelectorSeccionPunto from './SelectorSeccionPunto.jsx';
@@ -37,23 +38,30 @@ const TODAS_DEPENDENCIAS = [
   { id: 'Presupuesto', categoria: 'comisiones' }
 ];
 
-const estadoVacio = {
-  categoria: 'pleno',
-  remitente: 'Pleno',
-  contenido: '',
-  tipoVotacion: JSON.stringify({ voto: 0, votacion: 0, estado: true }),
-  acuerdo: '',
-  archivos: [],
-  seccionDestino: 'proyectos de acuerdo',
-  confidencial: false,
-  bloquesActa: [],
-};
+// Función (no un objeto fijo) para que cada punto nuevo nazca ya con las
+// secciones por defecto de la plantilla inicial (Introducción -> Considerando)
+// desde el primer render, sin depender de que un efecto en
+// VistaPreviaFlotante llegue a dispararse a tiempo.
+function crearEstadoVacio() {
+  return {
+    categoria: 'pleno',
+    remitente: 'Pleno',
+    contenido: '',
+    tipoVotacion: JSON.stringify({ voto: 0, votacion: 0, estado: true }),
+    acuerdo: '',
+    archivos: [],
+    seccionDestino: 'proyectos de acuerdo',
+    confidencial: false,
+    bloquesActa: crearBloquesPorDefecto(PLANTILLA_POR_DEFECTO),
+    plantilla: PLANTILLA_POR_DEFECTO,
+  };
+}
 
 export default function SidebarTerciario() {
   const { sidebarTerciarioAbierto, setSidebarTerciarioAbierto, vistaActual, setArchivosTemporales, setEliminarArchivoTemporalFn } = useUI();
   const { secciones, seccionActual, puntoEditandoId, setPuntoEditandoId, agregarPunto, editarPuntoExistente, setPuntoSeleccionadoId, proyectoMeta, setOneDriveFolder, asistentes } = useProyecto();
   const { obtenerAccessToken } = useAuth();
-  const [form, setForm] = useState(estadoVacio);
+  const [form, setForm] = useState(crearEstadoVacio);
   const [oneDriveStatus, setOneDriveStatus] = useState('');
   const asideRef = useRef(null); // 🔥 ref para anclar la vista previa flotante
 
@@ -82,10 +90,11 @@ export default function SidebarTerciario() {
         acuerdo: sec.acuerdo || 'Se aprueba por unanimidad',
         archivos: sec.archivos ? [...sec.archivos] : [],
         confidencial: sec.confidencial || false,
-        bloquesActa: sec.bloquesActa ? sec.bloquesActa.map(b => ({ ...b })) : []
+        bloquesActa: sec.bloquesActa ? sec.bloquesActa.map(b => ({ ...b })) : [],
+        plantilla: sec.plantilla || PLANTILLA_POR_DEFECTO
       });
     } else {
-      setForm(estadoVacio);
+      setForm(crearEstadoVacio());
     }
     setOneDriveStatus('');
   }, [sidebarTerciarioAbierto, puntoEditandoId]);
@@ -122,7 +131,13 @@ export default function SidebarTerciario() {
 
   const opcionesRemitente = (REMITENTES_POR_CATEGORIA[form.categoria] || ['Pleno']).map(id => ({ id, label: id }));
   const categoriaActual = CATEGORIAS.find(c => c.id === form.categoria) || CATEGORIAS[0];
-  const hayContenido = !!(form.contenido.trim() || form.acuerdo.trim() || form.bloquesActa.some(b => b.texto.trim()));
+  // El visor solo aparece cuando el usuario empieza a escribir de verdad
+  // (contenido, acuerdo o el texto de alguna sección), no solo porque ya
+  // haya secciones precargadas vacías por defecto. Esas secciones se
+  // preparan igual "detrás de escena" (VistaPreviaFlotante las precarga sin
+  // importar si es o no visible), así que en cuanto aparece ya las trae
+  // listas según la plantilla elegida.
+  const hayContenido = !!(form.contenido.trim() || form.acuerdo.trim() || form.bloquesActa.some(b => b.texto && b.texto.trim()));
 
   function cambiarCategoria(categoria) {
     const opciones = REMITENTES_POR_CATEGORIA[categoria] || ['Pleno'];
@@ -173,7 +188,7 @@ export default function SidebarTerciario() {
   }
 
   function limpiarFormulario() {
-    setForm(estadoVacio);
+    setForm(crearEstadoVacio());
     const inputArchivos = document.getElementById('archivosInput');
     const inputCarpeta = document.getElementById('carpetaInput');
     if (inputArchivos) inputArchivos.value = '';
@@ -190,7 +205,7 @@ export default function SidebarTerciario() {
   async function conArchivoAutoAdjunto(contenido, acuerdo) {
     const anteriores = form.archivos.filter(a => !a.autogenerado);
     const autoPrevio = form.archivos.filter(a => a.autogenerado);
-    const resultado = await generarWordPunto({ contenido, acuerdo, bloquesActa: form.bloquesActa }, proyectoMeta);
+    const resultado = await generarWordPunto({ contenido, acuerdo, bloquesActa: form.bloquesActa, plantilla: form.plantilla }, proyectoMeta);
     if (!resultado) return form.archivos;
     autoPrevio.forEach(a => { eliminarArchivo(a.id).catch(() => {}); });
     const archivoAutoId = 'arch_auto_' + Date.now();
@@ -214,11 +229,12 @@ export default function SidebarTerciario() {
         acuerdo,
         archivos: archivosConAuto,
         confidencial: form.confidencial,
-        bloquesActa: form.bloquesActa
+        bloquesActa: form.bloquesActa,
+        plantilla: form.plantilla
       });
       setPuntoSeleccionadoId(puntoEditandoId);
       setPuntoEditandoId(null);
-      setForm(estadoVacio);
+      setForm(crearEstadoVacio());
       setSidebarTerciarioAbierto(false);
       return;
     }
@@ -236,14 +252,15 @@ export default function SidebarTerciario() {
       archivos: archivosConAuto,
       origenAG: desdeAG,
       confidencial: form.confidencial,
-      bloquesActa: form.bloquesActa
+      bloquesActa: form.bloquesActa,
+      plantilla: form.plantilla
     });
 
     setPuntoSeleccionadoId(nuevoId);
     if (form.archivos.length > 0) {
       subirArchivosAOneDrive(nuevoId, form.archivos);
     }
-    setForm(f => ({ ...f, contenido: '', acuerdo: '', archivos: [], bloquesActa: [] }));
+    setForm(f => ({ ...f, contenido: '', acuerdo: '', archivos: [], bloquesActa: crearBloquesPorDefecto(PLANTILLA_POR_DEFECTO), plantilla: PLANTILLA_POR_DEFECTO }));
   }
 
   async function subirArchivosAOneDrive(puntoId, archivos) {

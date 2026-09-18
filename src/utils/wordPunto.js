@@ -1,7 +1,8 @@
 // Genera el .docx de un punto individual, reflejando el mismo contenido
 // que se arma en VistaPreviaFlotante (logo, intro, bloques de acta, contenido y acuerdo).
-import { Document, Packer, Paragraph, TextRun, AlignmentType, ImageRun, Footer, PageNumber } from 'docx';
+import { Document, Packer, Paragraph, TextRun, AlignmentType, ImageRun, Header, Footer, PageNumber } from 'docx';
 import { cargarImagen } from './logoDocx.js';
+import { INTRO_ACTA_TEXTO, PUENTE_ACTA_TEXTO } from './textosActa.js';
 
 export const WORD_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
@@ -9,8 +10,6 @@ const TITULOS_BLOQUE = {
   considerando: 'CONSIDERANDO',
   antecedente: 'ANTECEDENTES'
 };
-
-const INTRO_TEXTO = 'El Pleno del Órgano de Administración Judicial del Poder Judicial de la Federación, con fundamento en los artículos 94, párrafo segundo, 100, párrafos décimo segundo, décimo tercero y décimo octavo de la Constitución Política de los Estados Unidos Mexicanos; así como 1, fracción VIII, 70, 71, 78, 79, primer párrafo, 80, fracción II de la Ley Orgánica del Poder Judicial de la Federación; y,';
 
 // Recorre una línea con marcadores **negrita**, _itálica_ y %%oculto%% (anidables)
 // y devuelve segmentos planos {text, bold, italics} listos para TextRun.
@@ -60,50 +59,82 @@ function parrafosDeTexto(texto, opciones = {}) {
 }
 
 export async function generarWordPunto(punto, proyectoMeta = {}) {
-  const { contenido = '', acuerdo = '', bloquesActa = [] } = punto;
-  const parrafos = [];
+  const { contenido = '', acuerdo = '', bloquesActa = [], plantilla = 'introduccion' } = punto;
 
+  // El logo va en el encabezado (Header), no como párrafo del cuerpo, para
+  // que docx lo repita en todas las páginas igual que ya hace con el pie
+  // de página (número de página).
+  let header;
   const imagenData = await cargarImagen('/logo.png');
   if (imagenData && imagenData.width > 0 && imagenData.height > 0) {
-    const targetWidth = 140;
+    const targetWidth = 100;
     const targetHeight = Math.round(targetWidth / (imagenData.width / imagenData.height));
-    parrafos.push(new Paragraph({
-      alignment: AlignmentType.LEFT,
-      spacing: { after: 200 },
+    header = new Header({
       children: [
-        new ImageRun({ data: imagenData.data, transformation: { width: targetWidth, height: targetHeight }, type: 'png' })
+        new Paragraph({
+          alignment: AlignmentType.LEFT,
+          children: [
+            new ImageRun({ data: imagenData.data, transformation: { width: targetWidth, height: targetHeight }, type: 'png' })
+          ]
+        })
       ]
-    }));
+    });
   }
 
-  parrafos.push(new Paragraph({
+  // "Introducción": fundamento, secciones, proyecto de acuerdo, acuerdo.
+  // "Proyecto": proyecto de acuerdo primero (sin el párrafo de fundamento),
+  // luego secciones y acuerdo. Mismo orden que VistaPreviaFlotante.
+  const fundamentoParrafo = new Paragraph({
     alignment: AlignmentType.JUSTIFIED,
     spacing: { after: 300 },
-    children: [new TextRun({ text: INTRO_TEXTO, size: 24, color: '000000', font: 'Arial' })]
-  }));
+    children: [new TextRun({ text: INTRO_ACTA_TEXTO, size: 24, color: '000000', font: 'Arial' })]
+  });
 
+  const seccionesParrafos = [];
   bloquesActa.forEach(bloque => {
     if (!bloque.texto || !bloque.texto.trim()) return;
     const titulo = bloque.tipo === 'personalizada' ? (bloque.titulo || 'SECCIÓN') : (TITULOS_BLOQUE[bloque.tipo] || 'SECCIÓN');
-    parrafos.push(new Paragraph({
+    seccionesParrafos.push(new Paragraph({
       alignment: AlignmentType.CENTER,
       spacing: { before: 100, after: 160 },
       children: [new TextRun({ text: titulo, bold: true, size: 24, color: '000000', font: 'Arial' })]
     }));
-    parrafos.push(...parrafosDeTexto(bloque.texto, { afterUltima: 300 }));
+    seccionesParrafos.push(...parrafosDeTexto(bloque.texto, { afterUltima: 300 }));
   });
 
   const contenidoLimpio = contenido.replace(/\*\*/g, '').replace(/_(.+?)_/g, '$1').replace(/%%(.+?)%%/g, '$1');
-  if (contenidoLimpio.trim()) {
-    parrafos.push(new Paragraph({
-      alignment: AlignmentType.JUSTIFIED,
-      spacing: { after: 300 },
-      children: [new TextRun({ text: contenidoLimpio.toUpperCase(), bold: true, size: 24, color: '000000', font: 'Arial' })]
-    }));
-  }
+  const proyectoParrafo = contenidoLimpio.trim() ? new Paragraph({
+    alignment: AlignmentType.JUSTIFIED,
+    spacing: { after: 300 },
+    children: [new TextRun({ text: contenidoLimpio.toUpperCase(), bold: true, size: 24, color: '000000', font: 'Arial' })]
+  }) : null;
 
-  if (acuerdo.trim()) {
-    parrafos.push(...parrafosDeTexto(acuerdo));
+  const acuerdoParrafos = acuerdo.trim() ? parrafosDeTexto(acuerdo) : [];
+
+  // Línea en blanco, frase puente y otra línea en blanco entre las secciones
+  // y el proyecto de acuerdo (solo en "Introducción").
+  const parrafoVacio = () => new Paragraph({ spacing: { after: 200 }, children: [new TextRun({ text: '', size: 24, font: 'Arial' })] });
+  const puenteParrafos = [
+    parrafoVacio(),
+    new Paragraph({
+      alignment: AlignmentType.JUSTIFIED,
+      spacing: { after: 200 },
+      children: [new TextRun({ text: PUENTE_ACTA_TEXTO, size: 24, color: '000000', font: 'Arial' })]
+    }),
+    parrafoVacio()
+  ];
+
+  const parrafos = [];
+  if (plantilla === 'proyecto') {
+    if (proyectoParrafo) parrafos.push(proyectoParrafo);
+    parrafos.push(...seccionesParrafos);
+    parrafos.push(...acuerdoParrafos);
+  } else {
+    parrafos.push(fundamentoParrafo);
+    parrafos.push(...seccionesParrafos);
+    parrafos.push(...puenteParrafos);
+    if (proyectoParrafo) parrafos.push(proyectoParrafo);
+    parrafos.push(...acuerdoParrafos);
   }
 
   if (parrafos.length === 0) return null;
@@ -118,7 +149,12 @@ export async function generarWordPunto(punto, proyectoMeta = {}) {
   });
 
   const doc = new Document({
-    sections: [{ properties: {}, footers: { default: footer }, children: parrafos }]
+    sections: [{
+      properties: {},
+      headers: header ? { default: header } : undefined,
+      footers: { default: footer },
+      children: parrafos
+    }]
   });
   const blob = await Packer.toBlob(doc);
   const fechaTexto = proyectoMeta.fecha ? ` ${proyectoMeta.fecha}` : '';
