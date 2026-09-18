@@ -51,7 +51,8 @@ export default function SidebarSecundario({ onAbrirCreacion }) {
       contenido: puntoVistaPrevia?.contenido || '',
       acuerdo: puntoVistaPrevia?.acuerdo || '',
       bloquesActa: puntoVistaPrevia?.bloquesActa || [],
-      plantilla: puntoVistaPrevia?.plantilla || PLANTILLA_POR_DEFECTO
+      plantilla: puntoVistaPrevia?.plantilla || PLANTILLA_POR_DEFECTO,
+      tipoVotacion: puntoVistaPrevia?.tipoVotacion || ''
     };
     const codigoVistaPrevia = puntoVistaPrevia
       ? getTituloPunto(puntoVistaPrevia, secciones.indexOf(puntoVistaPrevia), secciones)

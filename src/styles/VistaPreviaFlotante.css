@@ -232,6 +232,22 @@
 .vista-previa-hoja .vp-contenido {
   text-transform: uppercase;
 }
+.vp-engrose {
+  margin-top: 20px;
+}
+.vp-engrose-firma {
+  text-align: center;
+  margin-top: 50px;
+  font-weight: 700;
+}
+.vp-engrose-linea {
+  width: 260px;
+  margin: 0 auto 6px;
+  border-bottom: 1px solid #000;
+}
+.vp-engrose-nombre {
+  margin-bottom: 2px;
+}
 .vp-bloque {
   margin-bottom: 20px;
 }

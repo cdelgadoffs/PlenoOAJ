@@ -27,11 +27,6 @@ export default function EditorOcultable({ id, value, onChange, placeholder, auto
   function sincronizar() {
     if (!ref.current) return;
     let markers = nodoAMarkers(ref.current);
-    // Las líneas de tabla (##tabla##<html codificado>) van completas: envolverlas
-    // en ** o mezclarlas con el prefijo ordinal rompería su marcador y el HTML
-    // codificado, así que quedan fuera de estas transformaciones. Las líneas
-    // alineadas (##align-<valor>##texto) mantienen su prefijo intacto y solo
-    // se envuelve en ** el texto que sigue.
     if (negritaTotal) {
       markers = markers.split('\n').map(linea => {
         if (linea.startsWith('##tabla##')) return linea;

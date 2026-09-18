@@ -4,6 +4,7 @@ import { usePermisos } from '../hooks/usePermisos.js';
 import Calendarizacion from './Calendarizacion.jsx';
 import Email from './Email.jsx';
 import Quorum from './Quorum.jsx';
+import SEPLE from './SEPLE.jsx';
 import Sync from './Sync.jsx';
 import GestionUsuarios from './GestionUsuarios.jsx';
 import '../styles/SidebarNuevo.css';
@@ -56,7 +57,7 @@ export default function SidebarNuevo() {
           <li className="nuevo-menu-item" id="menuItemCalendarizacion" style={{ display: puedeCalendarizacion ? '' : 'none' }} onClick={() => abrirPanel('calendarizacion', true)}>Calendarización anual</li>
           <li className="nuevo-menu-item" data-permiso="email" id="menuItemEmail" style={{ display: puedeEmail ? '' : 'none' }} onClick={() => abrirPanel('email', false)}>Email</li>
           <li className="nuevo-menu-item" id="menuItemQuorum" onClick={() => abrirPanel('quorum', true)}>Quórum</li>
-          <li className="nuevo-menu-item">Notificaciones</li>
+          <li className="nuevo-menu-item" id="menuItemSEPLE" onClick={() => abrirPanel('seple', true)}>SEPLE</li>
           <li className="nuevo-menu-item">Perfil</li>
           <li className="nuevo-menu-item" id="menuItemSync" style={{ display: puedeSync ? '' : 'none' }} onClick={() => abrirPanel('sync', false)}>Carpeta local</li>
           <li className="nuevo-menu-item" id="menuItemUsuarios" style={{ display: puedeGestionarUsuarios ? '' : 'none' }} onClick={() => abrirPanel('usuarios', false)}>Gestión de usuarios</li>
@@ -81,6 +82,10 @@ export default function SidebarNuevo() {
 
       <div className={'sb-nav nuevo-panel' + (panelNuevoActivo === 'quorum' ? '' : ' hidden')} id="panelQuorum">
         {panelNuevoActivo === 'quorum' && <Quorum onVolver={volverAlMenu} />}
+      </div>
+
+      <div className={'sb-nav nuevo-panel' + (panelNuevoActivo === 'seple' ? '' : ' hidden')} id="panelSEPLEWrap">
+        {panelNuevoActivo === 'seple' && <SEPLE onVolver={volverAlMenu} />}
       </div>
 
       <div className={'sb-nav nuevo-panel' + (panelNuevoActivo === 'sync' ? '' : ' hidden')} id="panelSync">

@@ -2,7 +2,21 @@ import { useEffect, useState } from 'react';
 import { renderConOcultos, capitalizarPalabras } from '../utils/texto.js';
 import { INTRO_ACTA_NOMBRE, INTRO_ACTA_RESTO, PUENTE_ACTA_TEXTO } from '../utils/textosActa.js';
 import { PLANTILLAS, PLANTILLA_POR_DEFECTO, SECCIONES_POR_DEFECTO, crearBloquesPorDefecto } from '../utils/plantillasActa.js';
+import { fechaEnLetras } from '../utils/fechaLetras.js';
+import { describirVotacionEngrose } from '../utils/votacion.js';
+import { useProyecto } from '../context/ProyectoContext.jsx';
 import EditorOcultable from './EditorOcultable.jsx';
+
+function nombreFirmante(asistente, conGrado) {
+  if (!asistente) return conGrado ? '<<presidente>>' : '<<secretario>>';
+  if (!conGrado) return asistente.nombre.toUpperCase();
+  const gradoMap = {
+    'Licenciatura': asistente.genero === 'femenino' ? 'LICENCIADA' : 'LICENCIADO',
+    'Maestría': asistente.genero === 'femenino' ? 'MAESTRA' : 'MAESTRO',
+    'Doctorado': asistente.genero === 'femenino' ? 'DOCTORA' : 'DOCTOR'
+  };
+  return `${gradoMap[asistente.grado] || ''} ${asistente.nombre}`.toUpperCase().replace(/\s+/g, ' ').trim();
+}
 
 const TIPOS_BLOQUE = [
   { id: 'considerando', label: 'Considerando', titulo: 'CONSIDERANDO', placeholder: 'Considerandos...', icon: 'fa-scale-balanced' },
@@ -27,6 +41,7 @@ const TABLA_MAX_FILAS = 8;
 const TABLA_MAX_COLS = 10;
 
 export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, soloLectura, codigoLectura, remitenteLectura, onCerrarLectura }) {
+  const { proyectoMeta, asistentes, secretarioEjecutivo } = useProyecto();
   const [pos, setPos] = useState(null);
   const plantilla = form.plantilla || PLANTILLA_POR_DEFECTO;
   const setPlantilla = (id) => setForm(f => ({ ...f, plantilla: id }));
@@ -109,6 +124,12 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, 
   const tiposDisponibles = tiposDisponiblesPara(bloques);
   const seccionActual = tiposDisponibles.find(t => t.id === tipoNuevoBloque) || PLACEHOLDER_SECCION;
 
+  const presidenteAsistente = asistentes.find(a => a.presidente);
+  const descriptorVotacion = describirVotacionEngrose(form.tipoVotacion, asistentes);
+  const tipoSesionTexto = (proyectoMeta.tipoSesion || 'ordinaria').toLowerCase();
+  const fechaSesionTexto = fechaEnLetras(proyectoMeta.fecha) || '<<fecha>>';
+  const textoEngrose = `Así lo aprobaron ${descriptorVotacion}las personas integrantes del Pleno del Órgano de Administración Judicial, en sesión ${tipoSesionTexto} de ${fechaSesionTexto}, firmando al calce el Presidente del Órgano de Administración Judicial y la persona Titular de la Secretaría Ejecutiva del Pleno, de conformidad con lo dispuesto en los artículos 91, 99, fracción VIII y 100, párrafo primero de la Ley Orgánica del Poder Judicial de la Federación.`;
+
   function agregarBloque() {
     if (esPersonalizada) {
       const titulo = tituloPersonalizado.trim();
@@ -153,9 +174,6 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, 
     const range = sel.getRangeAt(0);
     let elemento = range.commonAncestorContainer;
     if (elemento.nodeType === Node.TEXT_NODE) elemento = elemento.parentElement;
-    // Extraer y reinsertar contenido dentro de una celda (range.extractContents
-    // sobre una selección que toca estructura de tabla) puede romper filas/columnas,
-    // así que esta función queda deshabilitada mientras la selección esté en una tabla.
     if (elemento.closest('table')) return;
     const tamanoActual = parseFloat(window.getComputedStyle(elemento).fontSize) || 13;
     const nuevoTamano = Math.min(72, Math.max(8, Math.round(tamanoActual + delta)));
@@ -430,6 +448,23 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, 
             style={{ outline: 'none' }}
             soloLectura={soloLectura}
           />
+          {soloLectura && (
+            <div className="vp-engrose">
+              <div style={{ textAlign: 'justify' }}>{textoEngrose}</div>
+              <div className="vp-engrose-firma">
+                <div className="vp-engrose-linea"></div>
+                <div className="vp-engrose-nombre">{nombreFirmante(presidenteAsistente, true)}</div>
+                <div>PRESIDENTE DEL ÓRGANO DE ADMINISTRACIÓN JUDICIAL</div>
+                <div>DEL PODER JUDICIAL DE LA FEDERACIÓN</div>
+              </div>
+              <div className="vp-engrose-firma">
+                <div className="vp-engrose-linea"></div>
+                <div className="vp-engrose-nombre">{nombreFirmante(secretarioEjecutivo, false)}</div>
+                <div>SECRETARIO EJECUTIVO DEL PLENO</div>
+                <div>DEL ÓRGANO DE ADMINISTRACIÓN JUDICIAL</div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -5,6 +5,7 @@ import {
   guardarSesiones as persistirSesiones, guardarProyectoMeta as persistirProyectoMeta,
   guardarDiaSesion as persistirDiaSesion, guardarExcepciones as persistirExcepciones,
   cargarAsistentes, guardarAsistentes as persistirAsistentes,
+  cargarSecretarioEjecutivo, guardarSecretarioEjecutivo as persistirSecretarioEjecutivo,
   cargarAnclasNumeracion, guardarAnclasNumeracion as persistirAnclasNumeracion
 } from '../utils/storage.js';
 import { conPuntosFijosAsegurados, conPunto2Actualizado, getInsertIndex } from '../utils/puntos.js';
@@ -32,6 +33,7 @@ export function ProyectoProvider({ children }) {
   const [puntoEditandoId, setPuntoEditandoId] = useState(null);
   const [puntoPreviaSeleccionadoId, setPuntoPreviaSeleccionadoId] = useState(null);
   const [asistentes, setAsistentes] = useState(() => cargarAsistentes());
+  const [secretarioEjecutivo, setSecretarioEjecutivo] = useState(() => cargarSecretarioEjecutivo());
   // ✅ Fix B: anclas de numeración persistidas
   const [anclasNumeracion, setAnclasNumeracion] = useState(() => cargarAnclasNumeracion());
 
@@ -45,6 +47,7 @@ export function ProyectoProvider({ children }) {
   useEffect(() => { persistirDiaSesion(diaSesion); }, [diaSesion]);
   useEffect(() => { persistirExcepciones(excepciones); }, [excepciones]);
   useEffect(() => { persistirAsistentes(asistentes); }, [asistentes]);
+  useEffect(() => { persistirSecretarioEjecutivo(secretarioEjecutivo); }, [secretarioEjecutivo]);
   // ✅ Fix B: persistir anclas
   useEffect(() => { persistirAnclasNumeracion(anclasNumeracion); }, [anclasNumeracion]);
 
@@ -298,6 +301,13 @@ export function ProyectoProvider({ children }) {
     setAsistentes(prev => prev.map((a, i) => i === idx ? { ...a, presente } : a));
   }
 
+  function guardarSecretarioEjecutivo(datos) {
+    setSecretarioEjecutivo(datos);
+  }
+  function eliminarSecretarioEjecutivo() {
+    setSecretarioEjecutivo(null);
+  }
+
   function actualizarPunto(id, cambios) {
     setSecciones(prev => prev.map(s => s.id === id ? { ...s, ...cambios } : s));
   }
@@ -411,12 +421,6 @@ export function ProyectoProvider({ children }) {
     });
     registrar('sesion', 'Restableció la sesión', '');
   }
-  // Cierra formalmente la sesión activa: la marca con `terminada: true`, la
-  // señal que usan obtenerProximaSesion (para dejar de considerarla "próxima")
-  // y los badges de celebrada en la cinta/calendario. Es independiente de
-  // `horaFin`, que solo indica que se pulsó "Finalizar sesión" (habilita el
-  // widget de hora de fin y el botón de descargar acta) sin ocultar
-  // secciones ni marcar la sesión como celebrada por sí solo.
   function terminarSesionCelebracion() {
     if (!sesionActivaFecha) return;
     setSesiones(prev => {
@@ -513,6 +517,7 @@ export function ProyectoProvider({ children }) {
     moverPunto, eliminarPunto, toggleAnexo, agregarPunto, editarPuntoExistente,
     cargarSesion, eliminarSesion, regenerarCalendario, agregarVacacion, agregarAsueto, eliminarExcepcion,
     asistentes, agregarAsistente, eliminarAsistente, editarAsistente, toggleAsistentePresente,
+    secretarioEjecutivo, guardarSecretarioEjecutivo, eliminarSecretarioEjecutivo,
     actualizarPunto, agregarActa, crearSesionExtraordinaria, adjuntarArchivoAPunto, setOneDriveFolder,
     toggleListaCerrada, comenzarSesionCelebracion, finalizarSesionCelebracion, restablecerSesionCelebracion, terminarSesionCelebracion,
     actualizarHoraInicioCelebracion, actualizarHoraFinCelebracion, ajustarNumerosDesde,

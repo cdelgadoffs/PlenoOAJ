@@ -6,6 +6,7 @@ export const SESIONES_KEY = 'sesiones';
 export const DIA_SESION_KEY = 'diaSesion';
 export const EXCEPCIONES_KEY = 'excepcionesCalendario';
 export const ASISTENTES_KEY = 'asistentesQuorum';
+export const SECRETARIO_EJECUTIVO_KEY = 'secretarioEjecutivoPleno';
 export const CINTA_FILTRO_KEY = 'cintaFiltro';
 export const ANCLAS_NUMERACION_KEY = 'anclasNumeracion';
 export const cargarAnclasNumeracion = () => leerJSON(ANCLAS_NUMERACION_KEY, {});
@@ -31,6 +32,9 @@ export const guardarSesiones = (sesiones) => guardarJSON(SESIONES_KEY, sesiones)
 
 export const cargarAsistentes = () => leerJSON(ASISTENTES_KEY, []);
 export const guardarAsistentes = (asistentes) => guardarJSON(ASISTENTES_KEY, asistentes);
+
+export const cargarSecretarioEjecutivo = () => leerJSON(SECRETARIO_EJECUTIVO_KEY, null);
+export const guardarSecretarioEjecutivo = (secretario) => guardarJSON(SECRETARIO_EJECUTIVO_KEY, secretario);
 
 export function cargarDiaSesion() {
   const data = localStorage.getItem(DIA_SESION_KEY);
