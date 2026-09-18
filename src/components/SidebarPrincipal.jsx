@@ -124,13 +124,25 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
       <div className="sb-header">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
           <div className="sb-title" id="docTitleSidebar">Sesión {tipo} N° {numero}</div>
-          <button
-            className="btn-add"
-            title="Editar número de sesión"
-            onClick={() => { setNumeroEditado(numero); setModalNumeroAbierto(true); }}
-          >
-            <i className="fas fa-pen"></i>
-          </button>
+          {vistaActual === 'proyecto' && (
+            <button
+              className="btn-add"
+              title="Editar número de sesión"
+              onClick={() => { setNumeroEditado(numero); setModalNumeroAbierto(true); }}
+            >
+              <i className="fas fa-pen"></i>
+            </button>
+          )}
+          {vistaActual === 'sesionPrevia' && !horaInicioSesion && (
+            <span style={{ background: '#dbeafe', color: '#1d4ed8', border: '1px solid #1d4ed8', fontSize: '12px', fontWeight: '700', padding: '4px 16px', borderRadius: '6px', textTransform: 'uppercase', letterSpacing: '0.03em', marginTop: '3px' }}>
+              Previa
+            </span>
+          )}
+          {vistaActual === 'sesionPrevia' && horaFinSesion && (
+            <span style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #15803d', fontSize: '12px', fontWeight: '700', padding: '4px 16px', borderRadius: '6px', textTransform: 'uppercase', letterSpacing: '0.03em', marginTop: '3px' }}>
+              Celebrada
+            </span>
+          )}
         </div>
         <div className="sb-subtitle" id="docSubSidebar">{fechaTexto}</div>
       </div>
