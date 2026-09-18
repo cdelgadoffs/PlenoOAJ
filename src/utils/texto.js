@@ -88,7 +88,7 @@ export function ocultarParaActa(texto) {
 }
 
 function procesarSegmentos(texto, prefijoKey) {
-  const partes = texto.split(/(\*\*.+?\*\*|_.+?_|%%.+?%%)/g).filter(p => p !== '');
+  const partes = texto.split(/(\*\*.+?\*\*|_.+?_|%%.+?%%|##fs[\d.]+##.+?##\/fs##)/g).filter(p => p !== '');
   return partes.map((parte, i) => {
     const key = `${prefijoKey}-${i}`;
     const negrita = parte.match(/^\*\*(.+)\*\*$/);
@@ -104,11 +104,31 @@ function procesarSegmentos(texto, prefijoKey) {
     if (oculto) {
       return React.createElement('span', { key, className: 'texto-oculto' }, oculto[1]);
     }
+    const tamano = parte.match(/^##fs([\d.]+)##(.+)##\/fs##$/);
+    if (tamano) {
+      return React.createElement('span', { key, style: { fontSize: `${tamano[1]}px` } }, procesarSegmentos(tamano[2], key));
+    }
     return parte;
   });
 }
 
 const PREFIJO_LISTA = '##li##';
+const PREFIJO_TABLA = '##tabla##';
+const PREFIJO_ALINEAR = '##align-';
+
+function extraerAlineacion(linea) {
+  const match = linea.match(/^##align-([a-z]+)##/);
+  if (!match) return null;
+  return { align: match[1], resto: linea.slice(match[0].length) };
+}
+
+function decodificarTabla(linea) {
+  try {
+    return decodeURIComponent(escape(atob(linea.slice(PREFIJO_TABLA.length))));
+  } catch {
+    return '';
+  }
+}
 
 export function renderConOcultos(texto) {
   if (!texto) return texto;
@@ -130,6 +150,17 @@ export function renderConOcultos(texto) {
       return;
     }
     cerrarLista(li);
+    if (linea.startsWith(PREFIJO_TABLA)) {
+      nodos.push(React.createElement('div', { key: `tabla-${li}`, dangerouslySetInnerHTML: { __html: decodificarTabla(linea) } }));
+      ultimaFueLista = false;
+      return;
+    }
+    const alineacion = extraerAlineacion(linea);
+    if (alineacion) {
+      nodos.push(React.createElement('div', { key: `align-${li}`, style: { textAlign: alineacion.align } }, procesarSegmentos(alineacion.resto, `l${li}`)));
+      ultimaFueLista = false;
+      return;
+    }
     if (nodos.length > 0 && !ultimaFueLista) nodos.push(React.createElement('br', { key: `br-${li}` }));
     ultimaFueLista = false;
     nodos.push(...procesarSegmentos(linea, `l${li}`));
@@ -153,7 +184,8 @@ function formatearLineaInline(linea) {
   const escapado = escaparHtml(linea);
   const conNegritas = escapado.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   const conItalica = conNegritas.replace(/_(.+?)_/g, '<em>$1</em>');
-  return conItalica.replace(/%%(.+?)%%/g, '<span class="marca-oculta">$1</span>');
+  const conTamano = conItalica.replace(/##fs([\d.]+)##(.+?)##\/fs##/g, '<span style="font-size:$1px">$2</span>');
+  return conTamano.replace(/%%(.+?)%%/g, '<span class="marca-oculta">$1</span>');
 }
 
 export function markersAHtml(texto) {
@@ -162,6 +194,20 @@ export function markersAHtml(texto) {
   let enLista = false;
   lineas.forEach((linea, i) => {
     const esLi = linea.startsWith('##li##');
+    const esTabla = linea.startsWith(PREFIJO_TABLA);
+    if (esTabla) {
+      if (enLista) { html += '</ol>'; enLista = false; }
+      else if (i > 0) html += '<br>';
+      html += decodificarTabla(linea);
+      return;
+    }
+    const alineacion = extraerAlineacion(linea);
+    if (alineacion) {
+      if (enLista) { html += '</ol>'; enLista = false; }
+      else if (i > 0) html += '<br>';
+      html += `<div style="text-align:${alineacion.align}">${formatearLineaInline(alineacion.resto)}</div>`;
+      return;
+    }
     const contenidoLinea = formatearLineaInline(esLi ? linea.slice(6) : linea);
     if (esLi) {
       if (!enLista) { html += '<ol>'; enLista = true; }
@@ -192,13 +238,24 @@ export function nodoAMarkers(nodo) {
     } else if (hijo.nodeName === 'SPAN' && hijo.classList.contains('marca-oculta')) {
       const interno = nodoAMarkers(hijo);
       resultado += interno ? `%%${interno}%%` : '';
+    } else if (hijo.nodeName === 'SPAN' && hijo.style && hijo.style.fontSize) {
+      const interno = nodoAMarkers(hijo);
+      const px = parseFloat(hijo.style.fontSize);
+      resultado += (interno && px) ? `##fs${px}##${interno}##/fs##` : interno;
+    } else if (hijo.nodeName === 'TABLE') {
+      if (resultado && !resultado.endsWith('\n')) resultado += '\n';
+      resultado += PREFIJO_TABLA + btoa(unescape(encodeURIComponent(hijo.outerHTML)));
     } else if (hijo.nodeName === 'OL' || hijo.nodeName === 'UL') {
       if (resultado && !resultado.endsWith('\n')) resultado += '\n';
       const items = Array.from(hijo.children).filter(c => c.nodeName === 'LI');
       resultado += items.map(li => '##li##' + nodoAMarkers(li)).join('\n');
     } else if (hijo.nodeName === 'DIV' || hijo.nodeName === 'P') {
       if (resultado && !resultado.endsWith('\n')) resultado += '\n';
-      resultado += nodoAMarkers(hijo);
+      const align = hijo.style && hijo.style.textAlign;
+      const interno = nodoAMarkers(hijo);
+      resultado += (align && align !== 'left' && align !== 'start' && interno.trim())
+        ? `${PREFIJO_ALINEAR}${align}##${interno}`
+        : interno;
     } else {
       resultado += nodoAMarkers(hijo);
     }

@@ -3,7 +3,7 @@ import { agregarNombrePropio } from '../utils/diccionarioPropios.js';
 import { aplicarPrefijosAcuerdo } from '../utils/ordinales.js';
 import { markersAHtml, nodoAMarkers } from '../utils/texto.js';
 
-export default function EditorOcultable({ id, value, onChange, placeholder, autoAjustar, negritaTotal, modoAcuerdo, modoConsiderando, className, style }) {
+export default function EditorOcultable({ id, value, onChange, placeholder, autoAjustar, negritaTotal, modoAcuerdo, modoConsiderando, className, style, soloLectura }) {
   const ref = useRef(null);
   const [botonPos, setBotonPos] = useState(null);
   const [textoSeleccionado, setTextoSeleccionado] = useState('');
@@ -28,8 +28,14 @@ export default function EditorOcultable({ id, value, onChange, placeholder, auto
     if (!ref.current) return;
     let markers = nodoAMarkers(ref.current);
     if (negritaTotal) {
-      const plano = markers.replace(/\*\*/g, '');
-      markers = plano.trim() ? `**${plano}**` : '';
+      markers = markers.split('\n').map(linea => {
+        if (linea.startsWith('##tabla##')) return linea;
+        const alineada = linea.match(/^(##align-[a-z]+##)(.*)$/s);
+        const prefijo = alineada ? alineada[1] : '';
+        const cuerpo = alineada ? alineada[2] : linea;
+        const plano = cuerpo.replace(/\*\*/g, '');
+        return prefijo + (plano.trim() ? `**${plano}**` : plano);
+      }).join('\n');
     }
     if (modoAcuerdo) {
       markers = aplicarPrefijosAcuerdo(markers);
@@ -91,7 +97,7 @@ export default function EditorOcultable({ id, value, onChange, placeholder, auto
 
   return (
     <div style={{ position: 'relative' }}>
-      {botonPos && (
+      {!soloLectura && botonPos && (
         <div
           style={{ position: 'absolute', top: botonPos.top, center: botonPos.left, display: 'flex', gap: '4px' }}
         >
@@ -118,19 +124,19 @@ export default function EditorOcultable({ id, value, onChange, placeholder, auto
         ref={ref}
         className={className ?? ('ter-textarea ter-textarea-editable' + (autoAjustar ? ' ter-textarea-auto' : ''))}
         style={{ ...(negritaTotal ? { fontWeight: 700 } : null), ...style }}
-        contentEditable
+        contentEditable={!soloLectura}
         suppressContentEditableWarning
         data-placeholder={placeholder}
-        onInput={sincronizar}
-        onMouseUp={manejarSeleccion}
-        onKeyUp={manejarSeleccion}
-        onBlur={() => {
+        onInput={soloLectura ? undefined : sincronizar}
+        onMouseUp={soloLectura ? undefined : manejarSeleccion}
+        onKeyUp={soloLectura ? undefined : manejarSeleccion}
+        onBlur={soloLectura ? undefined : () => {
           setBotonPos(null);
           if (ref.current) {
             ref.current.innerHTML = markersAHtml(ultimoValorExternoRef.current);
           }
         }}
-        onPaste={manejarPegado}
+        onPaste={soloLectura ? undefined : manejarPegado}
       ></div>
     </div>
   );

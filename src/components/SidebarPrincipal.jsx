@@ -11,6 +11,7 @@ import { obtenerProximaSesion } from '../utils/calendario.js';
 import { generarWordActa } from '../utils/wordActa.js';
 import HorariosCelebracion from './HorariosCelebracion.jsx';
 import IndicadorEnVivo from './IndicadorEnVivo.jsx';
+import BotonTerminarSesion from './BotonTerminarSesion.jsx';
 
 const VISTAS = [
   { id: 'inicio', label: 'Inicio' },
@@ -23,7 +24,7 @@ const SECCIONES_VISIBLES = SECCIONES_DEL_DOCUMENTO.filter(sec => sec !== 'licenc
 
 export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalPuntos = 0 }) {
   const { vistaActual, setVistaActual, terminoBusqueda, sidebarTerciarioAbierto, archivosTemporales, eliminarArchivoTemporalFn } = useUI();
-  const { proyectoMeta, secciones, seccionActual, setSeccionActual, setPuntoSeleccionadoId, sesiones, sesionActivaFecha, toggleAsistentePresente, asistentes, comenzarSesionCelebracion, finalizarSesionCelebracion, restablecerSesionCelebracion, actualizarHoraInicioCelebracion, actualizarHoraFinCelebracion, ajustarNumerosDesde } = useProyecto();
+  const { proyectoMeta, secciones, seccionActual, setSeccionActual, setPuntoSeleccionadoId, sesiones, sesionActivaFecha, toggleAsistentePresente, asistentes, comenzarSesionCelebracion, finalizarSesionCelebracion, actualizarHoraInicioCelebracion, actualizarHoraFinCelebracion, ajustarNumerosDesde } = useProyecto();
 
   // ✅ Variables derivadas que se necesitan en los useState de abajo
   const tipo = proyectoMeta.tipoSesion || 'Ordinaria';
@@ -31,6 +32,7 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
 
   const horaInicioSesion = sesionActivaFecha ? sesiones[sesionActivaFecha]?.horaInicio : null;
   const horaFinSesion = sesionActivaFecha ? sesiones[sesionActivaFecha]?.horaFin : null;
+  const sesionTerminada = sesionActivaFecha ? !!sesiones[sesionActivaFecha]?.terminada : false;
   const presentes = asistentes.filter(a => a.presente).length;
   const proximaSesionFecha = obtenerProximaSesion(sesiones);
   const esSesionProxima = sesionActivaFecha === proximaSesionFecha;
@@ -163,6 +165,7 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
         {VISTAS.map(v => {
           if (esLector && (v.id === 'inicio' || v.id === 'proyecto')) return null;
           if (v.id === 'sesionPrevia' && !esSesionProxima) return null;
+          if (v.id === 'proyecto' && sesionTerminada) return null;
           const activo = vistaActual === v.id;
           const expandido = v.acordeon && activo && acordeonAbierto;
           const bloqueadoPorSesion = (sesionEnCurso && v.id !== 'sesionPrevia') || (v.id === 'sesionPrevia' && !listaCerrada && !sesionEnCurso);
@@ -345,15 +348,7 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
               {generandoActaQuorum ? 'Generando...' : `Descargar acta de Sesión ${tipo} N°${numero}`}
             </button>
           )}
-          {horaInicioSesion && (
-            <button
-              className="btn-nuevo-proyecto"
-              style={{ margin: 0, width: '100%', background: 'transparent', color: '#888', border: '1px solid #ccc' }}
-              onClick={restablecerSesionCelebracion}
-            >
-              Restablecer sesión
-            </button>
-          )}
+          {horaFinSesion && <BotonTerminarSesion />}
           {horaInicioSesion && !horaFinSesion && (
             <button className="btn-nuevo-proyecto" style={{ margin: 0, width: '100%', background: '#b91c1c' }} onClick={finalizarSesionCelebracion}>
               Finalizar sesión

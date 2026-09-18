@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useProyecto } from '../context/ProyectoContext.jsx';
 import { formatearFechaES, formatearFechaCorta, hoyLocalISO, sumarDias, parsearFechaLocal } from '../utils/fechas.js';
-import { obtenerSesionesDelMes } from '../utils/calendario.js';
+import { obtenerSesionesDelMes, obtenerProximaSesion } from '../utils/calendario.js';
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
@@ -61,8 +61,7 @@ export default function Calendarizacion({ mostrarFormulario, setMostrarFormulari
 
   const fechasMes = obtenerSesionesDelMes(sesiones, mesControl);
   const hoy = hoyLocalISO();
-  let proximaGlobal = null;
-  for (const f of Object.keys(sesiones).sort()) { if (f >= hoy) { proximaGlobal = f; break; } }
+  const proximaGlobal = obtenerProximaSesion(sesiones);
 
   const mesesDisponibles = Array.from(new Set([
     ...Object.keys(sesiones).map(f => f.substring(0, 7)),
@@ -73,7 +72,7 @@ export default function Calendarizacion({ mostrarFormulario, setMostrarFormulari
   fechasMes.forEach(f => {
     const s = sesiones[f];
     if (!s) return;
-    if (f < hoy && s.secciones && s.secciones.some(p => !p.fijo)) celebradas++;
+    if (s.terminada || (f < hoy && s.secciones && s.secciones.some(p => !p.fijo))) celebradas++;
   });
 
   return (
@@ -196,12 +195,14 @@ export default function Calendarizacion({ mostrarFormulario, setMostrarFormulari
                 const sesion = sesiones[f];
                 if (!sesion) return null;
                 const tieneContenido = sesion.secciones && sesion.secciones.some(s => !s.fijo);
+                const celebrada = !!sesion.terminada || (f < hoy && tieneContenido);
                 const esSeleccionada = f === sesionActivaFecha;
                 const puedeEliminar = sesion.tipoSesion === 'Extraordinaria';
                 let clase = 'control-item';
                 let estado = '';
                 if (f === proximaGlobal) { clase += ' proxima'; estado = 'Próxima'; }
-                else if (f < hoy) { clase += tieneContenido ? ' celebrada' : ' no-celebrada'; estado = tieneContenido ? 'Celebrada' : 'No celebrada'; }
+                else if (celebrada) { clase += ' celebrada'; estado = 'Celebrada'; }
+                else if (f < hoy) { clase += ' no-celebrada'; estado = 'No celebrada'; }
                 else { clase += ' pendiente'; estado = 'Pendiente'; }
 
                 return (

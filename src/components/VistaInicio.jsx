@@ -5,7 +5,7 @@ import { generarWordActa } from '../utils/wordActa.js';
 import { generarZipArchivosSesion } from '../utils/zipArchivos.js'; 
 
 export default function VistaInicio() {
-  const { secciones, sesiones, sesionActivaFecha, proyectoMeta, asistentes } = useProyecto();
+  const { secciones, sesiones, sesionActivaFecha, proyectoMeta, asistentes, restablecerSesionCelebracion } = useProyecto();
   const [generandoActa, setGenerandoActa] = useState(false);
 
   const sesionActiva = sesionActivaFecha ? sesiones[sesionActivaFecha] : null;
@@ -102,6 +102,13 @@ export default function VistaInicio() {
             onClick={generarActa}
           >
             {generandoActa ? 'Generando...' : 'Descargar acta de sesión'}
+          </button>
+          <button
+            className="btn-nuevo-proyecto"
+            style={{ margin: '8px 0 0', background: 'transparent', color: '#888', border: '1px solid #ccc' }}
+            onClick={restablecerSesionCelebracion}
+          >
+            Restablecer sesión
           </button>
         </div>
       )}
