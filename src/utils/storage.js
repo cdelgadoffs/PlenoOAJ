@@ -12,6 +12,22 @@ export const ANCLAS_NUMERACION_KEY = 'anclasNumeracion';
 export const cargarAnclasNumeracion = () => leerJSON(ANCLAS_NUMERACION_KEY, {});
 export const guardarAnclasNumeracion = (v) => guardarJSON(ANCLAS_NUMERACION_KEY, v);
 
+export const EMAIL_CONTACTOS_KEY = 'emailContactos';
+export const cargarContactosEmail = () => leerJSON(EMAIL_CONTACTOS_KEY, []);
+export const guardarContactosEmail = (v) => guardarJSON(EMAIL_CONTACTOS_KEY, v);
+
+export const EMAIL_REMITENTES_KEY = 'emailRemitentesCorreo';
+export const cargarRemitentesCorreo = () => leerJSON(EMAIL_REMITENTES_KEY, {});
+export const guardarRemitentesCorreo = (v) => guardarJSON(EMAIL_REMITENTES_KEY, v);
+
+export const EMAIL_PLANTILLAS_KEY = 'emailPlantillas';
+export const cargarPlantillasEmail = () => leerJSON(EMAIL_PLANTILLAS_KEY, []);
+export const guardarPlantillasEmail = (v) => guardarJSON(EMAIL_PLANTILLAS_KEY, v);
+
+export const EMAIL_LISTAS_KEY = 'emailListasDestinatarios';
+export const cargarListasDestinatarios = () => leerJSON(EMAIL_LISTAS_KEY, []);
+export const guardarListasDestinatarios = (v) => guardarJSON(EMAIL_LISTAS_KEY, v);
+
 function leerJSON(key, porDefecto) {
   const data = localStorage.getItem(key);
   if (!data) return porDefecto;
