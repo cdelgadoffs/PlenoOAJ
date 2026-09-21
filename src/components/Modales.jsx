@@ -1,8 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useUI } from '../context/UIContext.jsx';
 import { useProyecto } from '../context/ProyectoContext.jsx';
-import { guardarArchivo, obtenerURLArchivo } from '../utils/archivosDB.js';
+import { guardarArchivo, obtenerURLArchivo, obtenerArchivo } from '../utils/archivosDB.js';
 import { obtenerFechasDisponiblesExtraordinaria, hoyLocalISO } from '../utils/fechas.js';
+import VistaPreviaWord from './VistaPreviaWord.jsx';
+
+function esArchivoWordDocx(archivo) {
+  return !!archivo && (
+    archivo.tipo === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+    /\.docx$/i.test(archivo.nombre || '')
+  );
+}
 /*import { hoyLocalISO, calcularFechaAnterior, obtenerFechasDisponiblesExtraordinaria } from '../utils/fechas.js';*/
 
 /*function ModalActa() {
@@ -103,9 +111,11 @@ function ModalPrevisualizacion() {
   const { modalActivo, setModalActivo, previewArchivo } = useUI();
   const archivo = previewArchivo;
   const activo = modalActivo === 'preview' && archivo;
-  const tieneVistaPrevia = archivo && (archivo.tipo.startsWith('image/') || archivo.tipo === 'application/pdf' || archivo.tipo.startsWith('text/'));
+  const esWord = esArchivoWordDocx(archivo);
+  const tieneVistaPrevia = archivo && (archivo.tipo.startsWith('image/') || archivo.tipo === 'application/pdf' || archivo.tipo.startsWith('text/') || esWord);
   const [url, setUrl] = useState(null);
   const [textoPlano, setTextoPlano] = useState('');
+  const [blobWord, setBlobWord] = useState(null);
 
   useEffect(() => {
     let urlActual = null;
@@ -117,9 +127,13 @@ function ModalPrevisualizacion() {
           fetch(u).then(r => r.text()).then(setTextoPlano).catch(() => setTextoPlano('No se pudo leer el texto.'));
         }
       });
+      if (esWord) {
+        obtenerArchivo(archivo.id).then(setBlobWord);
+      }
     } else {
       setUrl(null);
       setTextoPlano('');
+      setBlobWord(null);
     }
     return () => { if (urlActual) URL.revokeObjectURL(urlActual); };
   }, [activo, archivo?.id]);
@@ -132,6 +146,8 @@ function ModalPrevisualizacion() {
       contenido = <embed src={url} type="application/pdf" style={{ width: '100%', height: '80vh' }} />;
     } else if (archivo.tipo.startsWith('text/')) {
       contenido = <pre style={{ textAlign: 'left', whiteSpace: 'pre-wrap', maxHeight: '70vh', overflow: 'auto', background: '#f5f5f5', padding: '10px' }}>{textoPlano}</pre>;
+    } else if (esWord) {
+      contenido = blobWord ? <VistaPreviaWord blob={blobWord} /> : null;
     } else {
       contenido = (
         <>
@@ -151,7 +167,23 @@ function ModalPrevisualizacion() {
       <div className={'modal-content' + (tieneVistaPrevia ? ' modal-preview-full' : ' modal-preview-compact')}>
         <div className="header-top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <h3 id="previewTitle" style={{ marginBottom: '0' }}>{archivo?.nombre || 'Archivo'}</h3>
-          <button className="btn-close-derecho" id="btnCerrarPreview2" onClick={() => setModalActivo(null)}>✕</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {url && (
+              <button
+                className="btn-descargar-preview"
+                title="Descargar archivo"
+                onClick={() => {
+                  const link = document.createElement('a');
+                  link.href = url; link.download = archivo.nombre;
+                  document.body.appendChild(link); link.click(); document.body.removeChild(link);
+                }}
+              >
+                <i className="fas fa-download"></i>
+                Descargar
+              </button>
+            )}
+            <i className="fas fa-xmark btn-close-derecho" id="btnCerrarPreview2" title="Cerrar" onClick={() => setModalActivo(null)}></i>
+          </div>
         </div>
         <div id="previewContent">{contenido}</div>
         <div className="modal-actions">

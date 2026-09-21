@@ -260,7 +260,6 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, 
           >
             {PLANTILLAS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
           </select>
-          {/* Selector de secciones: visible para ambas plantillas */}
           <div className="vp-dropdown-wrapper">
             <button
               type="button"
@@ -385,10 +384,7 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, 
               <strong>{INTRO_ACTA_NOMBRE}</strong>{INTRO_ACTA_RESTO}
             </div>
           )}
-          {/* Mismo componente y mismas reglas (negritaTotal/modoAcuerdo) que
-              el sidebar terciario: editar aquí o allá debe dar el mismo
-              resultado en lugar de dos formas distintas de normalizar el
-              texto que terminaban pisándose entre sí. */}
+
           {plantilla === 'proyecto' && (
             <EditorOcultable
               value={form.contenido}

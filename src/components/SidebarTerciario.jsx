@@ -220,7 +220,10 @@ export default function SidebarTerciario() {
         plantilla: form.plantilla
       });
       setPuntoSeleccionadoId(puntoEditandoId);
-      setAvisosEdicionCorreo(prev => [...prev, { id: crypto.randomUUID(), puntoId: puntoEditandoId, codigoPunto, dependencia: form.remitente, contenido, acuerdo, diffCambio }]);
+      setAvisosEdicionCorreo(prev => [
+        ...prev.filter(a => a.puntoId !== puntoEditandoId),
+        { id: crypto.randomUUID(), puntoId: puntoEditandoId, codigoPunto, dependencia: form.remitente, contenido, acuerdo, diffCambio }
+      ]);
       setPuntoEditandoId(null);
       setForm(crearEstadoVacio());
       setSidebarTerciarioAbierto(false);

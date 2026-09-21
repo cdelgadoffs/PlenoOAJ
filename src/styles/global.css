@@ -890,6 +890,39 @@ input[type="checkbox"] {
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-bottom: 28px;
+}
+.btn-close-derecho {
+  background: none;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  color: #1a1a1a;
+  padding: 4px;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+.btn-close-derecho:hover {
+  color: #555;
+}
+.btn-descargar-preview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f0f0f0;
+  border: 1px solid #ddd;
+  color: #1a1a1a;
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.btn-descargar-preview:hover {
+  background: #e4e4e4;
+  border-color: #ccc;
 }
 .modal-preview-full #previewContent img,
 .modal-preview-full #previewContent embed {
@@ -901,6 +934,14 @@ input[type="checkbox"] {
   max-height: 100%;
   width: 100%;
   overflow: auto;
+}
+.modal-preview-full #previewContent .vista-previa-word-scroll {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  background: #737373;
+  padding: 20px 0;
+  border-radius: 4px;
 }
 .modal-preview-compact {
   max-width: 450px;

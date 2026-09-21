@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useUI } from '../context/UIContext.jsx';
 import { cargarRemitentesCorreo } from '../utils/storage.js';
 import '../styles/AvisoEdicionCorreo.css';
@@ -68,6 +68,16 @@ export default function AvisoEdicionCorreo() {
   const { avisosEdicionCorreo, setAvisosEdicionCorreo } = useUI();
   const [expandido, setExpandido] = useState(false);
   const [enviandoTodos, setEnviandoTodos] = useState(false);
+  const idsPreviosRef = useRef(new Set());
+
+  useEffect(() => {
+    const idsActuales = new Set(avisosEdicionCorreo.map(a => a.id));
+    const hayIdNuevo = avisosEdicionCorreo.some(a => !idsPreviosRef.current.has(a.id));
+    if (hayIdNuevo && avisosEdicionCorreo.length >= 2) {
+      setExpandido(false);
+    }
+    idsPreviosRef.current = idsActuales;
+  }, [avisosEdicionCorreo]);
 
   if (avisosEdicionCorreo.length === 0) return null;
 
