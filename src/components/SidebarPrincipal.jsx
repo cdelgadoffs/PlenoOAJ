@@ -324,8 +324,9 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
                 <input
                   type="checkbox"
                   checked={!!a.presente}
+                  disabled={!!horaFinSesion}
                   onChange={(e) => toggleAsistentePresente(idx, e.target.checked)}
-                  style={{ width: '17px', height: '17px', flexShrink: 0, cursor: 'pointer' }}
+                  style={{ width: '17px', height: '17px', flexShrink: 0, cursor: horaFinSesion ? 'default' : 'pointer' }}
                 />
               </label>
             );

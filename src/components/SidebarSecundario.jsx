@@ -12,8 +12,10 @@ export default function SidebarSecundario({ onAbrirCreacion }) {
   const { vistaActual, terminoBusqueda } = useUI();
   const {
     secciones, seccionActual, setSeccionActual, setPuntoSeleccionadoId,
-    puntoPreviaSeleccionadoId, setPuntoPreviaSeleccionadoId, actualizarPunto, eliminarPunto
+    puntoPreviaSeleccionadoId, setPuntoPreviaSeleccionadoId, actualizarPunto, eliminarPunto,
+    sesiones, sesionActivaFecha
   } = useProyecto();
+  const horaFinSesion = sesionActivaFecha ? sesiones[sesionActivaFecha]?.horaFin : null;
   const [puntoVistaPreviaId, setPuntoVistaPreviaId] = useState(null);
   const asideRef = useRef(null);
 
@@ -25,7 +27,8 @@ export default function SidebarSecundario({ onAbrirCreacion }) {
     return <aside className="sidebar-secundario hidden" id="sidebarSecundario"></aside>;
   }
 
-  const puntosFiltrados = obtenerPuntosFiltrados(secciones, terminoBusqueda);
+  const puntosFiltrados = obtenerPuntosFiltrados(secciones, terminoBusqueda)
+    .filter(p => !(p.fijo && p.seccion === 'asuntos generales'));
   const idsFiltrados = new Set(puntosFiltrados.map(p => p.id));
 
   if (vistaActual === 'sesionPrevia') {
@@ -46,6 +49,7 @@ export default function SidebarSecundario({ onAbrirCreacion }) {
     }
     const totalAprobados = puntosFiltrados.filter(s => s.aprobado === true).length;
     const todosAprobados = puntosFiltrados.length > 0 && puntosFiltrados.every(s => s.aprobado === true);
+    const totalPuntosSinFijoAG = secciones.filter(s => !(s.fijo && s.seccion === 'asuntos generales')).length;
     const puntoVistaPrevia = secciones.find(s => s.id === puntoVistaPreviaId) || null;
     const formVistaPrevia = {
       contenido: puntoVistaPrevia?.contenido || '',
@@ -64,14 +68,16 @@ export default function SidebarSecundario({ onAbrirCreacion }) {
           <div className="sb-header-top">
             <div className="sb-badge" id="secBadgeLabel">Sesión en curso</div>
             <div className="sb-header-actions">
-              <button
-                className="btn-add" id="btnAprobarTodos" title="Marcar/desmarcar todos"
-                onClick={() => puntosFiltrados.forEach(sec => actualizarPunto(sec.id, { aprobado: !todosAprobados }))}
-              >&#8595;</button>
+              {!horaFinSesion && (
+                <button
+                  className="btn-add" id="btnAprobarTodos" title="Marcar/desmarcar todos"
+                  onClick={() => puntosFiltrados.forEach(sec => actualizarPunto(sec.id, { aprobado: !todosAprobados }))}
+                >&#8595;</button>
+              )}
             </div>
           </div>
           <div className="sb-subtitle" id="secSubtitle">
-            {terminoBusqueda ? `${totalAprobados} de ${puntosFiltrados.length} coinciden` : `${totalAprobados} de ${secciones.length} aprobados`}
+            {terminoBusqueda ? `${totalAprobados} de ${puntosFiltrados.length} coinciden` : `${totalAprobados} de ${totalPuntosSinFijoAG} aprobados`}
           </div>
         </div>
         <nav className="sb-nav" id="navSecundario">
@@ -87,6 +93,7 @@ export default function SidebarSecundario({ onAbrirCreacion }) {
               >
                 <input
                   type="checkbox" checked={!!sec.aprobado}
+                  disabled={!!horaFinSesion}
                   onChange={(e) => {
                     actualizarPunto(sec.id, { aprobado: e.target.checked });
                     setPuntoPreviaSeleccionadoId(sec.id);

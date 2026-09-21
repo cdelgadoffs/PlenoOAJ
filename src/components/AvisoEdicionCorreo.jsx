@@ -65,8 +65,7 @@ async function enviarAvisoIndividual(aviso, correoDestino) {
 }
 
 export default function AvisoEdicionCorreo() {
-  const { avisosEdicionCorreo, setAvisosEdicionCorreo } = useUI();
-  const [expandido, setExpandido] = useState(false);
+  const { avisosEdicionCorreo, setAvisosEdicionCorreo, avisosEdicionExpandido: expandido, setAvisosEdicionExpandido: setExpandido } = useUI();
   const [enviandoTodos, setEnviandoTodos] = useState(false);
   const idsPreviosRef = useRef(new Set());
 

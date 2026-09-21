@@ -12,6 +12,7 @@ export function UIProvider({ children }) {
   const [mostrarFormularioCalendario, setMostrarFormularioCalendario] = useState(false);
   const [panelEmailVista, setPanelEmailVista] = useState('envio');
   const [avisosEdicionCorreo, setAvisosEdicionCorreo] = useState([]);
+  const [avisosEdicionExpandido, setAvisosEdicionExpandido] = useState(false);
   const [sidebarTerciarioAbierto, setSidebarTerciarioAbierto] = useState(false);
   const [terminoBusqueda, setTerminoBusqueda] = useState('');
   const [modalActivo, setModalActivo] = useState(null); 
@@ -29,6 +30,7 @@ export function UIProvider({ children }) {
     mostrarFormularioCalendario, setMostrarFormularioCalendario,
     panelEmailVista, setPanelEmailVista,
     avisosEdicionCorreo, setAvisosEdicionCorreo,
+    avisosEdicionExpandido, setAvisosEdicionExpandido,
     sidebarTerciarioAbierto, setSidebarTerciarioAbierto,
     terminoBusqueda, setTerminoBusqueda,
     modalActivo, setModalActivo,
