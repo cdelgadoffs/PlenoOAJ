@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useUI } from '../context/UIContext.jsx';
 import { useProyecto } from '../context/ProyectoContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
-import { formatearFechaES } from '../utils/fechas.js';
+import { formatearFechaES, padNumber } from '../utils/fechas.js';
+import { diferenciaTexto } from '../utils/diffTexto.js';
 import { crearCarpetaProyecto, crearCarpetaPunto, subirArchivoAOneDrive } from '../services/onedrive.js';
 import { guardarArchivo, obtenerArchivo, eliminarArchivo } from '../utils/archivosDB.js';
 import { esArchivoWord, extraerTextoWord } from '../utils/extraccionWord.js';
@@ -37,7 +38,7 @@ function crearEstadoVacio() {
 }
 
 export default function SidebarTerciario() {
-  const { sidebarTerciarioAbierto, setSidebarTerciarioAbierto, vistaActual, setArchivosTemporales, setEliminarArchivoTemporalFn } = useUI();
+  const { sidebarTerciarioAbierto, setSidebarTerciarioAbierto, vistaActual, setArchivosTemporales, setEliminarArchivoTemporalFn, setAvisosEdicionCorreo } = useUI();
   const { secciones, seccionActual, puntoEditandoId, setPuntoEditandoId, agregarPunto, editarPuntoExistente, setPuntoSeleccionadoId, proyectoMeta, setOneDriveFolder, asistentes } = useProyecto();
   const { obtenerAccessToken } = useAuth();
   const [form, setForm] = useState(crearEstadoVacio);
@@ -201,6 +202,13 @@ export default function SidebarTerciario() {
     }
     const archivosConAuto = await conArchivoAutoAdjunto(contenido, acuerdo);
     if (puntoEditandoId) {
+      const anterior = secciones.find(s => s.id === puntoEditandoId);
+      const idx = secciones.findIndex(s => s.id === puntoEditandoId);
+      const codigoPunto = 'PLE/' + padNumber(idx + 1, 3);
+      const textoAnterior = `${anterior?.contenido || ''} ${anterior?.acuerdo || ''}`;
+      const textoNuevo = `${contenido} ${acuerdo}`;
+      const diffCambio = diferenciaTexto(textoAnterior, textoNuevo);
+
       editarPuntoExistente(puntoEditandoId, {
         contenido,
         dependencia: form.remitente,
@@ -212,6 +220,7 @@ export default function SidebarTerciario() {
         plantilla: form.plantilla
       });
       setPuntoSeleccionadoId(puntoEditandoId);
+      setAvisosEdicionCorreo(prev => [...prev, { id: crypto.randomUUID(), puntoId: puntoEditandoId, codigoPunto, dependencia: form.remitente, contenido, acuerdo, diffCambio }]);
       setPuntoEditandoId(null);
       setForm(crearEstadoVacio());
       setSidebarTerciarioAbierto(false);
