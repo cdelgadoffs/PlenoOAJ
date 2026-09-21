@@ -17,6 +17,11 @@
 .sidebar-nuevo.ancho {
   width: 420px;
 }
+.sidebar-nuevo.mitad-pantalla {
+  width: 50vw;
+  min-width: 560px;
+  max-width: 900px;
+}
 .sidebar-nuevo.open {
   transform: translateX(0);
 }
@@ -575,6 +580,22 @@
 .cal-btn-generar:active {
   transform: translateY(0);
   box-shadow: 0 1px 4px rgba(47,125,49,0.3);
+}
+
+/* ===== Panel Email: layout en cuadrícula (aprovecha el sidebar ancho) ===== */
+.email-panel-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.email-panel-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  align-items: start;
+}
+.sidebar-nuevo:not(.ancho) .email-panel-row {
+  grid-template-columns: 1fr;
 }
 
 /* ===== Panel Email: estado de subida a OneDrive (reutilizado por SidebarTerciario) ===== */

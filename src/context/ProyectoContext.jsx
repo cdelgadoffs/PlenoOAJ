@@ -256,17 +256,38 @@ export function ProyectoProvider({ children }) {
     if (sesiones[sesionActivaFecha]?.listaCerrada) return;
     const idxGlobal = secciones.findIndex(s => s.id === id);
     const tituloPrevio = idxGlobal !== -1 ? codigoPunto(idxGlobal) : '';
-    setSecciones(prev => prev.map(s => s.id === id ? {
-      ...s,
-      contenido: datos.contenido,
-      dependencia: datos.dependencia,
-      tipoVotacion: datos.tipoVotacion,
-      acuerdo: datos.acuerdo,
-      archivos: datos.archivos,
-      confidencial: datos.confidencial || false,
-      bloquesActa: datos.bloquesActa || [],
-      anexo: (datos.archivos || []).length > 0 || s.anexo === true
-    } : s));
+    setSecciones(prev => {
+      const idxActual = prev.findIndex(s => s.id === id);
+      if (idxActual === -1) return prev;
+      const actual = prev[idxActual];
+      const nuevaSeccion = datos.seccion || actual.seccion;
+      const actualizado = {
+        ...actual,
+        contenido: datos.contenido,
+        dependencia: datos.dependencia,
+        tipoVotacion: datos.tipoVotacion,
+        acuerdo: datos.acuerdo,
+        archivos: datos.archivos,
+        confidencial: datos.confidencial || false,
+        bloquesActa: datos.bloquesActa || [],
+        anexo: (datos.archivos || []).length > 0 || actual.anexo === true,
+        seccion: nuevaSeccion
+      };
+      if (nuevaSeccion === actual.seccion) {
+        const copia = [...prev];
+        copia[idxActual] = actualizado;
+        return copia;
+      }
+      // Cambiar de sección reposiciona el punto junto a los demás de su
+      // nueva sección (misma lógica que al crear un punto), para que la
+      // numeración consecutiva y el orden del documento exportado sigan
+      // coincidiendo con lo que se ve en pantalla.
+      const sinPunto = prev.filter(s => s.id !== id);
+      const insertIdx = getInsertIndex(sinPunto, nuevaSeccion);
+      const copia = [...sinPunto];
+      copia.splice(insertIdx, 0, actualizado);
+      return copia;
+    });
     registrar('punto_editar', `Editó el punto ${tituloPrevio}`, `${datos.dependencia || ''} · "${resumenTexto(datos.contenido)}"`);
   }
 

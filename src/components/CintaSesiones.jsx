@@ -12,8 +12,8 @@ const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto'
 export default function CintaSesiones() {
   const { vistaActual, sidebarTerciarioAbierto } = useUI();
   const { sesiones, sesionActivaFecha, proyectoMeta, cargarSesion } = useProyecto();
-  const [mes, setMes] = useState(() => (sesionActivaFecha || hoyLocalISO()).substring(0, 7));
-  const [semanaAncla, setSemanaAncla] = useState(() => sesionActivaFecha || hoyLocalISO());
+  const [mes, setMes] = useState(() => (sesionActivaFecha || obtenerProximaSesion(sesiones) || hoyLocalISO()).substring(0, 7));
+  const [semanaAncla, setSemanaAncla] = useState(() => sesionActivaFecha || obtenerProximaSesion(sesiones) || hoyLocalISO());
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
   const botonRef = useRef(null);

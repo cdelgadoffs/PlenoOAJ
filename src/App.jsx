@@ -16,6 +16,7 @@ import PanelPrincipal from './components/PanelPrincipal.jsx';
 import SidebarDerecho from './components/SidebarDerecho.jsx';
 import Modales from './components/Modales.jsx';
 import AccesoBloqueado from './components/AccesoBloqueado.jsx';
+import AvisoEdicionCorreo from './components/AvisoEdicionCorreo.jsx';
 
 export default function App() {
   const { cuentaActiva } = useAuth();
@@ -76,6 +77,7 @@ export default function App() {
         </div>
       </div>
       <Modales />
+      <AvisoEdicionCorreo />
     </>
   );
 }

@@ -12,7 +12,7 @@ import DiccionarioPersonalizado from './DiccionarioPersonalizado.jsx';
 import { useAuth } from '../context/AuthContext';
 
 export default function SidebarNuevo() {
-  const { sidebarNuevoAbierto, sidebarNuevoAncho, setSidebarNuevoAncho, panelNuevoActivo, setPanelNuevoActivo, mostrarFormularioCalendario, setMostrarFormularioCalendario } = useUI();
+  const { sidebarNuevoAbierto, sidebarNuevoAncho, setSidebarNuevoAncho, panelNuevoActivo, setPanelNuevoActivo, mostrarFormularioCalendario, setMostrarFormularioCalendario, panelEmailVista, setPanelEmailVista } = useUI();
   const { puedeCalendarizacion, puedeEmail, puedeSync, puedeGestionarUsuarios } = usePermisos();
   const { cuentaActiva } = useAuth();
 
@@ -21,8 +21,9 @@ export default function SidebarNuevo() {
       setPanelNuevoActivo('menu');
       setSidebarNuevoAncho(false);
       setMostrarFormularioCalendario(false);
+      setPanelEmailVista('envio');
     }
-  }, [sidebarNuevoAbierto, setPanelNuevoActivo, setSidebarNuevoAncho, setMostrarFormularioCalendario]);
+  }, [sidebarNuevoAbierto, setPanelNuevoActivo, setSidebarNuevoAncho, setMostrarFormularioCalendario, setPanelEmailVista]);
 
   function abrirPanel(panel, ancho) {
     setPanelNuevoActivo(panel);
@@ -34,7 +35,7 @@ export default function SidebarNuevo() {
   }
 
   return (
-    <aside className={'sidebar-nuevo' + (sidebarNuevoAbierto ? ' open' : '') + (sidebarNuevoAncho ? ' ancho' : '')} id="sidebarNuevo">
+    <aside className={'sidebar-nuevo' + (sidebarNuevoAbierto ? ' open' : '') + (sidebarNuevoAncho ? ' ancho' : '') + (panelNuevoActivo === 'email' ? ' mitad-pantalla' : '')} id="sidebarNuevo">
       <div className="sb-header sb-header-nuevo">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div className="sb-title sb-title-nuevo">Panel de control</div>
@@ -48,6 +49,16 @@ export default function SidebarNuevo() {
             <span className="btn-add-icono">+</span>
             <span className="btn-add-label">Nuevo calendario</span>
           </button>
+          <button
+            id="btnGestionarContactosEmail"
+            className="btn-add btn-add-expandible"
+            title="Gestionar contactos, remitentes y listas"
+            style={{ display: panelNuevoActivo === 'email' ? 'flex' : 'none' }}
+            onClick={() => setPanelEmailVista(v => v === 'gestion' ? 'envio' : 'gestion')}
+          >
+            <span className="btn-add-icono">{panelEmailVista === 'gestion' ? '✉' : '⚙'}</span>
+            <span className="btn-add-label">{panelEmailVista === 'gestion' ? 'Volver al envío' : 'Gestionar contactos'}</span>
+          </button>
         </div>
         <div className="sb-subtitle sb-subtitle-nuevo" id="sidebarNuevoSubtitle">{cuentaActiva?.username}</div>
       </div>
@@ -55,7 +66,7 @@ export default function SidebarNuevo() {
       <div className={'sb-nav nuevo-panel' + (panelNuevoActivo === 'menu' ? '' : ' hidden')} id="panelMenuNuevo">
         <ul className="nuevo-menu-list">
           <li className="nuevo-menu-item" id="menuItemCalendarizacion" style={{ display: puedeCalendarizacion ? '' : 'none' }} onClick={() => abrirPanel('calendarizacion', true)}>Calendarización anual</li>
-          <li className="nuevo-menu-item" data-permiso="email" id="menuItemEmail" style={{ display: puedeEmail ? '' : 'none' }} onClick={() => abrirPanel('email', false)}>Email</li>
+          <li className="nuevo-menu-item" data-permiso="email" id="menuItemEmail" style={{ display: puedeEmail ? '' : 'none' }} onClick={() => abrirPanel('email', true)}>Email</li>
           <li className="nuevo-menu-item" id="menuItemQuorum" onClick={() => abrirPanel('quorum', true)}>Quórum</li>
           <li className="nuevo-menu-item" id="menuItemSEPLE" onClick={() => abrirPanel('seple', true)}>SEPLE</li>
           <li className="nuevo-menu-item">Perfil</li>
@@ -77,7 +88,7 @@ export default function SidebarNuevo() {
       )}
 
       <div className={'sb-nav nuevo-panel' + (panelNuevoActivo === 'email' ? '' : ' hidden')} id="panelEmailNuevo">
-        {panelNuevoActivo === 'email' && <Email onVolver={volverAlMenu} />}
+        {panelNuevoActivo === 'email' && <Email onVolver={volverAlMenu} vista={panelEmailVista} setVista={setPanelEmailVista} />}
       </div>
 
       <div className={'sb-nav nuevo-panel' + (panelNuevoActivo === 'quorum' ? '' : ' hidden')} id="panelQuorum">

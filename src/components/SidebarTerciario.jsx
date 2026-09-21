@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useUI } from '../context/UIContext.jsx';
 import { useProyecto } from '../context/ProyectoContext.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
-import { formatearFechaES } from '../utils/fechas.js';
+import { formatearFechaES, padNumber } from '../utils/fechas.js';
+import { diferenciaTexto } from '../utils/diffTexto.js';
 import { crearCarpetaProyecto, crearCarpetaPunto, subirArchivoAOneDrive } from '../services/onedrive.js';
 import { guardarArchivo, obtenerArchivo, eliminarArchivo } from '../utils/archivosDB.js';
 import { esArchivoWord, extraerTextoWord } from '../utils/extraccionWord.js';
@@ -15,28 +16,7 @@ import SelectorSeccionPunto from './SelectorSeccionPunto.jsx';
 import DropdownSelect from './DropdownSelect.jsx';
 import VistaPreviaFlotante from './VistaPreviaFlotante.jsx';
 import '../styles/VistaPreviaFlotante.css';
-
-const CATEGORIAS = [
-  { id: 'pleno', label: 'Pleno' },
-  { id: 'direcciones', label: 'Direcciones generales' },
-  { id: 'comisiones', label: 'Comisiones' }
-];
-
-const REMITENTES_POR_CATEGORIA = {
-  pleno: ['Pleno'],
-  direcciones: ['DGEJ', 'DEGETD', 'DGTI', 'DGJJ', 'DGIPDI', 'DGRH'],
-  comisiones: ['Administración', 'Creación de nuevos órganos', 'Adscripción', 'Carrera judicial', 'Presupuesto']
-};
-
-const TODAS_DEPENDENCIAS = [
-  { id: 'Pleno', categoria: 'pleno' },
-  { id: 'DGEJ', categoria: 'direcciones' }, { id: 'DEGETD', categoria: 'direcciones' },
-  { id: 'DGTI', categoria: 'direcciones' }, { id: 'DGJJ', categoria: 'direcciones' },
-  { id: 'DGIPDI', categoria: 'direcciones' }, { id: 'DGRH', categoria: 'direcciones' },
-  { id: 'Administración', categoria: 'comisiones' }, { id: 'Creación de nuevos órganos', categoria: 'comisiones' },
-  { id: 'Adscripción', categoria: 'comisiones' }, { id: 'Carrera judicial', categoria: 'comisiones' },
-  { id: 'Presupuesto', categoria: 'comisiones' }
-];
+import { CATEGORIAS, REMITENTES_POR_CATEGORIA, TODAS_DEPENDENCIAS } from '../utils/dependencias.js';
 
 // Función (no un objeto fijo) para que cada punto nuevo nazca ya con las
 // secciones por defecto de la plantilla inicial (Introducción -> Considerando)
@@ -58,7 +38,7 @@ function crearEstadoVacio() {
 }
 
 export default function SidebarTerciario() {
-  const { sidebarTerciarioAbierto, setSidebarTerciarioAbierto, vistaActual, setArchivosTemporales, setEliminarArchivoTemporalFn } = useUI();
+  const { sidebarTerciarioAbierto, setSidebarTerciarioAbierto, vistaActual, setArchivosTemporales, setEliminarArchivoTemporalFn, setAvisosEdicionCorreo } = useUI();
   const { secciones, seccionActual, puntoEditandoId, setPuntoEditandoId, agregarPunto, editarPuntoExistente, setPuntoSeleccionadoId, proyectoMeta, setOneDriveFolder, asistentes } = useProyecto();
   const { obtenerAccessToken } = useAuth();
   const [form, setForm] = useState(crearEstadoVacio);
@@ -91,7 +71,8 @@ export default function SidebarTerciario() {
         archivos: sec.archivos ? [...sec.archivos] : [],
         confidencial: sec.confidencial || false,
         bloquesActa: sec.bloquesActa ? sec.bloquesActa.map(b => ({ ...b })) : [],
-        plantilla: sec.plantilla || PLANTILLA_POR_DEFECTO
+        plantilla: sec.plantilla || PLANTILLA_POR_DEFECTO,
+        seccionDestino: sec.seccion || 'proyectos de acuerdo'
       });
     } else {
       setForm(crearEstadoVacio());
@@ -222,6 +203,13 @@ export default function SidebarTerciario() {
     }
     const archivosConAuto = await conArchivoAutoAdjunto(contenido, acuerdo);
     if (puntoEditandoId) {
+      const anterior = secciones.find(s => s.id === puntoEditandoId);
+      const idx = secciones.findIndex(s => s.id === puntoEditandoId);
+      const codigoPunto = 'PLE/' + padNumber(idx + 1, 3);
+      const textoAnterior = `${anterior?.contenido || ''} ${anterior?.acuerdo || ''}`;
+      const textoNuevo = `${contenido} ${acuerdo}`;
+      const diffCambio = diferenciaTexto(textoAnterior, textoNuevo);
+
       editarPuntoExistente(puntoEditandoId, {
         contenido,
         dependencia: form.remitente,
@@ -230,9 +218,14 @@ export default function SidebarTerciario() {
         archivos: archivosConAuto,
         confidencial: form.confidencial,
         bloquesActa: form.bloquesActa,
-        plantilla: form.plantilla
+        plantilla: form.plantilla,
+        seccion: form.seccionDestino
       });
       setPuntoSeleccionadoId(puntoEditandoId);
+      setAvisosEdicionCorreo(prev => [
+        ...prev.filter(a => a.puntoId !== puntoEditandoId),
+        { id: crypto.randomUUID(), puntoId: puntoEditandoId, codigoPunto, dependencia: form.remitente, contenido, acuerdo, diffCambio }
+      ]);
       setPuntoEditandoId(null);
       setForm(crearEstadoVacio());
       setSidebarTerciarioAbierto(false);
@@ -377,6 +370,12 @@ export default function SidebarTerciario() {
                 modoAcuerdo
               />
             </div>
+          )}
+          {puntoEditandoId && (
+            <SelectorSeccionPunto
+              valor={form.seccionDestino}
+              onChange={(v) => setForm(f => ({ ...f, seccionDestino: v }))}
+            />
           )}
           {/* COMENTADO: el selector de tipo de votación ya no se muestra
           <div className="ter-field">

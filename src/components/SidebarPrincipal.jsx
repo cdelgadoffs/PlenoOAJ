@@ -23,7 +23,7 @@ const VISTAS = [
 const SECCIONES_VISIBLES = SECCIONES_DEL_DOCUMENTO.filter(sec => sec !== 'licencias');
 
 export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalPuntos = 0 }) {
-  const { vistaActual, setVistaActual, terminoBusqueda, sidebarTerciarioAbierto, archivosTemporales, eliminarArchivoTemporalFn } = useUI();
+  const { vistaActual, setVistaActual, terminoBusqueda, sidebarTerciarioAbierto, archivosTemporales, eliminarArchivoTemporalFn, panelVistaCompleta, setPanelVistaCompleta, seccionEnVista, scrollASeccionFn } = useUI();
   const { proyectoMeta, secciones, seccionActual, setSeccionActual, setPuntoSeleccionadoId, sesiones, sesionActivaFecha, toggleAsistentePresente, asistentes, comenzarSesionCelebracion, finalizarSesionCelebracion, actualizarHoraInicioCelebracion, actualizarHoraFinCelebracion, ajustarNumerosDesde } = useProyecto();
 
   // ✅ Variables derivadas que se necesitan en los useState de abajo
@@ -49,6 +49,7 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
 
   useEffect(() => {
     if (vistaActual === 'proyecto') setAcordeonAbierto(true);
+    else setPanelVistaCompleta(false);
   }, [vistaActual]);
 
   // ⚠️ Estas dos líneas ya NO van aquí (se movieron arriba)
@@ -82,6 +83,10 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
 
   function seleccionarSeccion(sec, conteo) {
     if (conteo === 0 && terminoBusqueda) return;
+    if (panelVistaCompleta) {
+      if (scrollASeccionFn) scrollASeccionFn(sec);
+      return;
+    }
     setSeccionActual(sec);
     const pts = secciones.filter(s => s.seccion === sec);
     setPuntoSeleccionadoId(pts.length > 0 ? pts[0].id : null);
@@ -124,13 +129,34 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
       <div className="sb-header">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
           <div className="sb-title" id="docTitleSidebar">Sesión {tipo} N° {numero}</div>
-          <button
-            className="btn-add"
-            title="Editar número de sesión"
-            onClick={() => { setNumeroEditado(numero); setModalNumeroAbierto(true); }}
-          >
-            <i className="fas fa-pen"></i>
-          </button>
+          {vistaActual === 'proyecto' && (
+            <button
+              className="btn-add"
+              title={panelVistaCompleta ? 'Ver por sección' : 'Ver lista completa'}
+              onClick={() => setPanelVistaCompleta(v => !v)}
+            >
+              <i className={panelVistaCompleta ? 'fas fa-list' : 'fas fa-layer-group'}></i>
+            </button>
+          )}
+          {vistaActual === 'proyecto' && (
+            <button
+              className="btn-add"
+              title="Editar número de sesión"
+              onClick={() => { setNumeroEditado(numero); setModalNumeroAbierto(true); }}
+            >
+              <i className="fas fa-pen"></i>
+            </button>
+          )}
+          {vistaActual === 'sesionPrevia' && !horaInicioSesion && (
+            <span style={{ background: '#dbeafe', color: '#1d4ed8', border: '1px solid #1d4ed8', fontSize: '12px', fontWeight: '700', padding: '4px 16px', borderRadius: '6px', textTransform: 'uppercase', letterSpacing: '0.03em', marginTop: '3px' }}>
+              Previa
+            </span>
+          )}
+          {vistaActual === 'sesionPrevia' && horaFinSesion && (
+            <span style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #15803d', fontSize: '12px', fontWeight: '700', padding: '4px 16px', borderRadius: '6px', textTransform: 'uppercase', letterSpacing: '0.03em', marginTop: '3px' }}>
+              Celebrada
+            </span>
+          )}
         </div>
         <div className="sb-subtitle" id="docSubSidebar">{fechaTexto}</div>
       </div>
@@ -200,7 +226,7 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
                     return (
                       <div
                         key={sec}
-                        className={'nav-subitem' + (sec === seccionActual ? ' active' : '') + (oculto ? ' disabled' : '')}
+                        className={'nav-subitem' + (sec === (panelVistaCompleta ? seccionEnVista : seccionActual) ? ' active' : '') + (oculto ? ' disabled' : '')}
                         style={oculto ? { display: 'none' } : undefined}
                         data-seccion={sec}
                         onClick={(e) => { e.stopPropagation(); seleccionarSeccion(sec, conteo); }}
@@ -312,8 +338,9 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
                 <input
                   type="checkbox"
                   checked={!!a.presente}
+                  disabled={!!horaFinSesion}
                   onChange={(e) => toggleAsistentePresente(idx, e.target.checked)}
-                  style={{ width: '17px', height: '17px', flexShrink: 0, cursor: 'pointer' }}
+                  style={{ width: '17px', height: '17px', flexShrink: 0, cursor: horaFinSesion ? 'default' : 'pointer' }}
                 />
               </label>
             );

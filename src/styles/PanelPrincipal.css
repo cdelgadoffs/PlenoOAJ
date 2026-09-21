@@ -255,6 +255,7 @@
   border: 2px solid #e0e0e0;
   border-radius: 8px;
   background: #f5f6f8;
+  margin-bottom: 24px;
 }
 .ag-titulo-label {
   font-size: 11px;
@@ -317,6 +318,22 @@
 }
 .ag-grupo-separador:first-child {
   margin-top: 0;
+}
+.seccion-completa-separador {
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #1a1a1a;
+  padding: 10px 14px;
+  background: #f0f0f0;
+  border-left: 4px solid #1a1a1a;
+  border-radius: 4px;
+  margin-bottom: 14px;
+  scroll-margin-top: 12px;
+}
+.lista-puntos-expandida > div:not(:first-child) .seccion-completa-separador {
+  margin-top: 8px;
 }
 .punto-tabla-titulo.confidencial {
   color: #c0392b;
