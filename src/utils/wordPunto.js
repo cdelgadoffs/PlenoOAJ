@@ -3,6 +3,7 @@
 import { Document, Packer, Paragraph, TextRun, AlignmentType, ImageRun, Header, Footer, PageNumber } from 'docx';
 import { cargarImagen } from './logoDocx.js';
 import { INTRO_ACTA_TEXTO, PUENTE_ACTA_TEXTO } from './textosActa.js';
+import { generarTextoEngrose } from './textoEngrose.js';
 
 export const WORD_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
@@ -58,7 +59,32 @@ function parrafosDeTexto(texto, opciones = {}) {
   });
 }
 
-export async function generarWordPunto(punto, proyectoMeta = {}) {
+function bloqueFirma(firma) {
+  return [
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 500, after: 40 },
+      children: [new TextRun({ text: '_______________________________', size: 24, color: '000000', font: 'Arial' })]
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 20 },
+      children: [new TextRun({ text: firma.nombre, bold: true, size: 24, color: '000000', font: 'Arial' })]
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 0 },
+      children: [new TextRun({ text: firma.cargo1, size: 24, color: '000000', font: 'Arial' })]
+    }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 200 },
+      children: [new TextRun({ text: firma.cargo2, size: 24, color: '000000', font: 'Arial' })]
+    })
+  ];
+}
+
+export async function generarWordPunto(punto, proyectoMeta = {}, opciones = {}) {
   const { contenido = '', acuerdo = '', bloquesActa = [], plantilla = 'introduccion' } = punto;
 
   // El logo va en el encabezado (Header), no como párrafo del cuerpo, para
@@ -135,6 +161,22 @@ export async function generarWordPunto(punto, proyectoMeta = {}) {
     parrafos.push(...puenteParrafos);
     if (proyectoParrafo) parrafos.push(proyectoParrafo);
     parrafos.push(...acuerdoParrafos);
+  }
+
+  if (opciones.engrose) {
+    const engrose = generarTextoEngrose({
+      tipoVotacion: punto.tipoVotacion,
+      proyectoMeta,
+      asistentes: opciones.engrose.asistentes,
+      secretarioEjecutivo: opciones.engrose.secretarioEjecutivo
+    });
+    parrafos.push(new Paragraph({
+      alignment: AlignmentType.JUSTIFIED,
+      spacing: { before: 300, after: 200 },
+      children: [new TextRun({ text: engrose.parrafo, size: 24, color: '000000', font: 'Arial' })]
+    }));
+    parrafos.push(...bloqueFirma(engrose.firmaPresidente));
+    parrafos.push(...bloqueFirma(engrose.firmaSecretario));
   }
 
   if (parrafos.length === 0) return null;
