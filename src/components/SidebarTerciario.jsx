@@ -71,7 +71,8 @@ export default function SidebarTerciario() {
         archivos: sec.archivos ? [...sec.archivos] : [],
         confidencial: sec.confidencial || false,
         bloquesActa: sec.bloquesActa ? sec.bloquesActa.map(b => ({ ...b })) : [],
-        plantilla: sec.plantilla || PLANTILLA_POR_DEFECTO
+        plantilla: sec.plantilla || PLANTILLA_POR_DEFECTO,
+        seccionDestino: sec.seccion || 'proyectos de acuerdo'
       });
     } else {
       setForm(crearEstadoVacio());
@@ -217,7 +218,8 @@ export default function SidebarTerciario() {
         archivos: archivosConAuto,
         confidencial: form.confidencial,
         bloquesActa: form.bloquesActa,
-        plantilla: form.plantilla
+        plantilla: form.plantilla,
+        seccion: form.seccionDestino
       });
       setPuntoSeleccionadoId(puntoEditandoId);
       setAvisosEdicionCorreo(prev => [
@@ -368,6 +370,12 @@ export default function SidebarTerciario() {
                 modoAcuerdo
               />
             </div>
+          )}
+          {puntoEditandoId && (
+            <SelectorSeccionPunto
+              valor={form.seccionDestino}
+              onChange={(v) => setForm(f => ({ ...f, seccionDestino: v }))}
+            />
           )}
           {/* COMENTADO: el selector de tipo de votación ya no se muestra
           <div className="ter-field">

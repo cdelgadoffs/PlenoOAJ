@@ -13,6 +13,9 @@ export function UIProvider({ children }) {
   const [panelEmailVista, setPanelEmailVista] = useState('envio');
   const [avisosEdicionCorreo, setAvisosEdicionCorreo] = useState([]);
   const [avisosEdicionExpandido, setAvisosEdicionExpandido] = useState(false);
+  const [panelVistaCompleta, setPanelVistaCompleta] = useState(false);
+  const [seccionEnVista, setSeccionEnVista] = useState(null);
+  const [scrollASeccionFn, setScrollASeccionFn] = useState(null);
   const [sidebarTerciarioAbierto, setSidebarTerciarioAbierto] = useState(false);
   const [terminoBusqueda, setTerminoBusqueda] = useState('');
   const [modalActivo, setModalActivo] = useState(null); 
@@ -31,6 +34,9 @@ export function UIProvider({ children }) {
     panelEmailVista, setPanelEmailVista,
     avisosEdicionCorreo, setAvisosEdicionCorreo,
     avisosEdicionExpandido, setAvisosEdicionExpandido,
+    panelVistaCompleta, setPanelVistaCompleta,
+    seccionEnVista, setSeccionEnVista,
+    scrollASeccionFn, setScrollASeccionFn,
     sidebarTerciarioAbierto, setSidebarTerciarioAbierto,
     terminoBusqueda, setTerminoBusqueda,
     modalActivo, setModalActivo,

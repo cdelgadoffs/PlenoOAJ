@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { useUI } from '../context/UIContext.jsx';
 import { useProyecto } from '../context/ProyectoContext.jsx';
 import { getTituloPunto, formatearFechaES } from '../utils/fechas.js';
@@ -8,6 +9,8 @@ import VistaHistorial from './VistaHistorial.jsx';
 import { renderConOcultos } from '../utils/texto.js';
 import TipoVotacionSelector from './TipoVotacionSelector.jsx';
 import SelectorInforme from './SelectorInforme.jsx';
+
+const SECCIONES_VISIBLES = SECCIONES_DEL_DOCUMENTO.filter(sec => sec !== 'licencias');
 
 function TarjetaPunto({ sec, idx, secciones, puedeSubir, puedeBajar, esSeleccionada, listaCerrada, onSeleccionar, onMover, onEditar, onEliminar, onToggleAnexo, onPreviewArchivo, onAdjuntar }) {
   const titulo = getTituloPunto(sec, idx, secciones);
@@ -80,16 +83,19 @@ function TarjetaPunto({ sec, idx, secciones, puedeSubir, puedeBajar, esSeleccion
 }
 
 function VistaProyecto({ onEditar }) {
-  const { terminoBusqueda, sidebarTerciarioAbierto, setModalActivo, setPreviewArchivo, setPuntoAdjuntarId } = useUI();
+  const { terminoBusqueda, sidebarTerciarioAbierto, setModalActivo, setPreviewArchivo, setPuntoAdjuntarId, panelVistaCompleta, setSeccionEnVista, setScrollASeccionFn } = useUI();
   const { secciones, seccionActual, setSeccionActual, proyectoMeta, puntoSeleccionadoId, setPuntoSeleccionadoId, moverPunto, eliminarPunto, toggleAnexo, sesiones, sesionActivaFecha } = useProyecto();
   const listaCerrada = sesionActivaFecha ? !!sesiones[sesionActivaFecha]?.listaCerrada : false;
+  const seccionRefs = useRef({});
 
-  // === FILTRO POR SECCIÓN + BÚSQUEDA ===
-  const puntosDeSeccion = seccionActual === 'asuntos generales'
-    ? secciones.filter(s => s.seccion === 'asuntos generales' || s.origenAG)
-    : secciones.filter(s => s.seccion === seccionActual);
-  const pts = ordenarPorSeccion(obtenerPuntosFiltrados(puntosDeSeccion, terminoBusqueda));
   const modoBusqueda = terminoBusqueda.trim().length > 0;
+
+  function puntosDe(seccionKey) {
+    const puntosDeSeccion = seccionKey === 'asuntos generales'
+      ? secciones.filter(s => s.seccion === 'asuntos generales' || s.origenAG)
+      : secciones.filter(s => s.seccion === seccionKey);
+    return ordenarPorSeccion(obtenerPuntosFiltrados(puntosDeSeccion, terminoBusqueda));
+  }
 
   function confirmarEliminar(sec) {
     const idx = secciones.indexOf(sec);
@@ -124,6 +130,163 @@ function VistaProyecto({ onEditar }) {
     });
   }
 
+  function renderPuntos(seccionKey, pts) {
+    if (seccionKey === 'asuntos generales') {
+      return agruparPorSeccionDestino(sidebarTerciarioAbierto ? pts.slice().reverse() : pts).map(grupo => (
+        <div key={grupo.clave}>
+          {grupo.clave !== '__fijo__' && (
+            <div className="ag-grupo-separador">
+              {grupo.clave.charAt(0).toUpperCase() + grupo.clave.slice(1)}
+            </div>
+          )}
+          {grupo.items.map(sec => {
+            const idx = secciones.indexOf(sec);
+            if (sec.id === 'sec_fijo_3') {
+              return (
+                <div key={sec.id} className="ag-titulo-fijo">
+                  <span>{getTituloPunto(sec, idx)}</span>
+                  <span className="ag-titulo-label">Asuntos Generales</span>
+                </div>
+              );
+            }
+            const puedeSubir = idx > 0 && secciones[idx - 1].seccion === sec.seccion;
+            const puedeBajar = idx < secciones.length - 1 && secciones[idx + 1].seccion === sec.seccion;
+            return (
+              <TarjetaPunto
+                key={sec.id}
+                sec={sec}
+                idx={idx}
+                secciones={secciones}
+                puedeSubir={puedeSubir}
+                puedeBajar={puedeBajar}
+                esSeleccionada={sec.id === puntoSeleccionadoId}
+                onSeleccionar={() => setPuntoSeleccionadoId(sec.id)}
+                onMover={moverPunto}
+                onEditar={onEditar}
+                onEliminar={confirmarEliminar}
+                onToggleAnexo={toggleAnexo}
+                onPreviewArchivo={(a) => { setPreviewArchivo(a); setModalActivo('preview'); }}
+                onAdjuntar={(id) => { setPuntoAdjuntarId(id); setModalActivo('adjuntar'); }}
+                listaCerrada={listaCerrada}
+              />
+            );
+          })}
+        </div>
+      ));
+    }
+    return (sidebarTerciarioAbierto ? pts.slice().reverse() : pts).map(sec => {
+      const idx = secciones.indexOf(sec);
+      if (sec.id === 'sec_fijo_3') {
+        return (
+          <div key={sec.id} className="ag-titulo-fijo">
+            <span>{getTituloPunto(sec, idx)}</span>
+            <span className="ag-titulo-label">Asuntos Generales</span>
+          </div>
+        );
+      }
+      if (sec.origenAG && sec.seccion === seccionKey) {
+        const titulo = getTituloPunto(sec, idx, secciones);
+        return (
+          <div
+            key={sec.id}
+            className="badge-origen-ag"
+            onClick={() => irAPuntoEnAG(sec.id)}
+            title={`Registrado en Asuntos Generales · ${sec.dependencia || 'Pleno'}`}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span className="badge-origen-ag-codigo">{titulo}</span>
+                <span className="badge-origen-ag-label">Registrado en Asuntos Generales</span>
+              </div>
+              <div style={{ fontSize: '13px', color: '#333', lineHeight: '1.4' }}>
+                {sec.contenido ? sec.contenido.replace(/\*\*/g, '') : 'Sin contenido'}
+              </div>
+            </div>
+            <span className="badge-origen-ag-dep">{sec.dependencia || 'Pleno'}</span>
+          </div>
+        );
+      }
+      const puedeSubir = idx > 0 && secciones[idx - 1].seccion === sec.seccion;
+      const puedeBajar = idx < secciones.length - 1 && secciones[idx + 1].seccion === sec.seccion;
+      return (
+        <TarjetaPunto
+          key={sec.id}
+          sec={sec}
+          idx={idx}
+          puedeSubir={puedeSubir}
+          puedeBajar={puedeBajar}
+          esSeleccionada={sec.id === puntoSeleccionadoId}
+          onSeleccionar={() => setPuntoSeleccionadoId(sec.id)}
+          onMover={moverPunto}
+          onEditar={onEditar}
+          onEliminar={confirmarEliminar}
+          onToggleAnexo={toggleAnexo}
+          onPreviewArchivo={(a) => { setPreviewArchivo(a); setModalActivo('preview'); }}
+          onAdjuntar={(id) => { setPuntoAdjuntarId(id); setModalActivo('adjuntar'); }}
+          listaCerrada={listaCerrada}
+        />
+      );
+    });
+  }
+
+  useEffect(() => {
+    setScrollASeccionFn(() => (sec) => {
+      const el = seccionRefs.current[sec];
+      const contenedor = document.getElementById('panelPrincipal');
+      if (!el || !contenedor) return;
+      // Se desplaza manualmente el contenedor #panelPrincipal (en vez de
+      // el.scrollIntoView, que puede arrastrar el scroll a un ancestro
+      // distinto y esconder el topbar) para garantizar que solo se mueve
+      // este contenedor.
+      const delta = el.getBoundingClientRect().top - contenedor.getBoundingClientRect().top;
+      contenedor.scrollTo({ top: contenedor.scrollTop + delta - 12, behavior: 'smooth' });
+    });
+    return () => setScrollASeccionFn(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!panelVistaCompleta) return;
+    const contenedor = document.getElementById('panelPrincipal');
+    if (!contenedor) return;
+    function actualizarSeccionVisible() {
+      const referencia = contenedor.getBoundingClientRect().top + 90;
+      let actual = SECCIONES_VISIBLES[0];
+      for (const sec of SECCIONES_VISIBLES) {
+        const el = seccionRefs.current[sec];
+        if (el && el.getBoundingClientRect().top <= referencia) actual = sec;
+      }
+      setSeccionEnVista(actual);
+    }
+    actualizarSeccionVisible();
+    contenedor.addEventListener('scroll', actualizarSeccionVisible);
+    return () => contenedor.removeEventListener('scroll', actualizarSeccionVisible);
+  }, [panelVistaCompleta, secciones, terminoBusqueda, setSeccionEnVista]);
+
+  if (panelVistaCompleta) {
+    return (
+      <div className="panel-proyecto">
+        <div className="lista-puntos-expandida">
+          {SECCIONES_VISIBLES.map(sec => {
+            const ptsSeccion = puntosDe(sec);
+            return (
+              <div key={sec} ref={(el) => { seccionRefs.current[sec] = el; }}>
+                <div className="seccion-completa-separador">
+                  {sec.charAt(0).toUpperCase() + sec.slice(1)}
+                </div>
+                {ptsSeccion.length === 0
+                  ? <div className="placeholder-msg" style={{ padding: '10px 0', margin: 0 }}>Sin puntos en esta sección.</div>
+                  : renderPuntos(sec, ptsSeccion)}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  const pts = puntosDe(seccionActual);
+
   return (
     <div className="panel-proyecto">
       {pts.length === 0 ? (
@@ -137,103 +300,7 @@ function VistaProyecto({ onEditar }) {
         )
       ) : (
         <div className="lista-puntos-expandida">
-          {seccionActual === 'asuntos generales' ? (
-            agruparPorSeccionDestino(sidebarTerciarioAbierto ? pts.slice().reverse() : pts).map(grupo => (
-              <div key={grupo.clave}>
-                {grupo.clave !== '__fijo__' && (
-                  <div className="ag-grupo-separador">
-                    {grupo.clave.charAt(0).toUpperCase() + grupo.clave.slice(1)}
-                  </div>
-                )}
-                {grupo.items.map(sec => {
-                  const idx = secciones.indexOf(sec);
-                  if (sec.id === 'sec_fijo_3') {
-                    return (
-                      <div key={sec.id} className="ag-titulo-fijo">
-                        <span>{getTituloPunto(sec, idx)}</span>
-                        <span className="ag-titulo-label">Asuntos Generales</span>
-                      </div>
-                    );
-                  }
-                  const puedeSubir = idx > 0 && secciones[idx - 1].seccion === sec.seccion;
-                  const puedeBajar = idx < secciones.length - 1 && secciones[idx + 1].seccion === sec.seccion;
-                  return (
-                    <TarjetaPunto
-                      key={sec.id}
-                      sec={sec}
-                      idx={idx}
-                      secciones={secciones}
-                      puedeSubir={puedeSubir}
-                      puedeBajar={puedeBajar}
-                      esSeleccionada={sec.id === puntoSeleccionadoId}
-                      onSeleccionar={() => setPuntoSeleccionadoId(sec.id)}
-                      onMover={moverPunto}
-                      onEditar={onEditar}
-                      onEliminar={confirmarEliminar}
-                      onToggleAnexo={toggleAnexo}
-                      onPreviewArchivo={(a) => { setPreviewArchivo(a); setModalActivo('preview'); }}
-                      onAdjuntar={(id) => { setPuntoAdjuntarId(id); setModalActivo('adjuntar'); }}
-                      listaCerrada={listaCerrada}
-                    />
-                  );
-                })}
-              </div>
-            ))
-          ) : (
-            (sidebarTerciarioAbierto ? pts.slice().reverse() : pts).map(sec => {
-              const idx = secciones.indexOf(sec);
-              if (sec.id === 'sec_fijo_3') {
-                return (
-                  <div key={sec.id} className="ag-titulo-fijo">
-                    <span>{getTituloPunto(sec, idx)}</span>
-                    <span className="ag-titulo-label">Asuntos Generales</span>
-                  </div>
-                );
-              }
-              if (sec.origenAG && sec.seccion === seccionActual) {
-                const titulo = getTituloPunto(sec, idx, secciones);
-                return (
-                  <div
-                    key={sec.id}
-                    className="badge-origen-ag"
-                    onClick={() => irAPuntoEnAG(sec.id)}
-                    title={`Registrado en Asuntos Generales · ${sec.dependencia || 'Pleno'}`}
-                  >
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <span className="badge-origen-ag-codigo">{titulo}</span>
-                        <span className="badge-origen-ag-label">Registrado en Asuntos Generales</span>
-                      </div>
-                      <div style={{ fontSize: '13px', color: '#333', lineHeight: '1.4' }}>
-                        {sec.contenido ? sec.contenido.replace(/\*\*/g, '') : 'Sin contenido'}
-                      </div>
-                    </div>
-                    <span className="badge-origen-ag-dep">{sec.dependencia || 'Pleno'}</span>
-                  </div>
-                );
-              }
-              const puedeSubir = idx > 0 && secciones[idx - 1].seccion === sec.seccion;
-              const puedeBajar = idx < secciones.length - 1 && secciones[idx + 1].seccion === sec.seccion;
-              return (
-                <TarjetaPunto
-                  key={sec.id}
-                  sec={sec}
-                  idx={idx}
-                  puedeSubir={puedeSubir}
-                  puedeBajar={puedeBajar}
-                  esSeleccionada={sec.id === puntoSeleccionadoId}
-                  onSeleccionar={() => setPuntoSeleccionadoId(sec.id)}
-                  onMover={moverPunto}
-                  onEditar={onEditar}
-                  onEliminar={confirmarEliminar}
-                  onToggleAnexo={toggleAnexo}
-                  onPreviewArchivo={(a) => { setPreviewArchivo(a); setModalActivo('preview'); }}
-                  onAdjuntar={(id) => { setPuntoAdjuntarId(id); setModalActivo('adjuntar'); }}
-                  listaCerrada={listaCerrada}
-                />
-              );
-            })
-          )}
+          {renderPuntos(seccionActual, pts)}
         </div>
       )}
     </div>
