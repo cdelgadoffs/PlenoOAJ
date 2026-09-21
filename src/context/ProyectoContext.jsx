@@ -440,6 +440,7 @@ export function ProyectoProvider({ children }) {
       const { horaInicio, horaFin, terminada, ...resto } = sesion;
       return { ...prev, [sesionActivaFecha]: resto };
     });
+    setSecciones(prev => prev.map(s => s.engroseEnviado ? { ...s, engroseEnviado: false } : s));
     registrar('sesion', 'Restableció la sesión', '');
   }
   function terminarSesionCelebracion() {

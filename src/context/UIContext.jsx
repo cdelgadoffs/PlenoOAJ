@@ -16,6 +16,7 @@ export function UIProvider({ children }) {
   const [panelVistaCompleta, setPanelVistaCompleta] = useState(false);
   const [seccionEnVista, setSeccionEnVista] = useState(null);
   const [scrollASeccionFn, setScrollASeccionFn] = useState(null);
+  const [previewEngroseAbierta, setPreviewEngroseAbierta] = useState(false);
   const [sidebarTerciarioAbierto, setSidebarTerciarioAbierto] = useState(false);
   const [terminoBusqueda, setTerminoBusqueda] = useState('');
   const [modalActivo, setModalActivo] = useState(null); 
@@ -37,6 +38,7 @@ export function UIProvider({ children }) {
     panelVistaCompleta, setPanelVistaCompleta,
     seccionEnVista, setSeccionEnVista,
     scrollASeccionFn, setScrollASeccionFn,
+    previewEngroseAbierta, setPreviewEngroseAbierta,
     sidebarTerciarioAbierto, setSidebarTerciarioAbierto,
     terminoBusqueda, setTerminoBusqueda,
     modalActivo, setModalActivo,

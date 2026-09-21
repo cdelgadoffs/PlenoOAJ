@@ -2,21 +2,10 @@ import { useEffect, useState } from 'react';
 import { renderConOcultos, capitalizarPalabras } from '../utils/texto.js';
 import { INTRO_ACTA_NOMBRE, INTRO_ACTA_RESTO, PUENTE_ACTA_TEXTO } from '../utils/textosActa.js';
 import { PLANTILLAS, PLANTILLA_POR_DEFECTO, SECCIONES_POR_DEFECTO, crearBloquesPorDefecto } from '../utils/plantillasActa.js';
-import { fechaEnLetras } from '../utils/fechaLetras.js';
-import { describirVotacionEngrose } from '../utils/votacion.js';
+import { generarWordPunto } from '../utils/wordPunto.js';
+import { generarTextoEngrose } from '../utils/textoEngrose.js';
 import { useProyecto } from '../context/ProyectoContext.jsx';
 import EditorOcultable from './EditorOcultable.jsx';
-
-function nombreFirmante(asistente, conGrado) {
-  if (!asistente) return conGrado ? '<<presidente>>' : '<<secretario>>';
-  if (!conGrado) return asistente.nombre.toUpperCase();
-  const gradoMap = {
-    'Licenciatura': asistente.genero === 'femenino' ? 'LICENCIADA' : 'LICENCIADO',
-    'Maestría': asistente.genero === 'femenino' ? 'MAESTRA' : 'MAESTRO',
-    'Doctorado': asistente.genero === 'femenino' ? 'DOCTORA' : 'DOCTOR'
-  };
-  return `${gradoMap[asistente.grado] || ''} ${asistente.nombre}`.toUpperCase().replace(/\s+/g, ' ').trim();
-}
 
 const TIPOS_BLOQUE = [
   { id: 'considerando', label: 'Considerando', titulo: 'CONSIDERANDO', placeholder: 'Considerandos...', icon: 'fa-scale-balanced' },
@@ -124,11 +113,16 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, 
   const tiposDisponibles = tiposDisponiblesPara(bloques);
   const seccionActual = tiposDisponibles.find(t => t.id === tipoNuevoBloque) || PLACEHOLDER_SECCION;
 
-  const presidenteAsistente = asistentes.find(a => a.presidente);
-  const descriptorVotacion = describirVotacionEngrose(form.tipoVotacion, asistentes);
-  const tipoSesionTexto = (proyectoMeta.tipoSesion || 'ordinaria').toLowerCase();
-  const fechaSesionTexto = fechaEnLetras(proyectoMeta.fecha) || '<<fecha>>';
-  const textoEngrose = `Así lo aprobaron ${descriptorVotacion}las personas integrantes del Pleno del Órgano de Administración Judicial, en sesión ${tipoSesionTexto} de ${fechaSesionTexto}, firmando al calce el Presidente del Órgano de Administración Judicial y la persona Titular de la Secretaría Ejecutiva del Pleno, de conformidad con lo dispuesto en los artículos 91, 99, fracción VIII y 100, párrafo primero de la Ley Orgánica del Poder Judicial de la Federación.`;
+  const engrose = generarTextoEngrose({ tipoVotacion: form.tipoVotacion, proyectoMeta, asistentes, secretarioEjecutivo });
+
+  async function descargarWord() {
+    const { blob, nombreArchivo } = await generarWordPunto(form, proyectoMeta, { engrose: soloLectura ? { asistentes, secretarioEjecutivo } : null });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url; link.download = nombreArchivo;
+    document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
 
   function agregarBloque() {
     if (esPersonalizada) {
@@ -149,9 +143,6 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, 
     setForm(f => ({ ...f, bloquesActa: (f.bloquesActa || []).filter(b => b.id !== id) }));
   }
 
-  // Los botones de formato viven fuera de los editores; con preventDefault en
-  // mousedown se evita el blur, así el execCommand actúa sobre la selección
-  // vigente del editor que estaba activo (Considerando, Antecedente, etc.).
   function aplicarNegrita() {
     document.execCommand('bold');
   }
@@ -247,7 +238,12 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, 
               {codigoLectura && <span className="vp-lectura-codigo">{codigoLectura}</span>}
               {remitenteLectura && <span className="vp-lectura-remitente">{remitenteLectura}</span>}
             </div>
-            <button type="button" className="btn-close-derecho" title="Cerrar vista previa" onClick={onCerrarLectura}>✕</button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <button type="button" className="vp-header-btn" title="Descargar Word" onClick={descargarWord}>
+                <i className="fas fa-download"></i>
+              </button>
+              <button type="button" className="btn-close-derecho" title="Cerrar vista previa" onClick={onCerrarLectura}>✕</button>
+            </div>
           </div>
         )}
         {!soloLectura && (
@@ -446,18 +442,18 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, 
           />
           {soloLectura && (
             <div className="vp-engrose">
-              <div style={{ textAlign: 'justify' }}>{textoEngrose}</div>
+              <div style={{ textAlign: 'justify' }}>{engrose.parrafo}</div>
               <div className="vp-engrose-firma">
                 <div className="vp-engrose-linea"></div>
-                <div className="vp-engrose-nombre">{nombreFirmante(presidenteAsistente, true)}</div>
-                <div>PRESIDENTE DEL ÓRGANO DE ADMINISTRACIÓN JUDICIAL</div>
-                <div>DEL PODER JUDICIAL DE LA FEDERACIÓN</div>
+                <div className="vp-engrose-nombre">{engrose.firmaPresidente.nombre}</div>
+                <div>{engrose.firmaPresidente.cargo1}</div>
+                <div>{engrose.firmaPresidente.cargo2}</div>
               </div>
               <div className="vp-engrose-firma">
                 <div className="vp-engrose-linea"></div>
-                <div className="vp-engrose-nombre">{nombreFirmante(secretarioEjecutivo, false)}</div>
-                <div>SECRETARIO EJECUTIVO DEL PLENO</div>
-                <div>DEL ÓRGANO DE ADMINISTRACIÓN JUDICIAL</div>
+                <div className="vp-engrose-nombre">{engrose.firmaSecretario.nombre}</div>
+                <div>{engrose.firmaSecretario.cargo1}</div>
+                <div>{engrose.firmaSecretario.cargo2}</div>
               </div>
             </div>
           )}

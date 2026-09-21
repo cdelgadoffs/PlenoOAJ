@@ -9,6 +9,7 @@ import VistaHistorial from './VistaHistorial.jsx';
 import { renderConOcultos } from '../utils/texto.js';
 import TipoVotacionSelector from './TipoVotacionSelector.jsx';
 import SelectorInforme from './SelectorInforme.jsx';
+import ListaEngroses from './ListaEngroses.jsx';
 
 const SECCIONES_VISIBLES = SECCIONES_DEL_DOCUMENTO.filter(sec => sec !== 'licencias');
 
@@ -308,11 +309,16 @@ function VistaProyecto({ onEditar }) {
 }
 
 function VistaSesionPrevia() {
-  const { secciones, puntoPreviaSeleccionadoId, setPuntoPreviaSeleccionadoId, eliminarPunto, actualizarPunto, asistentes } = useProyecto();
+  const { secciones, puntoPreviaSeleccionadoId, setPuntoPreviaSeleccionadoId, eliminarPunto, actualizarPunto, asistentes, sesiones, sesionActivaFecha } = useProyecto();
   const { terminoBusqueda, setModalActivo, setPreviewArchivo, setPuntoAdjuntarId } = useUI();
+  const horaFinSesion = sesionActivaFecha ? sesiones[sesionActivaFecha]?.horaFin : null;
 
   if (secciones.length === 0) {
     return <div className="placeholder-msg" style={{ marginTop: '60px' }}><strong>No hay un proyecto creado</strong><br />Genera un proyecto para revisar sus puntos.</div>;
+  }
+
+  if (horaFinSesion) {
+    return <ListaEngroses />;
   }
 
   const puntosFiltrados = obtenerPuntosFiltrados(secciones, terminoBusqueda);
@@ -474,7 +480,7 @@ function VistaSesionPrevia() {
 }
 
 export default function PanelPrincipal({ onEditarPunto }) {
-  const { vistaActual, sidebarDerechoAbierto } = useUI();
+  const { vistaActual, sidebarDerechoAbierto, previewEngroseAbierta } = useUI();
 
   let contenido = null;
   if (vistaActual === 'inicio') contenido = <VistaInicio />;
@@ -482,5 +488,9 @@ export default function PanelPrincipal({ onEditarPunto }) {
   else if (vistaActual === 'sesionPrevia') contenido = <VistaSesionPrevia />;
   else if (vistaActual === 'actaSesion') contenido = <VistaHistorial />;
 
-  return <main className={'main' + (sidebarDerechoAbierto && vistaActual === 'proyecto' ? ' shifted' : '')} id="panelPrincipal">{contenido}</main>;
+  const clases = 'main'
+    + (sidebarDerechoAbierto && vistaActual === 'proyecto' ? ' shifted' : '')
+    + (previewEngroseAbierta && vistaActual === 'sesionPrevia' ? ' shifted-engrose' : '');
+
+  return <main className={clases} id="panelPrincipal">{contenido}</main>;
 }

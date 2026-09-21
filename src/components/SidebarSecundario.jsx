@@ -23,7 +23,7 @@ export default function SidebarSecundario({ onAbrirCreacion }) {
     if (vistaActual !== 'sesionPrevia') setPuntoVistaPreviaId(null);
   }, [vistaActual]);
 
-  if (vistaActual !== 'sesionPrevia') {
+  if (vistaActual !== 'sesionPrevia' || horaFinSesion) {
     return <aside className="sidebar-secundario hidden" id="sidebarSecundario"></aside>;
   }
 

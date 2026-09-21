@@ -9,6 +9,9 @@
 .main.shifted {
   margin-right: 320px;
 }
+.main.shifted-engrose {
+  margin-right: 650px;
+}
 
 @media (max-width: 1100px) {
   .main.shifted { margin-right: 280px; }
