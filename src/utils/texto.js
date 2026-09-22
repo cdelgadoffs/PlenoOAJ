@@ -160,6 +160,11 @@ export function renderConOcultos(texto) {
       ultimaFueLista = false;
       return;
     }
+    if (linea.trim() === '') {
+      if (nodos.length > 0) nodos.push(React.createElement('span', { key: `sep-${li}`, className: 'salto-parrafo-corto' }));
+      ultimaFueLista = true;
+      return;
+    }
     if (nodos.length > 0 && !ultimaFueLista) nodos.push(React.createElement('br', { key: `br-${li}` }));
     ultimaFueLista = false;
     nodos.push(...procesarSegmentos(linea, `l${li}`));

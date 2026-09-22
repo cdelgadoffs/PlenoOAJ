@@ -69,26 +69,6 @@
   /* Reserva el hueco de la barra aunque no haya overflow, para que los badges
      no bailen 5px al aparecer/desaparecer el scroll. */
   scrollbar-gutter: stable;
-  /* Estándar (Firefox y Chrome 121+). Donde aplica, deja sin efecto las reglas
-     ::-webkit-scrollbar de abajo, que quedan como fallback para Chromium viejo. */
-  scrollbar-width: thin;
-  scrollbar-color: #c4c4c4 transparent;
-}
-.cinta-fechas::-webkit-scrollbar {
-  height: 10px;
-}
-.cinta-fechas::-webkit-scrollbar-track {
-  background: transparent;
-}
-.cinta-fechas::-webkit-scrollbar-thumb {
-  background: #c4c4c4;
-  border: 3px solid transparent;
-  background-clip: padding-box;
-  border-radius: 999px;
-}
-.cinta-fechas::-webkit-scrollbar-thumb:hover {
-  background: #9e9e9e;
-  background-clip: padding-box;
 }
 .badge-sesion {
   flex-shrink: 0;

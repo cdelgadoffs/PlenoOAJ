@@ -95,6 +95,7 @@
 }
 .punto-tabla-contenido {
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
   background: #ffffff;
   font-weight: 700;
   font-size: 15.5px;
@@ -105,6 +106,7 @@
   font-size: 12.5px;
   background: #f9fafb;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .punto-tabla-votacion {
   color: #666;
