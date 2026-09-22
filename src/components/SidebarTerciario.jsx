@@ -9,19 +9,17 @@ import { guardarArchivo, obtenerArchivo, eliminarArchivo } from '../utils/archiv
 import { esArchivoWord, extraerTextoWord } from '../utils/extraccionWord.js';
 import { generarWordPunto, WORD_MIME } from '../utils/wordPunto.js';
 import { PLANTILLA_POR_DEFECTO, crearBloquesPorDefecto } from '../utils/plantillasActa.js';
+import { INTRO_ACTA_NOMBRE, INTRO_ACTA_RESTO, PUENTE_ACTA_TEXTO } from '../utils/textosActa.js';
 import EditorOcultable from './EditorOcultable.jsx';
 import '../styles/SidebarTerciario.css';
 import SelectorSeccionPunto from './SelectorSeccionPunto.jsx';
-// import TipoVotacionSelector from './TipoVotacionSelector.jsx';  // COMENTADO: ya no se usa
 import DropdownSelect from './DropdownSelect.jsx';
 import VistaPreviaFlotante from './VistaPreviaFlotante.jsx';
 import '../styles/VistaPreviaFlotante.css';
 import { CATEGORIAS, REMITENTES_POR_CATEGORIA, TODAS_DEPENDENCIAS } from '../utils/dependencias.js';
 
-// Función (no un objeto fijo) para que cada punto nuevo nazca ya con las
-// secciones por defecto de la plantilla inicial (Introducción -> Considerando)
-// desde el primer render, sin depender de que un efecto en
-// VistaPreviaFlotante llegue a dispararse a tiempo.
+const INTRO_ACTA_MARKERS_POR_DEFECTO = `**${INTRO_ACTA_NOMBRE}**${INTRO_ACTA_RESTO}`;
+
 function crearEstadoVacio() {
   return {
     categoria: 'pleno',
@@ -34,6 +32,8 @@ function crearEstadoVacio() {
     confidencial: false,
     bloquesActa: crearBloquesPorDefecto(PLANTILLA_POR_DEFECTO),
     plantilla: PLANTILLA_POR_DEFECTO,
+    introTexto: INTRO_ACTA_MARKERS_POR_DEFECTO,
+    puenteTexto: PUENTE_ACTA_TEXTO,
   };
 }
 
@@ -43,7 +43,7 @@ export default function SidebarTerciario() {
   const { obtenerAccessToken } = useAuth();
   const [form, setForm] = useState(crearEstadoVacio);
   const [oneDriveStatus, setOneDriveStatus] = useState('');
-  const asideRef = useRef(null); // 🔥 ref para anclar la vista previa flotante
+  const asideRef = useRef(null);
 
   useEffect(() => {
     if (!sidebarTerciarioAbierto) return;
@@ -72,7 +72,9 @@ export default function SidebarTerciario() {
         confidencial: sec.confidencial || false,
         bloquesActa: sec.bloquesActa ? sec.bloquesActa.map(b => ({ ...b })) : [],
         plantilla: sec.plantilla || PLANTILLA_POR_DEFECTO,
-        seccionDestino: sec.seccion || 'proyectos de acuerdo'
+        seccionDestino: sec.seccion || 'proyectos de acuerdo',
+        introTexto: sec.introTexto ?? INTRO_ACTA_MARKERS_POR_DEFECTO,
+        puenteTexto: sec.puenteTexto ?? PUENTE_ACTA_TEXTO
       });
     } else {
       setForm(crearEstadoVacio());
@@ -186,7 +188,7 @@ export default function SidebarTerciario() {
   async function conArchivoAutoAdjunto(contenido, acuerdo) {
     const anteriores = form.archivos.filter(a => !a.autogenerado);
     const autoPrevio = form.archivos.filter(a => a.autogenerado);
-    const resultado = await generarWordPunto({ contenido, acuerdo, bloquesActa: form.bloquesActa, plantilla: form.plantilla }, proyectoMeta);
+    const resultado = await generarWordPunto({ contenido, acuerdo, bloquesActa: form.bloquesActa, plantilla: form.plantilla, introTexto: form.introTexto, puenteTexto: form.puenteTexto }, proyectoMeta);
     if (!resultado) return form.archivos;
     autoPrevio.forEach(a => { eliminarArchivo(a.id).catch(() => {}); });
     const archivoAutoId = 'arch_auto_' + Date.now();
@@ -219,6 +221,8 @@ export default function SidebarTerciario() {
         confidencial: form.confidencial,
         bloquesActa: form.bloquesActa,
         plantilla: form.plantilla,
+        introTexto: form.introTexto,
+        puenteTexto: form.puenteTexto,
         seccion: form.seccionDestino
       });
       setPuntoSeleccionadoId(puntoEditandoId);
@@ -246,14 +250,16 @@ export default function SidebarTerciario() {
       origenAG: desdeAG,
       confidencial: form.confidencial,
       bloquesActa: form.bloquesActa,
-      plantilla: form.plantilla
+      plantilla: form.plantilla,
+      introTexto: form.introTexto,
+      puenteTexto: form.puenteTexto
     });
 
     setPuntoSeleccionadoId(nuevoId);
     if (form.archivos.length > 0) {
       subirArchivosAOneDrive(nuevoId, form.archivos);
     }
-    setForm(f => ({ ...f, contenido: '', acuerdo: '', archivos: [], bloquesActa: crearBloquesPorDefecto(PLANTILLA_POR_DEFECTO), plantilla: PLANTILLA_POR_DEFECTO }));
+    setForm(f => ({ ...f, contenido: '', acuerdo: '', archivos: [], bloquesActa: crearBloquesPorDefecto(PLANTILLA_POR_DEFECTO), plantilla: PLANTILLA_POR_DEFECTO, introTexto: INTRO_ACTA_MARKERS_POR_DEFECTO, puenteTexto: PUENTE_ACTA_TEXTO }));
   }
 
   async function subirArchivosAOneDrive(puntoId, archivos) {
@@ -377,15 +383,6 @@ export default function SidebarTerciario() {
               onChange={(v) => setForm(f => ({ ...f, seccionDestino: v }))}
             />
           )}
-          {/* COMENTADO: el selector de tipo de votación ya no se muestra
-          <div className="ter-field">
-            <TipoVotacionSelector
-              value={form.tipoVotacion}
-              onChange={(nuevoValor) => setForm(f => ({ ...f, tipoVotacion: nuevoValor }))}
-              nombresQuorum={asistentes.map(a => a.nombre)}
-            />
-          </div>
-          */}
 
           <div className="ter-acciones">
             <div className="ter-field" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

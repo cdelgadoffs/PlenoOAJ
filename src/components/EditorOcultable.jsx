@@ -1,32 +1,82 @@
 import { useEffect, useRef, useState } from 'react';
+import { useEditor, EditorContent } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import TextAlign from '@tiptap/extension-text-align';
+import Placeholder from '@tiptap/extension-placeholder';
+import { Table } from '@tiptap/extension-table';
+import TableRow from '@tiptap/extension-table-row';
+import TableHeader from '@tiptap/extension-table-header';
+import TableCell from '@tiptap/extension-table-cell';
+import { MarcaOculta, TamanoFuente } from '../utils/tiptapExtensions.js';
 import { agregarNombrePropio } from '../utils/diccionarioPropios.js';
 import { aplicarPrefijosAcuerdo } from '../utils/ordinales.js';
 import { markersAHtml, nodoAMarkers } from '../utils/texto.js';
 
-export default function EditorOcultable({ id, value, onChange, placeholder, autoAjustar, negritaTotal, modoAcuerdo, modoConsiderando, className, style, soloLectura }) {
-  const ref = useRef(null);
+function extensionesEditor(placeholder) {
+  return [
+    StarterKit.configure({
+      heading: false,
+      blockquote: false,
+      codeBlock: false,
+      code: false,
+      horizontalRule: false,
+      bulletList: false,
+      strike: false
+    }),
+    TextAlign.configure({ types: ['paragraph'], defaultAlignment: 'left' }),
+    Placeholder.configure({ placeholder, showOnlyCurrent: false }),
+    Table.configure({ resizable: false, allowTableNodeSelection: true, HTMLAttributes: { class: 'acta-tabla' } }),
+    TableRow,
+    TableHeader.configure({ HTMLAttributes: { class: 'acta-celda' } }),
+    TableCell.configure({ HTMLAttributes: { class: 'acta-celda' } }),
+    MarcaOculta,
+    TamanoFuente
+  ];
+}
+
+export default function EditorOcultable({ id, value, onChange, placeholder, autoAjustar, negritaTotal, modoAcuerdo, modoConsiderando, className, style, soloLectura, onFocusEditor }) {
   const [botonPos, setBotonPos] = useState(null);
   const [textoSeleccionado, setTextoSeleccionado] = useState('');
   const ultimoValorExternoRef = useRef(value);
 
-  useEffect(() => {
-    if (!ref.current) return;
-    if (value !== ultimoValorExternoRef.current && document.activeElement !== ref.current) {
-      ref.current.innerHTML = markersAHtml(value);
-    }
-    ultimoValorExternoRef.current = value;
-  }, [value]);
+  const claseEditable = className ?? ('ter-textarea ter-textarea-editable' + (autoAjustar ? ' ter-textarea-auto' : ''));
+  const estiloEditable = { ...(negritaTotal ? { fontWeight: 700 } : null), ...style };
 
-  useEffect(() => {
-    if (ref.current && !ref.current.innerHTML && value) {
-      ref.current.innerHTML = markersAHtml(value);
+  const editor = useEditor({
+    extensions: extensionesEditor(placeholder),
+    content: markersAHtml(value) || '<p></p>',
+    editable: !soloLectura,
+    editorProps: {
+      attributes: {
+        ...(id ? { id } : null),
+        class: claseEditable,
+        style: Object.entries(estiloEditable).map(([k, v]) => `${k.replace(/[A-Z]/g, m => '-' + m.toLowerCase())}:${v}`).join(';')
+      }
+    },
+    onUpdate: ({ editor }) => sincronizar(editor),
+    onSelectionUpdate: () => manejarSeleccion(),
+    onFocus: ({ editor }) => onFocusEditor && onFocusEditor(editor),
+    onBlur: ({ editor }) => {
+      setBotonPos(null);
+      editor.commands.setContent(markersAHtml(ultimoValorExternoRef.current) || '<p></p>', false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function sincronizar() {
-    if (!ref.current) return;
-    let markers = nodoAMarkers(ref.current);
+  useEffect(() => {
+    if (!editor) return;
+    if (value !== ultimoValorExternoRef.current && !editor.isFocused) {
+      editor.commands.setContent(markersAHtml(value) || '<p></p>', false);
+    }
+    ultimoValorExternoRef.current = value;
+  }, [value, editor]);
+
+  useEffect(() => {
+    if (!editor) return;
+    editor.setEditable(!soloLectura);
+  }, [soloLectura, editor]);
+
+  function sincronizar(editorInstancia) {
+    let markers = nodoAMarkers(editorInstancia.view.dom);
     if (negritaTotal) {
       markers = markers.split('\n').map(linea => {
         if (linea.startsWith('##tabla##')) return linea;
@@ -49,19 +99,19 @@ export default function EditorOcultable({ id, value, onChange, placeholder, auto
 
   function manejarSeleccion() {
     const sel = window.getSelection();
-    if (!sel || sel.isCollapsed || sel.rangeCount === 0) {
+    if (!sel || sel.isCollapsed || sel.rangeCount === 0 || !editor) {
       setBotonPos(null);
       setTextoSeleccionado('');
       return;
     }
     const range = sel.getRangeAt(0);
-    if (!ref.current || !ref.current.contains(range.commonAncestorContainer)) {
+    if (!editor.view.dom.contains(range.commonAncestorContainer)) {
       setBotonPos(null);
       setTextoSeleccionado('');
       return;
     }
     const rect = range.getBoundingClientRect();
-    const contenedorRect = ref.current.getBoundingClientRect();
+    const contenedorRect = editor.view.dom.getBoundingClientRect();
     if (rect.width === 0 && rect.height === 0) { setBotonPos(null); return; }
     setTextoSeleccionado(sel.toString());
     setBotonPos({
@@ -71,15 +121,8 @@ export default function EditorOcultable({ id, value, onChange, placeholder, auto
   }
 
   function ocultarSeleccion() {
-    const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0) return;
-    const range = sel.getRangeAt(0);
-    const span = document.createElement('span');
-    span.className = 'marca-oculta';
-    span.appendChild(range.extractContents());
-    range.insertNode(span);
-    sel.removeAllRanges();
-    sincronizar();
+    if (!editor) return;
+    editor.chain().focus().setMark('oculto').run();
     setBotonPos(null);
   }
 
@@ -119,31 +162,7 @@ export default function EditorOcultable({ id, value, onChange, placeholder, auto
           </button>
         </div>
       )}
-      <div
-        id={id}
-        ref={ref}
-        className={className ?? ('ter-textarea ter-textarea-editable' + (autoAjustar ? ' ter-textarea-auto' : ''))}
-        style={{ ...(negritaTotal ? { fontWeight: 700 } : null), ...style }}
-        contentEditable={!soloLectura}
-        suppressContentEditableWarning
-        data-placeholder={placeholder}
-        onInput={soloLectura ? undefined : sincronizar}
-        onMouseUp={soloLectura ? undefined : manejarSeleccion}
-        onKeyUp={soloLectura ? undefined : manejarSeleccion}
-        onBlur={soloLectura ? undefined : () => {
-          setBotonPos(null);
-          if (ref.current) {
-            ref.current.innerHTML = markersAHtml(ultimoValorExternoRef.current);
-          }
-        }}
-        onPaste={soloLectura ? undefined : manejarPegado}
-      ></div>
+      <EditorContent editor={editor} />
     </div>
   );
-}
-
-function manejarPegado(e) {
-  e.preventDefault();
-  const texto = e.clipboardData.getData('text/plain');
-  document.execCommand('insertText', false, texto);
 }

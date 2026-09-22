@@ -24,11 +24,22 @@ export function aplicarPrefijosAcuerdo(textoPlano, sinUnico) {
   // Las líneas de viñeta numérica manual (##li##) llevan su propia numeración
   // y no deben recibir el prefijo ordinal automático (PRIMERO/SEGUNDO/...).
   const esEspecial = p => p.startsWith('##li##') || p.startsWith('##tabla##') || p.startsWith('##align-');
-  const total = parrafos.filter(p => p.trim() !== '' && !esEspecial(p)).length;
+  const esVacio = p => p.trim() === '';
+
+  let hayItemAbierto = false;
+  const esNuevoItem = parrafos.map((p, i) => {
+    if (esVacio(p) || esEspecial(p)) return false;
+    const esContinuacion = hayItemAbierto && i > 0 && esVacio(parrafos[i - 1]);
+    hayItemAbierto = true;
+    return !esContinuacion;
+  });
+
+  const total = esNuevoItem.filter(Boolean).length;
   let indice = 0;
-  return parrafos.map(p => {
-    if (p.trim() === '' || esEspecial(p)) return p;
+  return parrafos.map((p, i) => {
+    if (esVacio(p) || esEspecial(p)) return p;
     const limpio = limpiarPrefijo(p).trimStart();
+    if (!esNuevoItem[i]) return limpio;
     const prefijo = obtenerPrefijo(indice, total, sinUnico);
     indice++;
     return `**${prefijo}.** ${limpio}`;

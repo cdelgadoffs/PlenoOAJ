@@ -2,7 +2,7 @@
 // que se arma en VistaPreviaFlotante (logo, intro, bloques de acta, contenido y acuerdo).
 import { Document, Packer, Paragraph, TextRun, AlignmentType, ImageRun, Header, Footer, PageNumber } from 'docx';
 import { cargarImagen } from './logoDocx.js';
-import { INTRO_ACTA_TEXTO, PUENTE_ACTA_TEXTO } from './textosActa.js';
+import { INTRO_ACTA_NOMBRE, INTRO_ACTA_RESTO, PUENTE_ACTA_TEXTO } from './textosActa.js';
 import { generarTextoEngrose } from './textoEngrose.js';
 
 export const WORD_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
@@ -86,6 +86,8 @@ function bloqueFirma(firma) {
 
 export async function generarWordPunto(punto, proyectoMeta = {}, opciones = {}) {
   const { contenido = '', acuerdo = '', bloquesActa = [], plantilla = 'introduccion' } = punto;
+  const introTexto = punto.introTexto ?? `**${INTRO_ACTA_NOMBRE}**${INTRO_ACTA_RESTO}`;
+  const puenteTexto = punto.puenteTexto ?? PUENTE_ACTA_TEXTO;
 
   // El logo va en el encabezado (Header), no como párrafo del cuerpo, para
   // que docx lo repita en todas las páginas igual que ya hace con el pie
@@ -110,11 +112,7 @@ export async function generarWordPunto(punto, proyectoMeta = {}, opciones = {}) 
   // "Introducción": fundamento, secciones, proyecto de acuerdo, acuerdo.
   // "Proyecto": proyecto de acuerdo primero (sin el párrafo de fundamento),
   // luego secciones y acuerdo. Mismo orden que VistaPreviaFlotante.
-  const fundamentoParrafo = new Paragraph({
-    alignment: AlignmentType.JUSTIFIED,
-    spacing: { after: 300 },
-    children: [new TextRun({ text: INTRO_ACTA_TEXTO, size: 24, color: '000000', font: 'Arial' })]
-  });
+  const fundamentoParrafos = parrafosDeTexto(introTexto, { afterUltima: 300 });
 
   const seccionesParrafos = [];
   bloquesActa.forEach(bloque => {
@@ -142,11 +140,7 @@ export async function generarWordPunto(punto, proyectoMeta = {}, opciones = {}) 
   const parrafoVacio = () => new Paragraph({ spacing: { after: 200 }, children: [new TextRun({ text: '', size: 24, font: 'Arial' })] });
   const puenteParrafos = [
     parrafoVacio(),
-    new Paragraph({
-      alignment: AlignmentType.JUSTIFIED,
-      spacing: { after: 200 },
-      children: [new TextRun({ text: PUENTE_ACTA_TEXTO, size: 24, color: '000000', font: 'Arial' })]
-    }),
+    ...parrafosDeTexto(puenteTexto, { afterUltima: 200 }),
     parrafoVacio()
   ];
 
@@ -156,7 +150,7 @@ export async function generarWordPunto(punto, proyectoMeta = {}, opciones = {}) 
     parrafos.push(...seccionesParrafos);
     parrafos.push(...acuerdoParrafos);
   } else {
-    parrafos.push(fundamentoParrafo);
+    parrafos.push(...fundamentoParrafos);
     parrafos.push(...seccionesParrafos);
     parrafos.push(...puenteParrafos);
     if (proyectoParrafo) parrafos.push(proyectoParrafo);

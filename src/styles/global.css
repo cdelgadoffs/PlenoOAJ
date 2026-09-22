@@ -72,6 +72,44 @@ input[type="checkbox"] {
   margin-bottom: 2px;
 }
 
+/* ===== EDITOR TIPTAP (EditorOcultable) ===== */
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #aaa;
+  pointer-events: none;
+  height: 0;
+}
+.ProseMirror p.is-empty:not(.is-editor-empty) {
+  min-height: 0.5em;
+  line-height: 0.5em;
+}
+.acta-tabla {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 10px 0;
+}
+.acta-celda {
+  border: 1px solid #999;
+  padding: 1px 2px;
+  position: relative;
+  text-align: center;
+}
+.acta-celda p {
+  text-align: center;
+}
+th.acta-celda {
+  background: #d9d9d9;
+  font-weight: 700;
+}
+.acta-celda.selectedCell:after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(28, 99, 218, 0.25);
+  pointer-events: none;
+}
+
 /* ===== SCROLLBARS UNIFICADOS ===== */
 .sb-nav::-webkit-scrollbar,
 .sidebar-derecho .sb-nav::-webkit-scrollbar,
