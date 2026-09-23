@@ -286,7 +286,7 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
         <div style={{ fontWeight: '600', marginBottom: '5px' }}>
           {listaCerrada ? 'Lista de puntos cerrada' : 'Lista de puntos abierta'} · {secciones.length} punto{secciones.length === 1 ? '' : 's'}
         </div>
-        {vistaActual === 'proyecto' && !sidebarTerciarioAbierto && <BotonListaCerrada />}
+        {vistaActual === 'proyecto' && !sidebarTerciarioAbierto && !horaFinSesion && <BotonListaCerrada />}
         {vistaActual === 'proyecto' && listaCerrada && !sidebarTerciarioAbierto && (
           <button
             className="btn-nuevo-proyecto"

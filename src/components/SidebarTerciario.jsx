@@ -18,12 +18,18 @@ import '../styles/VistaPreviaFlotante.css';
 import { CATEGORIAS, REMITENTES_POR_CATEGORIA, TODAS_DEPENDENCIAS } from '../utils/dependencias.js';
 
 const INTRO_ACTA_MARKERS_POR_DEFECTO = `**${INTRO_ACTA_NOMBRE}**${INTRO_ACTA_RESTO}`;
+const CONTENIDO_POR_DEFECTO = 'Proyecto de Acuerdo del Pleno del Órgano de Administración Judicial ';
+const CONTENIDO_INFORME_POR_DEFECTO = 'Informe';
 
-function crearEstadoVacio() {
+function contenidoPorDefecto(seccion) {
+  return seccion === 'informes' ? CONTENIDO_INFORME_POR_DEFECTO : CONTENIDO_POR_DEFECTO;
+}
+
+function crearEstadoVacio(seccion) {
   return {
     categoria: 'pleno',
     remitente: 'Pleno',
-    contenido: '',
+    contenido: contenidoPorDefecto(seccion),
     tipoVotacion: JSON.stringify({ voto: 0, votacion: 0, estado: true }),
     acuerdo: '',
     archivos: [],
@@ -42,7 +48,17 @@ export default function SidebarTerciario() {
   const { obtenerAccessToken } = useAuth();
   const [form, setForm] = useState(crearEstadoVacio);
   const [oneDriveStatus, setOneDriveStatus] = useState('');
+  const [seccionDelForm, setSeccionDelForm] = useState(seccionActual);
+  const [tieneAporteReal, setTieneAporteReal] = useState(false);
+  const [resetToken, setResetToken] = useState(0);
   const asideRef = useRef(null);
+
+  if (sidebarTerciarioAbierto && !puntoEditandoId && seccionActual !== seccionDelForm) {
+    setSeccionDelForm(seccionActual);
+    setForm(crearEstadoVacio(seccionActual));
+    if (tieneAporteReal) setTieneAporteReal(false);
+    setResetToken(t => t + 1);
+  }
 
   useEffect(() => {
     if (!sidebarTerciarioAbierto) return;
@@ -75,8 +91,12 @@ export default function SidebarTerciario() {
         introTexto: sec.introTexto ?? INTRO_ACTA_MARKERS_POR_DEFECTO,
         puenteTexto: sec.puenteTexto ?? PUENTE_ACTA_TEXTO
       });
+      setTieneAporteReal(true);
+      setResetToken(t => t + 1);
     } else {
-      setForm(crearEstadoVacio());
+      setForm(crearEstadoVacio(seccionActual));
+      setTieneAporteReal(false);
+      setResetToken(t => t + 1);
     }
     setOneDriveStatus('');
   }, [sidebarTerciarioAbierto, puntoEditandoId]);
@@ -113,13 +133,10 @@ export default function SidebarTerciario() {
 
   const opcionesRemitente = (REMITENTES_POR_CATEGORIA[form.categoria] || ['Pleno']).map(id => ({ id, label: id }));
   const categoriaActual = CATEGORIAS.find(c => c.id === form.categoria) || CATEGORIAS[0];
-  // El visor solo aparece cuando el usuario empieza a escribir de verdad
-  // (contenido, acuerdo o el texto de alguna sección), no solo porque ya
-  // haya secciones precargadas vacías por defecto. Esas secciones se
-  // preparan igual "detrás de escena" (VistaPreviaFlotante las precarga sin
-  // importar si es o no visible), así que en cuanto aparece ya las trae
-  // listas según la plantilla elegida.
-  const hayContenido = seccionActual !== 'informes' && !!(form.contenido.trim() || form.acuerdo.trim() || form.bloquesActa.some(b => b.texto && b.texto.trim()));
+  const hayContenido = seccionActual !== 'informes' && tieneAporteReal;
+  function marcarAporte() {
+    if (!tieneAporteReal) setTieneAporteReal(true);
+  }
 
   function cambiarCategoria(categoria) {
     const opciones = REMITENTES_POR_CATEGORIA[categoria] || ['Pleno'];
@@ -154,7 +171,9 @@ export default function SidebarTerciario() {
   }
 
   function limpiarFormulario() {
-    setForm(crearEstadoVacio());
+    setForm(crearEstadoVacio(seccionActual));
+    setTieneAporteReal(false);
+    setResetToken(t => t + 1);
     const inputArchivos = document.getElementById('archivosInput');
     const inputCarpeta = document.getElementById('carpetaInput');
     if (inputArchivos) inputArchivos.value = '';
@@ -216,7 +235,7 @@ export default function SidebarTerciario() {
         { id: crypto.randomUUID(), puntoId: puntoEditandoId, codigoPunto, dependencia: form.remitente, contenido, acuerdo, diffCambio }
       ]);
       setPuntoEditandoId(null);
-      setForm(crearEstadoVacio());
+      setForm(crearEstadoVacio(seccionActual));
       setSidebarTerciarioAbierto(false);
       return;
     }
@@ -244,7 +263,9 @@ export default function SidebarTerciario() {
     if (form.archivos.length > 0) {
       subirArchivosAOneDrive(nuevoId, form.archivos);
     }
-    setForm(f => ({ ...f, contenido: '', acuerdo: '', archivos: [], bloquesActa: crearBloquesPorDefecto(PLANTILLA_POR_DEFECTO), plantilla: PLANTILLA_POR_DEFECTO, introTexto: INTRO_ACTA_MARKERS_POR_DEFECTO, puenteTexto: PUENTE_ACTA_TEXTO }));
+    setForm(f => ({ ...f, contenido: contenidoPorDefecto(seccionActual), acuerdo: '', archivos: [], bloquesActa: crearBloquesPorDefecto(PLANTILLA_POR_DEFECTO), plantilla: PLANTILLA_POR_DEFECTO, introTexto: INTRO_ACTA_MARKERS_POR_DEFECTO, puenteTexto: PUENTE_ACTA_TEXTO }));
+    setTieneAporteReal(false);
+    setResetToken(t => t + 1);
   }
 
   async function subirArchivosAOneDrive(puntoId, archivos) {
@@ -342,12 +363,15 @@ export default function SidebarTerciario() {
             <div id="oneDriveStatus" className="onedrive-status">{oneDriveStatus}</div>
           </div>
           <div className="ter-field ter-field-grow">
+            <label className="ter-label">{seccionActual === 'informes' ? 'Informe' : 'Punto de acuerdo'}</label>
             <EditorOcultable
               id="cuerpoTextarea"
               value={form.contenido}
-              onChange={(v) => setForm(f => ({ ...f, contenido: v }))}
-              placeholder={seccionActual === 'informes' ? 'Informe' : 'Punto de acuerdo'}
+              onChange={(v) => { marcarAporte(); setForm(f => ({ ...f, contenido: v })); }}
+              placeholder={seccionActual === 'informes' ? 'Informe' : '...por el que/cual se...'}
               negritaTotal
+              autoFocus={!puntoEditandoId}
+              resetToken={resetToken}
             />
           </div>
           {seccionActual !== 'informes' && (
@@ -356,7 +380,7 @@ export default function SidebarTerciario() {
               <EditorOcultable
                 id="acuerdoSelect"
                 value={form.acuerdo}
-                onChange={(v) => setForm(f => ({ ...f, acuerdo: v }))}
+                onChange={(v) => { marcarAporte(); setForm(f => ({ ...f, acuerdo: v })); }}
                 placeholder="Acuerdos"
                 modoAcuerdo
               />
@@ -390,7 +414,7 @@ export default function SidebarTerciario() {
         </div>
       </aside>
 
-    <VistaPreviaFlotante form={form} setForm={setForm} visible={hayContenido} anclaRef={asideRef} />
+    <VistaPreviaFlotante form={form} setForm={setForm} visible={hayContenido} anclaRef={asideRef} onAporte={marcarAporte} />
     </>
   );
 }

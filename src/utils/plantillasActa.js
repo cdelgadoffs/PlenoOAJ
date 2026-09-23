@@ -1,6 +1,7 @@
 export const PLANTILLAS = [
   { id: 'introduccion', label: 'Introducción' },
-  { id: 'proyecto', label: 'Proyecto' }
+  { id: 'proyecto', label: 'Proyecto' },
+  { id: 'personalizada', label: 'Personalizada' }
 ];
 export const PLANTILLA_POR_DEFECTO = PLANTILLAS[0].id;
 

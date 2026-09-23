@@ -3,11 +3,12 @@ import { Document, Packer, Paragraph, TextRun, AlignmentType, ImageRun, Header, 
 import { parsearFechaLocal, padNumber } from './fechas.js';
 import { cargarImagen } from './logoDocx.js';
 import { numeroALetras, corregirAcentosFecha, convertirNumeroALetras } from './fechaLetras.js';
+import { limpiarMarcadores } from './texto.js';
 
 // ========== LIMPIEZA DE ASTERISCOS ==========
 function limpiarAsteriscos(texto) {
   if (!texto) return texto;
-  return texto.replace(/\*\*/g, '').replace(/\*/g, '');
+  return limpiarMarcadores(texto).replace(/\*/g, '');
 }
 
 // ========== FORMATEAR LÍNEA DE ACUERDO ==========
@@ -34,7 +35,7 @@ function generarTextoVotacion(sec, asistentes) {
   try { v = JSON.parse(sec.tipoVotacion); } catch { return limpiarAsteriscos(sec.tipoVotacion); }
 
   const estadoLabel = v.estado ? 'aprueba' : 'acuerda';
-  const lineasAcuerdo = (sec.acuerdo || '').split('\n').filter(l => l.trim() !== '');
+  const lineasAcuerdo = limpiarAsteriscos(sec.acuerdo || '').split('\n').filter(l => l.trim() !== '');
   const esAcuerdoUnico = lineasAcuerdo.length === 1 && /^ÚNICO\.?\s*/i.test(lineasAcuerdo[0].trim());
   const textoAcuerdoUnico = esAcuerdoUnico
     ? lineasAcuerdo[0].trim().replace(/^ÚNICO\.?\s*/i, '').replace(/\.\s*$/, '')

@@ -1,5 +1,5 @@
 import { parsearFechaLocal, getTituloPunto } from './fechas.js';
-import { ocultarParaActa } from './texto.js';
+import { ocultarParaActa, limpiarMarcadores } from './texto.js';
 function escaparHtml(texto) {
   return (texto || '')
     .replace(/&/g, '&amp;')
@@ -8,7 +8,7 @@ function escaparHtml(texto) {
 }
 
 function contenidoParaActa(texto) {
-  return ocultarParaActa(escaparHtml(texto || ''));
+  return ocultarParaActa(escaparHtml(limpiarMarcadores(texto || '')));
 }
 export function generarPDFConPrint(secciones, proyectoMeta) {
   if (secciones.length === 0) {

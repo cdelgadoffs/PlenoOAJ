@@ -1,6 +1,7 @@
 import { Document, Packer, Paragraph, TextRun, AlignmentType, UnderlineType } from 'docx';
 import { parsearFechaLocal, getTituloPunto } from './fechas.js';
 import { SECCIONES_DEL_DOCUMENTO } from './puntos.js';
+import { limpiarMarcadores } from './texto.js';
 
 // Sangría base (1 tabulador)
 const SANGRIA_BASE = 720;
@@ -19,7 +20,7 @@ const MARGEN_DERECHO = 1440; // 2.54 cm
 
 function limpiarAsteriscos(texto) {
   if (!texto) return texto;
-  return texto.replace(/\*\*/g, '').replace(/\*/g, '');
+  return limpiarMarcadores(texto).replace(/\*/g, '');
 }
 
 // Función para añadir espacio entre caracteres y doble espacio entre palabras
