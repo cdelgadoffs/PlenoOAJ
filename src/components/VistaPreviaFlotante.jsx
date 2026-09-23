@@ -13,12 +13,6 @@ const TIPOS_BLOQUE = [
 ];
 const PLACEHOLDER_SECCION = { id: '', label: 'Seleccionar sección...', icon: 'fa-list' };
 
-// Tipos de sección que puede ofrecer el selector dado el estado actual de
-// bloques: considerando/antecedente desaparecen en cuanto ya están
-// agregados. Si no queda ninguno fijo libre, "Personalizada..." quedaría
-// como única opción y el selector la marcaría sola (abriendo de una el
-// campo de título sin que el usuario lo pidiera), así que en ese caso se
-// antepone un placeholder neutro que hay que cambiar a propósito.
 function tiposDisponiblesPara(bloques) {
   const fijosLibres = TIPOS_BLOQUE.filter(t => t.id !== 'personalizada' && !bloques.some(b => b.tipo === t.id));
   const personalizada = TIPOS_BLOQUE.find(t => t.id === 'personalizada');

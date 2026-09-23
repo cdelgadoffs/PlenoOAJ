@@ -152,6 +152,17 @@ export function ProyectoProvider({ children }) {
     let base = generarCalendarioAnual(sesiones, diaSesion, nuevasExcepciones, new Date().getFullYear());
     base = aplicarExcepciones(base, nuevasExcepciones, sesionActivaFecha);
     base = limpiarSesionesInvalidas(base, diaSesion, sesionActivaFecha, nuevasExcepciones);
+
+    if (sesionActivaFecha === fecha) {
+      const { [fecha]: sesionActiva, ...resto } = base;
+      base = {
+        ...resto,
+        [destino]: { ...(resto[destino] || {}), ...sesionActiva }
+      };
+      setSesionActivaFecha(destino);
+      setProyectoMeta(m => ({ ...m, fecha: destino }));
+    }
+
     setSesiones(recalcularNumerosSesion(base, anclasNumeracion));
   }
 

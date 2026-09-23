@@ -86,7 +86,7 @@ function generarTextoVotacion(sec, asistentes) {
 export async function generarWordActa(secciones, proyectoMeta, asistentes = [], sesionData = {}) {
   // Filtrar para eliminar el punto de "Asuntos Generales"
   const seccionesFiltradas = secciones.filter(sec =>
-    sec.seccion?.toLowerCase() !== 'asuntos generales' && !sec.confidencial
+    sec.seccion?.toLowerCase() !== 'asuntos generales'
   );
 
   if (seccionesFiltradas.length === 0) {
@@ -188,6 +188,22 @@ export async function generarWordActa(secciones, proyectoMeta, asistentes = [], 
 
   seccionesFiltradas.forEach(sec => {
     const identificador = `${numeroGlobal}. PLE./${padNumber(numeroGlobal, 3)}.- `;
+
+    // ----- PUNTOS CONFIDENCIALES -----
+    if (sec.confidencial) {
+      parrafos.push(new Paragraph({
+        indent: { left: 720, hanging: 360 },
+        spacing: { before: 160, after: 240 },
+        alignment: AlignmentType.JUSTIFIED,
+        children: [
+          new TextRun({ text: identificador, bold: true, size: 24, color: '000000', font: 'Arial' }),
+          new TextRun({ text: 'CONFIDENCIAL', bold: true, size: 24, color: '000000', font: 'Arial' }),
+        ],
+      }));
+
+      numeroGlobal++;
+      return;
+    }
 
     // ----- CONTENIDO ESPECIAL PARA EL PRIMER PUNTO -----
     let contenido = limpiarAsteriscos(sec.contenido) || '';

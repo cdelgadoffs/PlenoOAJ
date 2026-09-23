@@ -6,7 +6,6 @@ import { formatearFechaES, padNumber } from '../utils/fechas.js';
 import { diferenciaTexto } from '../utils/diffTexto.js';
 import { crearCarpetaProyecto, crearCarpetaPunto, subirArchivoAOneDrive } from '../services/onedrive.js';
 import { guardarArchivo, obtenerArchivo, eliminarArchivo } from '../utils/archivosDB.js';
-import { esArchivoWord, extraerTextoWord } from '../utils/extraccionWord.js';
 import { generarWordPunto, WORD_MIME } from '../utils/wordPunto.js';
 import { PLANTILLA_POR_DEFECTO, crearBloquesPorDefecto } from '../utils/plantillasActa.js';
 import { INTRO_ACTA_NOMBRE, INTRO_ACTA_RESTO, PUENTE_ACTA_TEXTO } from '../utils/textosActa.js';
@@ -90,7 +89,7 @@ export default function SidebarTerciario() {
   }, [vistaActual]);
 
   useEffect(() => {
-    if (sidebarTerciarioAbierto && (seccionActual === 'aprobaciones' || seccionActual === 'asuntos generales')) {
+    if (sidebarTerciarioAbierto && seccionActual === 'aprobaciones') {
       setSidebarTerciarioAbierto(false);
       setPuntoEditandoId(null);
     }
@@ -120,7 +119,7 @@ export default function SidebarTerciario() {
   // preparan igual "detrás de escena" (VistaPreviaFlotante las precarga sin
   // importar si es o no visible), así que en cuanto aparece ya las trae
   // listas según la plantilla elegida.
-  const hayContenido = !!(form.contenido.trim() || form.acuerdo.trim() || form.bloquesActa.some(b => b.texto && b.texto.trim()));
+  const hayContenido = seccionActual !== 'informes' && !!(form.contenido.trim() || form.acuerdo.trim() || form.bloquesActa.some(b => b.texto && b.texto.trim()));
 
   function cambiarCategoria(categoria) {
     const opciones = REMITENTES_POR_CATEGORIA[categoria] || ['Pleno'];
@@ -144,25 +143,9 @@ export default function SidebarTerciario() {
       );
     }
     if (procesos.length === 0) return;
-    Promise.all(procesos).then(async (resultados) => {
+    Promise.all(procesos).then((resultados) => {
       setForm(f => ({ ...f, archivos: [...f.archivos, ...resultados.map(({ _file, ...r }) => r)] }));
       e.target.value = '';
-
-      const wordFile = resultados.find(r => esArchivoWord(r._file));
-      if (!wordFile) return;
-      if (form.contenido.trim() !== '' || form.acuerdo.trim() !== '') {
-        if (!confirm('Se detectó un documento Word. ¿Extraer el punto de acuerdo y los acuerdos, reemplazando el contenido actual?')) return;
-      }
-      const { puntoAcuerdo, acuerdos } = await extraerTextoWord(wordFile._file, seccionActual);
-      if (puntoAcuerdo || acuerdos) {
-        setForm(f => ({
-          ...f,
-          contenido: puntoAcuerdo || f.contenido,
-          acuerdo: acuerdos || f.acuerdo
-        }));
-      } else {
-        alert('No se encontró un párrafo "ACUERDO" ni una sección "ACUERDOS" en el documento.');
-      }
     }).catch(err => alert('Error al guardar archivos: ' + err.message));
   }
 
@@ -203,7 +186,9 @@ export default function SidebarTerciario() {
       alert('Debes completar el punto de acuerdo y los acuerdos antes de añadir el punto.');
       return;
     }
-    const archivosConAuto = await conArchivoAutoAdjunto(contenido, acuerdo);
+    const archivosConAuto = seccionActual === 'informes'
+      ? form.archivos
+      : await conArchivoAutoAdjunto(contenido, acuerdo);
     if (puntoEditandoId) {
       const anterior = secciones.find(s => s.id === puntoEditandoId);
       const idx = secciones.findIndex(s => s.id === puntoEditandoId);
@@ -361,7 +346,7 @@ export default function SidebarTerciario() {
               id="cuerpoTextarea"
               value={form.contenido}
               onChange={(v) => setForm(f => ({ ...f, contenido: v }))}
-              placeholder="Punto de acuerdo"
+              placeholder={seccionActual === 'informes' ? 'Informe' : 'Punto de acuerdo'}
               negritaTotal
             />
           </div>

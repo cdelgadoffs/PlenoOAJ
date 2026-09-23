@@ -143,7 +143,7 @@ export async function generarWordOrdenDia(secciones, proyectoMeta) {
   SECCIONES_DEL_DOCUMENTO.forEach(nombreSeccion => {
     const puntosDeLaSeccion = secciones
       .map((sec, idx) => ({ sec, idx }))
-      .filter(({ sec }) => sec.seccion === nombreSeccion && !sec.confidencial)
+      .filter(({ sec }) => sec.seccion === nombreSeccion)
 
     if (puntosDeLaSeccion.length === 0) return;
 
@@ -176,7 +176,9 @@ export async function generarWordOrdenDia(secciones, proyectoMeta) {
 
     // --- Procesar los puntos de la sección ---
     puntosDeLaSeccion.forEach(({ sec }) => {
-      let textoPunto = sec.contenido ? sec.contenido : getTituloPunto(sec, 0);
+      let textoPunto = sec.confidencial
+        ? 'CONFIDENCIAL'
+        : (sec.contenido ? sec.contenido : getTituloPunto(sec, 0));
       textoPunto = limpiarAsteriscos(textoPunto);
       
       // Se ha eliminado la dependencia y el punto separador

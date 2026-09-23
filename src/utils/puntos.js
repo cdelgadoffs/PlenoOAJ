@@ -115,10 +115,17 @@ export function reordenarAsuntosGenerales(secciones) {
   return [...otros, ...generales];
 }
 
+function obtenerFechaSesionOrdinariaAnterior(sesiones, fechaActual) {
+  const anteriores = Object.keys(sesiones)
+    .filter(f => f < fechaActual && sesiones[f]?.tipoSesion === 'Ordinaria')
+    .sort();
+  return anteriores.length > 0 ? anteriores[anteriores.length - 1] : null;
+}
+
 export function conPunto2Actualizado(secciones, proyectoMeta, sesiones, calcularFechaAnterior, formatearFechaES, sumarDias) {
   const idx = secciones.findIndex(s => s.id === 'sec_fijo_2');
   if (idx === -1 || !proyectoMeta.fecha) return secciones;
-  const fechaAnterior = calcularFechaAnterior(proyectoMeta.fecha, 7);
+  const fechaAnterior = obtenerFechaSesionOrdinariaAnterior(sesiones, proyectoMeta.fecha) || calcularFechaAnterior(proyectoMeta.fecha, 7);
   if (!fechaAnterior) return secciones;
 
   const tipoActual = (proyectoMeta.tipoSesion || 'Ordinaria').toLowerCase();
