@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { renderConOcultos, capitalizarPalabras } from '../utils/texto.js';
-import { INTRO_ACTA_NOMBRE, INTRO_ACTA_RESTO, PUENTE_ACTA_TEXTO } from '../utils/textosActa.js';
 import { PLANTILLAS, PLANTILLA_POR_DEFECTO, SECCIONES_POR_DEFECTO, crearBloquesPorDefecto } from '../utils/plantillasActa.js';
 import { generarWordPunto } from '../utils/wordPunto.js';
 import { generarTextoEngrose } from '../utils/textoEngrose.js';
@@ -39,8 +38,8 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, 
   const bloques = form.bloquesActa || [];
   const [selectorTablaAbierto, setSelectorTablaAbierto] = useState(false);
   const [tablaHover, setTablaHover] = useState({ filas: 0, cols: 0 });
-  const [rangoGuardado, setRangoGuardado] = useState(null);
   const [dropdownAbierto, setDropdownAbierto] = useState(null);
+  const editorActivoRef = useRef(null);
 
   useEffect(() => {
     if (!visible || !anclaRef.current) { setPos(null); return; }
@@ -51,8 +50,7 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, 
     }
     calcular();
     window.addEventListener('resize', calcular);
-    // El sidebar anima su ancho (transition: width), así que hay que
-    // recalcular mientras dura la transición, no solo al montar.
+
     const observer = new ResizeObserver(calcular);
     observer.observe(elemento);
     return () => {
@@ -61,12 +59,6 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, 
     };
   }, [visible, anclaRef]);
 
-  // Precarga las secciones por defecto de la plantilla: al montar (punto
-  // nuevo) y cada vez que se cambia de plantilla, siempre que las secciones
-  // actuales sigan "vírgenes" (vacías y no personalizadas) para no pisar
-  // contenido que el usuario ya haya escrito. Si el usuario borra una
-  // sección a mano no se vuelve a agregar (solo se reevalúa al cambiar de
-  // plantilla, no en cada edición).
   useEffect(() => {
     const tipos = SECCIONES_POR_DEFECTO[plantilla];
     if (!tipos) return;
@@ -78,9 +70,6 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plantilla]);
 
-  // El tipo de sección seleccionado en el selector no puede ser uno que ya
-  // esté agregado (considerando/antecedente son únicos); si deja de estar
-  // disponible, cae al primero que sí lo esté.
   useEffect(() => {
     const disponibles = tiposDisponiblesPara(bloques);
     if (!disponibles.some(t => t.id === tipoNuevoBloque)) {
@@ -143,40 +132,36 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, 
     setForm(f => ({ ...f, bloquesActa: (f.bloquesActa || []).filter(b => b.id !== id) }));
   }
 
+  function editorActivo() {
+    return editorActivoRef.current;
+  }
   function aplicarNegrita() {
-    document.execCommand('bold');
+    editorActivo()?.chain().focus().toggleBold().run();
   }
   function aplicarItalica() {
-    document.execCommand('italic');
+    editorActivo()?.chain().focus().toggleItalic().run();
   }
   function aplicarListaNumerada() {
-    document.execCommand('insertOrderedList');
+    editorActivo()?.chain().focus().toggleOrderedList().run();
   }
   function capitalizarSeleccion() {
-    const sel = window.getSelection();
-    if (!sel || sel.isCollapsed || sel.rangeCount === 0) return;
-    const texto = sel.toString();
+    const editor = editorActivo();
+    if (!editor) return;
+    const { from, to } = editor.state.selection;
+    if (from === to) return;
+    const texto = editor.state.doc.textBetween(from, to, ' ');
     if (!texto.trim()) return;
-    document.execCommand('insertText', false, capitalizarPalabras(texto));
+    editor.chain().focus().insertContentAt({ from, to }, capitalizarPalabras(texto)).run();
   }
   function cambiarTamanoFuente(delta) {
-    const sel = window.getSelection();
-    if (!sel || sel.isCollapsed || sel.rangeCount === 0) return;
-    const range = sel.getRangeAt(0);
-    let elemento = range.commonAncestorContainer;
-    if (elemento.nodeType === Node.TEXT_NODE) elemento = elemento.parentElement;
-    if (elemento.closest('table')) return;
-    const tamanoActual = parseFloat(window.getComputedStyle(elemento).fontSize) || 13;
+    const editor = editorActivo();
+    if (!editor) return;
+    const { from, to } = editor.state.selection;
+    if (from === to) return;
+    const actual = editor.getAttributes('fontSize').size;
+    const tamanoActual = actual ? parseFloat(actual) : 13;
     const nuevoTamano = Math.min(72, Math.max(8, Math.round(tamanoActual + delta)));
-    const span = document.createElement('span');
-    span.style.fontSize = `${nuevoTamano}px`;
-    span.appendChild(range.extractContents());
-    range.insertNode(span);
-    const nuevoRange = document.createRange();
-    nuevoRange.selectNodeContents(span);
-    sel.removeAllRanges();
-    sel.addRange(nuevoRange);
-    span.closest('[contenteditable]')?.dispatchEvent(new Event('input', { bubbles: true }));
+    editor.chain().focus().setMark('fontSize', { size: `${nuevoTamano}px` }).run();
   }
   function aumentarFuente() {
     cambiarTamanoFuente(2);
@@ -185,48 +170,42 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, 
     cambiarTamanoFuente(-2);
   }
   function alinearIzquierda() {
-    document.execCommand('justifyLeft');
+    editorActivo()?.chain().focus().setTextAlign('left').run();
   }
   function alinearCentro() {
-    document.execCommand('justifyCenter');
+    editorActivo()?.chain().focus().setTextAlign('center').run();
   }
   function alinearDerecha() {
-    document.execCommand('justifyRight');
+    editorActivo()?.chain().focus().setTextAlign('right').run();
   }
   function deshacer() {
-    document.execCommand('undo');
+    editorActivo()?.chain().focus().undo().run();
   }
   function rehacer() {
-    document.execCommand('redo');
+    editorActivo()?.chain().focus().redo().run();
   }
   function abrirSelectorTabla() {
-    const sel = window.getSelection();
-    if (sel && sel.rangeCount > 0) {
-      setRangoGuardado(sel.getRangeAt(0).cloneRange());
-    }
     setTablaHover({ filas: 0, cols: 0 });
     setSelectorTablaAbierto(true);
   }
   function insertarTabla(filas, cols) {
-    if (rangoGuardado) {
-      const sel = window.getSelection();
-      sel.removeAllRanges();
-      sel.addRange(rangoGuardado);
-    }
-    let filasHtml = '';
-    for (let f = 0; f < filas; f++) {
-      let celdasHtml = '';
-      for (let c = 0; c < cols; c++) {
-        celdasHtml += f === 0
-          ? '<th style="border:1px solid #999;padding:1px 2px;background:#d9d9d9;font-weight:700;">&nbsp;</th>'
-          : '<td style="border:1px solid #999;padding:1px 2px;">&nbsp;</td>';
-      }
-      filasHtml += `<tr>${celdasHtml}</tr>`;
-    }
-    const tablaHtml = `<table style="border-collapse:collapse;width:100%;margin:10px 0;">${filasHtml}</table><p><br></p>`;
-    document.execCommand('insertHTML', false, tablaHtml);
+    const editor = editorActivo();
     setSelectorTablaAbierto(false);
-    setRangoGuardado(null);
+    if (!editor) return;
+    editor.chain().focus().insertTable({ rows: filas, cols, withHeaderRow: true }).run();
+    const { state, view } = editor;
+    const { $from } = state.selection;
+    for (let d = $from.depth; d > 0; d--) {
+      const nodo = $from.node(d);
+      if (nodo.type.name !== 'table') continue;
+      const inicio = $from.before(d);
+      const tr = state.tr;
+      state.doc.nodesBetween(inicio, inicio + nodo.nodeSize, (n, pos) => {
+        if (n.type.name === 'paragraph') tr.setNodeMarkup(pos, undefined, { ...n.attrs, textAlign: 'center' });
+      });
+      view.dispatch(tr);
+      break;
+    }
   }
 
   return (
@@ -376,9 +355,15 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, 
             <img src="/logo.png" alt="Logo" style={{ height: '100px', marginBottom: '0px' }} />
           </div>
           {plantilla === 'introduccion' && (
-            <div style={{ textAlign: 'justify', marginBottom: '20px' }}>
-              <strong>{INTRO_ACTA_NOMBRE}</strong>{INTRO_ACTA_RESTO}
-            </div>
+            <EditorOcultable
+              value={form.introTexto}
+              onChange={(v) => setForm(f => ({ ...f, introTexto: v }))}
+              placeholder="Fundamento..."
+              className=""
+              style={{ textAlign: 'justify', marginBottom: '20px', outline: 'none' }}
+              soloLectura={soloLectura}
+              onFocusEditor={(ed) => { editorActivoRef.current = ed; }}
+            />
           )}
 
           {plantilla === 'proyecto' && (
@@ -390,6 +375,7 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, 
               className="vp-contenido"
               style={{ marginBottom: '20px', outline: 'none' }}
               soloLectura={soloLectura}
+              onFocusEditor={(ed) => { editorActivoRef.current = ed; }}
             />
           )}
           {bloques.map(bloque => {
@@ -413,13 +399,22 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, 
                   className=""
                   style={{ outline: 'none' }}
                   soloLectura={soloLectura}
+                  onFocusEditor={(ed) => { editorActivoRef.current = ed; }}
                 />
               </div>
             );
           })}
           {plantilla === 'introduccion' && (
             <>
-              <div style={{ textAlign: 'justify', margin: '10px 0' }}>{PUENTE_ACTA_TEXTO}</div>
+              <EditorOcultable
+                value={form.puenteTexto}
+                onChange={(v) => setForm(f => ({ ...f, puenteTexto: v }))}
+                placeholder="Frase puente..."
+                className=""
+                style={{ textAlign: 'justify', margin: '10px 0', outline: 'none' }}
+                soloLectura={soloLectura}
+                onFocusEditor={(ed) => { editorActivoRef.current = ed; }}
+              />
               <EditorOcultable
                 value={form.contenido}
                 onChange={(v) => setForm(f => ({ ...f, contenido: v }))}
@@ -428,6 +423,7 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, 
                 className="vp-contenido"
                 style={{ marginBottom: '20px', outline: 'none' }}
                 soloLectura={soloLectura}
+                onFocusEditor={(ed) => { editorActivoRef.current = ed; }}
               />
             </>
           )}
@@ -439,6 +435,7 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, 
             className=""
             style={{ outline: 'none' }}
             soloLectura={soloLectura}
+            onFocusEditor={(ed) => { editorActivoRef.current = ed; }}
           />
           {soloLectura && (
             <div className="vp-engrose">

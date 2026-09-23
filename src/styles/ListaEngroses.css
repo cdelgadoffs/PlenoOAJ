@@ -60,6 +60,7 @@
   font-size: 13.5px;
   color: #333;
   line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 .engrose-item.selected .engrose-item-resumen {
   font-size: 15px;

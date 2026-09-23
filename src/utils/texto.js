@@ -1,7 +1,6 @@
 import React from 'react';
 import { obtenerNombresPropios } from './diccionarioPropios.js';
 
-// Títulos que preceden un nombre propio de persona; se amplía esta lista según se necesite.
 const TITULOS_PERSONA = ['Magistrado', 'Magistrada', 'Licenciado', 'Licenciada', 'Juez', 'Jueza'];
 
 export function capitalizarPalabras(texto) {
@@ -161,6 +160,11 @@ export function renderConOcultos(texto) {
       ultimaFueLista = false;
       return;
     }
+    if (linea.trim() === '') {
+      if (nodos.length > 0) nodos.push(React.createElement('span', { key: `sep-${li}`, className: 'salto-parrafo-corto' }));
+      ultimaFueLista = true;
+      return;
+    }
     if (nodos.length > 0 && !ultimaFueLista) nodos.push(React.createElement('br', { key: `br-${li}` }));
     ultimaFueLista = false;
     nodos.push(...procesarSegmentos(linea, `l${li}`));
@@ -191,34 +195,34 @@ function formatearLineaInline(linea) {
 export function markersAHtml(texto) {
   const lineas = (texto || '').split('\n');
   let html = '';
-  let enLista = false;
-  lineas.forEach((linea, i) => {
+  let itemsLista = [];
+  function cerrarLista() {
+    if (itemsLista.length === 0) return;
+    html += `<ol>${itemsLista.join('')}</ol>`;
+    itemsLista = [];
+  }
+  lineas.forEach(linea => {
     const esLi = linea.startsWith('##li##');
     const esTabla = linea.startsWith(PREFIJO_TABLA);
     if (esTabla) {
-      if (enLista) { html += '</ol>'; enLista = false; }
-      else if (i > 0) html += '<br>';
+      cerrarLista();
       html += decodificarTabla(linea);
       return;
     }
     const alineacion = extraerAlineacion(linea);
     if (alineacion) {
-      if (enLista) { html += '</ol>'; enLista = false; }
-      else if (i > 0) html += '<br>';
-      html += `<div style="text-align:${alineacion.align}">${formatearLineaInline(alineacion.resto)}</div>`;
+      cerrarLista();
+      html += `<p style="text-align:${alineacion.align}">${formatearLineaInline(alineacion.resto)}</p>`;
       return;
     }
-    const contenidoLinea = formatearLineaInline(esLi ? linea.slice(6) : linea);
     if (esLi) {
-      if (!enLista) { html += '<ol>'; enLista = true; }
-      html += `<li>${contenidoLinea}</li>`;
-    } else {
-      if (enLista) { html += '</ol>'; enLista = false; }
-      else if (i > 0) html += '<br>';
-      html += contenidoLinea;
+      itemsLista.push(`<li>${formatearLineaInline(linea.slice(6))}</li>`);
+      return;
     }
+    cerrarLista();
+    html += `<p>${formatearLineaInline(linea)}</p>`;
   });
-  if (enLista) html += '</ol>';
+  cerrarLista();
   return html;
 }
 
@@ -228,7 +232,7 @@ export function nodoAMarkers(nodo) {
     if (hijo.nodeType === Node.TEXT_NODE) {
       resultado += hijo.textContent;
     } else if (hijo.nodeName === 'BR') {
-      resultado += '\n';
+      if (!hijo.classList.contains('ProseMirror-trailingBreak')) resultado += '\n';
     } else if (hijo.nodeName === 'STRONG' || hijo.nodeName === 'B') {
       const interno = nodoAMarkers(hijo);
       resultado += interno ? `**${interno}**` : '';
@@ -243,14 +247,14 @@ export function nodoAMarkers(nodo) {
       const px = parseFloat(hijo.style.fontSize);
       resultado += (interno && px) ? `##fs${px}##${interno}##/fs##` : interno;
     } else if (hijo.nodeName === 'TABLE') {
-      if (resultado && !resultado.endsWith('\n')) resultado += '\n';
+      if (resultado) resultado += '\n';
       resultado += PREFIJO_TABLA + btoa(unescape(encodeURIComponent(hijo.outerHTML)));
     } else if (hijo.nodeName === 'OL' || hijo.nodeName === 'UL') {
-      if (resultado && !resultado.endsWith('\n')) resultado += '\n';
+      if (resultado) resultado += '\n';
       const items = Array.from(hijo.children).filter(c => c.nodeName === 'LI');
       resultado += items.map(li => '##li##' + nodoAMarkers(li)).join('\n');
     } else if (hijo.nodeName === 'DIV' || hijo.nodeName === 'P') {
-      if (resultado && !resultado.endsWith('\n')) resultado += '\n';
+      if (resultado) resultado += '\n';
       const align = hijo.style && hijo.style.textAlign;
       const interno = nodoAMarkers(hijo);
       resultado += (align && align !== 'left' && align !== 'start' && interno.trim())

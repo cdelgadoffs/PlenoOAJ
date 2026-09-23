@@ -4,6 +4,7 @@ import { useProyecto } from '../context/ProyectoContext.jsx';
 import { getTituloPunto, padNumber } from '../utils/fechas.js';
 import { cargarRemitentesCorreo } from '../utils/storage.js';
 import { PLANTILLA_POR_DEFECTO } from '../utils/plantillasActa.js';
+import { INTRO_ACTA_NOMBRE, INTRO_ACTA_RESTO, PUENTE_ACTA_TEXTO } from '../utils/textosActa.js';
 import VistaPreviaFlotante from './VistaPreviaFlotante.jsx';
 import '../styles/VistaPreviaFlotante.css';
 import '../styles/ListaEngroses.css';
@@ -48,7 +49,9 @@ export default function ListaEngroses() {
     acuerdo: puntoVistaPrevia?.acuerdo || '',
     bloquesActa: puntoVistaPrevia?.bloquesActa || [],
     plantilla: puntoVistaPrevia?.plantilla || PLANTILLA_POR_DEFECTO,
-    tipoVotacion: puntoVistaPrevia?.tipoVotacion || ''
+    tipoVotacion: puntoVistaPrevia?.tipoVotacion || '',
+    introTexto: puntoVistaPrevia?.introTexto ?? `**${INTRO_ACTA_NOMBRE}**${INTRO_ACTA_RESTO}`,
+    puenteTexto: puntoVistaPrevia?.puenteTexto ?? PUENTE_ACTA_TEXTO
   };
   const codigoVistaPrevia = puntoVistaPrevia ? getTituloPunto(puntoVistaPrevia, idxVistaPrevia, secciones) : '';
 

@@ -235,15 +235,10 @@ function VistaProyecto({ onEditar }) {
       const el = seccionRefs.current[sec];
       const contenedor = document.getElementById('panelPrincipal');
       if (!el || !contenedor) return;
-      // Se desplaza manualmente el contenedor #panelPrincipal (en vez de
-      // el.scrollIntoView, que puede arrastrar el scroll a un ancestro
-      // distinto y esconder el topbar) para garantizar que solo se mueve
-      // este contenedor.
       const delta = el.getBoundingClientRect().top - contenedor.getBoundingClientRect().top;
       contenedor.scrollTo({ top: contenedor.scrollTop + delta - 12, behavior: 'smooth' });
     });
     return () => setScrollASeccionFn(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

@@ -9,6 +9,7 @@ import {
   cargarAnclasNumeracion, guardarAnclasNumeracion as persistirAnclasNumeracion
 } from '../utils/storage.js';
 import { conPuntosFijosAsegurados, conPunto2Actualizado, getInsertIndex } from '../utils/puntos.js';
+import { PLANTILLA_POR_DEFECTO } from '../utils/plantillasActa.js';
 import { calcularFechaAnterior, formatearFechaES, hoyLocalISO, getTituloPunto, sumarDias, padNumber, parsearFechaLocal } from '../utils/fechas.js';
 import {
   generarCalendarioAnual, aplicarExcepciones, limpiarSesionesInvalidas,
@@ -238,7 +239,10 @@ export function ProyectoProvider({ children }) {
       archivos: datos.archivos || [],
       origenAG: datos.origenAG || false,
       confidencial: datos.confidencial || false,
-      bloquesActa: datos.bloquesActa || []
+      bloquesActa: datos.bloquesActa || [],
+      plantilla: datos.plantilla || PLANTILLA_POR_DEFECTO,
+      introTexto: datos.introTexto,
+      puenteTexto: datos.puenteTexto
     };
 
     const insertIdx = getInsertIndex(secciones, nuevaSec.seccion);
@@ -270,6 +274,9 @@ export function ProyectoProvider({ children }) {
         archivos: datos.archivos,
         confidencial: datos.confidencial || false,
         bloquesActa: datos.bloquesActa || [],
+        plantilla: datos.plantilla || PLANTILLA_POR_DEFECTO,
+        introTexto: datos.introTexto,
+        puenteTexto: datos.puenteTexto,
         anexo: (datos.archivos || []).length > 0 || actual.anexo === true,
         seccion: nuevaSeccion
       };
