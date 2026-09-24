@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { renderConOcultos, capitalizarPalabras } from '../utils/texto.js';
 import { PLANTILLAS, PLANTILLA_POR_DEFECTO, SECCIONES_POR_DEFECTO, crearBloquesPorDefecto } from '../utils/plantillasActa.js';
 import { generarWordPunto } from '../utils/wordPunto.js';
-import { generarTextoEngrose } from '../utils/textoEngrose.js';
+import { generarTextoEngrose, nombreArchivoEngrose } from '../utils/textoEngrose.js';
 import { useProyecto } from '../context/ProyectoContext.jsx';
 import EditorOcultable from './EditorOcultable.jsx';
 
@@ -106,9 +106,10 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, 
 
   async function descargarWord() {
     const { blob, nombreArchivo } = await generarWordPunto(form, proyectoMeta, { engrose: soloLectura ? { asistentes, secretarioEjecutivo } : null });
+    const nombreFinal = soloLectura ? nombreArchivoEngrose(codigoLectura) : nombreArchivo;
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = url; link.download = nombreArchivo;
+    link.href = url; link.download = nombreFinal;
     document.body.appendChild(link); link.click(); document.body.removeChild(link);
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
@@ -472,7 +473,7 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, 
               onFocusEditor={(ed) => { editorActivoRef.current = ed; }}
             />
           )}
-          <div className="vp-bloque-titulo">ACUERDO</div>
+          {plantilla === 'proyecto' && <div className="vp-bloque-titulo">ACUERDO</div>}
           <EditorOcultable
             value={form.acuerdo}
             onChange={(v) => { onAporte && onAporte(); setForm(f => ({ ...f, acuerdo: v })); }}

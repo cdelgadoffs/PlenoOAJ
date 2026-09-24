@@ -7,6 +7,13 @@ import { generarTextoEngrose } from './textoEngrose.js';
 
 export const WORD_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
+// El nombre visible sigue la convención "PLE/nnn" usada en toda la app, pero
+// para el nombre de archivo real (OneDrive, ZIP, descarga) se quita la barra
+// porque "/" no es válido en un nombre de archivo.
+export function nombreArchivoPuntoAcuerdo(codigo) {
+  return `01-Punto de acuerdo_${(codigo || '').replace(/\//g, '')}.docx`;
+}
+
 const TITULOS_BLOQUE = {
   considerando: 'CONSIDERANDO',
   antecedente: 'ANTECEDENTES'
@@ -59,12 +66,12 @@ function parrafosDeTexto(texto, opciones = {}) {
   });
 }
 
-function bloqueFirma(firma) {
+function bloqueFirma(firma, sinEspacioPrevio = false) {
   return [
     new Paragraph({
       alignment: AlignmentType.CENTER,
-      spacing: { before: 500, after: 40 },
-      children: [new TextRun({ text: '_______________________________', size: 24, color: '000000', font: 'Arial' })]
+      spacing: { before: sinEspacioPrevio ? 0 : 500, after: 40 },
+      children: [new TextRun({ text: '_______________________________', bold: true, size: 24, color: '000000', font: 'Arial' })]
     }),
     new Paragraph({
       alignment: AlignmentType.CENTER,
@@ -74,12 +81,12 @@ function bloqueFirma(firma) {
     new Paragraph({
       alignment: AlignmentType.CENTER,
       spacing: { after: 0 },
-      children: [new TextRun({ text: firma.cargo1, size: 24, color: '000000', font: 'Arial' })]
+      children: [new TextRun({ text: firma.cargo1, bold: true, size: 24, color: '000000', font: 'Arial' })]
     }),
     new Paragraph({
       alignment: AlignmentType.CENTER,
       spacing: { after: 200 },
-      children: [new TextRun({ text: firma.cargo2, size: 24, color: '000000', font: 'Arial' })]
+      children: [new TextRun({ text: firma.cargo2, bold: true, size: 24, color: '000000', font: 'Arial' })]
     })
   ];
 }
@@ -134,20 +141,25 @@ export async function generarWordPunto(punto, proyectoMeta = {}, opciones = {}) 
   }) : null;
 
   const acuerdoParrafos = acuerdo.trim() ? parrafosDeTexto(acuerdo) : [];
+  const acuerdoTitulo = new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { before: 100, after: 160 },
+    children: [new TextRun({ text: 'ACUERDO', bold: true, size: 24, color: '000000', font: 'Arial' })]
+  });
 
-  // Línea en blanco, frase puente y otra línea en blanco entre las secciones
-  // y el proyecto de acuerdo (solo en "Introducción").
+  // Línea en blanco y frase puente entre las secciones y el proyecto de
+  // acuerdo (solo en "Introducción"). El título ACUERDO va solo en "Proyecto".
   const parrafoVacio = () => new Paragraph({ spacing: { after: 200 }, children: [new TextRun({ text: '', size: 24, font: 'Arial' })] });
   const puenteParrafos = [
     parrafoVacio(),
-    ...parrafosDeTexto(puenteTexto, { afterUltima: 200 }),
-    parrafoVacio()
+    ...parrafosDeTexto(puenteTexto, { afterUltima: 200 })
   ];
 
   const parrafos = [];
   if (plantilla === 'proyecto') {
     if (proyectoParrafo) parrafos.push(proyectoParrafo);
     parrafos.push(...seccionesParrafos);
+    if (acuerdoParrafos.length > 0) parrafos.push(acuerdoTitulo);
     parrafos.push(...acuerdoParrafos);
   } else {
     parrafos.push(...fundamentoParrafos);
@@ -166,10 +178,13 @@ export async function generarWordPunto(punto, proyectoMeta = {}, opciones = {}) 
     });
     parrafos.push(new Paragraph({
       alignment: AlignmentType.JUSTIFIED,
-      spacing: { before: 300, after: 200 },
+      spacing: { before: 300, after: 0 },
       children: [new TextRun({ text: engrose.parrafo, size: 24, color: '000000', font: 'Arial' })]
     }));
-    parrafos.push(...bloqueFirma(engrose.firmaPresidente));
+    for (let i = 0; i < 5; i++) {
+      parrafos.push(new Paragraph({ children: [new TextRun({ text: '', size: 24, font: 'Arial' })] }));
+    }
+    parrafos.push(...bloqueFirma(engrose.firmaPresidente, true));
     parrafos.push(...bloqueFirma(engrose.firmaSecretario));
   }
 
@@ -185,6 +200,13 @@ export async function generarWordPunto(punto, proyectoMeta = {}, opciones = {}) 
   });
 
   const doc = new Document({
+    styles: {
+      default: {
+        document: {
+          paragraph: { spacing: { line: 276, lineRule: 'auto' } }
+        }
+      }
+    },
     sections: [{
       properties: {},
       headers: header ? { default: header } : undefined,

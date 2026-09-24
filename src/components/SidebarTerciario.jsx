@@ -6,7 +6,8 @@ import { formatearFechaES, padNumber } from '../utils/fechas.js';
 import { diferenciaTexto } from '../utils/diffTexto.js';
 import { crearCarpetaProyecto, crearCarpetaPunto, subirArchivoAOneDrive } from '../services/onedrive.js';
 import { guardarArchivo, obtenerArchivo, eliminarArchivo } from '../utils/archivosDB.js';
-import { generarWordPunto, WORD_MIME } from '../utils/wordPunto.js';
+import { generarWordPunto, nombreArchivoPuntoAcuerdo, WORD_MIME } from '../utils/wordPunto.js';
+import { getInsertIndex } from '../utils/puntos.js';
 import { PLANTILLA_POR_DEFECTO, crearBloquesPorDefecto } from '../utils/plantillasActa.js';
 import { INTRO_ACTA_NOMBRE, INTRO_ACTA_RESTO, PUENTE_ACTA_TEXTO } from '../utils/textosActa.js';
 import EditorOcultable from './EditorOcultable.jsx';
@@ -187,7 +188,8 @@ export default function SidebarTerciario() {
 
   // Genera el .docx de respaldo del punto (mismo contenido que VistaPreviaFlotante)
   // y lo mezcla con los archivos ya adjuntados, reemplazando la versión auto anterior si existía.
-  async function conArchivoAutoAdjunto(contenido, acuerdo) {
+  // Siempre queda primero en la lista de adjuntos.
+  async function conArchivoAutoAdjunto(contenido, acuerdo, codigoPunto) {
     const anteriores = form.archivos.filter(a => !a.autogenerado);
     const autoPrevio = form.archivos.filter(a => a.autogenerado);
     const resultado = await generarWordPunto({ contenido, acuerdo, bloquesActa: form.bloquesActa, plantilla: form.plantilla, introTexto: form.introTexto, puenteTexto: form.puenteTexto }, proyectoMeta);
@@ -195,7 +197,8 @@ export default function SidebarTerciario() {
     autoPrevio.forEach(a => { eliminarArchivo(a.id).catch(() => {}); });
     const archivoAutoId = 'arch_auto_' + Date.now();
     await guardarArchivo(archivoAutoId, resultado.blob);
-    return [...anteriores, { id: archivoAutoId, nombre: resultado.nombreArchivo, tipo: WORD_MIME, autogenerado: true }];
+    const nombre = nombreArchivoPuntoAcuerdo(codigoPunto);
+    return [{ id: archivoAutoId, nombre, tipo: WORD_MIME, autogenerado: true }, ...anteriores];
   }
 
   async function confirmar() {
@@ -205,13 +208,19 @@ export default function SidebarTerciario() {
       alert('Debes completar el punto de acuerdo y los acuerdos antes de añadir el punto.');
       return;
     }
+    const desdeAG = seccionActual === 'asuntos generales';
+    const seccionFinal = desdeAG
+      ? (form.seccionDestino || 'proyectos de acuerdo')
+      : seccionActual;
+    const codigoPunto = puntoEditandoId
+      ? 'PLE/' + padNumber(secciones.findIndex(s => s.id === puntoEditandoId) + 1, 3)
+      : 'PLE/' + padNumber(getInsertIndex(secciones, seccionFinal) + 1, 3);
+
     const archivosConAuto = seccionActual === 'informes'
       ? form.archivos
-      : await conArchivoAutoAdjunto(contenido, acuerdo);
+      : await conArchivoAutoAdjunto(contenido, acuerdo, codigoPunto);
     if (puntoEditandoId) {
       const anterior = secciones.find(s => s.id === puntoEditandoId);
-      const idx = secciones.findIndex(s => s.id === puntoEditandoId);
-      const codigoPunto = 'PLE/' + padNumber(idx + 1, 3);
       const textoAnterior = `${anterior?.contenido || ''} ${anterior?.acuerdo || ''}`;
       const textoNuevo = `${contenido} ${acuerdo}`;
       const diffCambio = diferenciaTexto(textoAnterior, textoNuevo);
@@ -239,10 +248,6 @@ export default function SidebarTerciario() {
       setSidebarTerciarioAbierto(false);
       return;
     }
-    const desdeAG = seccionActual === 'asuntos generales';
-    const seccionFinal = desdeAG
-      ? (form.seccionDestino || 'proyectos de acuerdo')
-      : seccionActual;
 
     const nuevoId = agregarPunto({
       contenido,
