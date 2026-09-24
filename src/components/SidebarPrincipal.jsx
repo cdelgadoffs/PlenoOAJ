@@ -2,13 +2,15 @@ import { useEffect, useState } from 'react';
 import { useUI } from '../context/UIContext.jsx';
 import { useProyecto } from '../context/ProyectoContext.jsx';
 import { usePermisos } from '../hooks/usePermisos.js';
-import { parsearFechaLocal } from '../utils/fechas.js';
+import { parsearFechaLocal, padNumber } from '../utils/fechas.js';
 import { SECCIONES_DEL_DOCUMENTO, obtenerPuntosFiltrados } from '../utils/puntos.js';
 import '../styles/SidebarPrincipal.css';
 import BotonListaCerrada from './BotonListaCerrada.jsx';
 import { generarWordOrdenDia } from '../utils/word.js';
 import { obtenerProximaSesion } from '../utils/calendario.js';
 import { generarWordActa } from '../utils/wordActa.js';
+import { generarZipArchivosSesion } from '../utils/zipArchivos.js';
+import { generarZipEngroses } from '../utils/zipEngroses.js';
 import HorariosCelebracion from './HorariosCelebracion.jsx';
 import IndicadorEnVivo from './IndicadorEnVivo.jsx';
 import BotonTerminarSesion from './BotonTerminarSesion.jsx';
@@ -24,7 +26,7 @@ const SECCIONES_VISIBLES = SECCIONES_DEL_DOCUMENTO.filter(sec => sec !== 'licenc
 
 export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalPuntos = 0 }) {
   const { vistaActual, setVistaActual, terminoBusqueda, sidebarTerciarioAbierto, archivosTemporales, eliminarArchivoTemporalFn, panelVistaCompleta, setPanelVistaCompleta, seccionEnVista, scrollASeccionFn } = useUI();
-  const { proyectoMeta, secciones, seccionActual, setSeccionActual, setPuntoSeleccionadoId, sesiones, sesionActivaFecha, toggleAsistentePresente, asistentes, comenzarSesionCelebracion, finalizarSesionCelebracion, actualizarHoraInicioCelebracion, actualizarHoraFinCelebracion, ajustarNumerosDesde } = useProyecto();
+  const { proyectoMeta, secciones, seccionActual, setSeccionActual, setPuntoSeleccionadoId, sesiones, sesionActivaFecha, toggleAsistentePresente, asistentes, comenzarSesionCelebracion, finalizarSesionCelebracion, actualizarHoraInicioCelebracion, actualizarHoraFinCelebracion, ajustarNumerosDesde, restablecerSesionCelebracion, secretarioEjecutivo } = useProyecto();
 
   // ✅ Variables derivadas que se necesitan en los useState de abajo
   const tipo = proyectoMeta.tipoSesion || 'Ordinaria';
@@ -41,11 +43,15 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
   const [acordeonAbierto, setAcordeonAbierto] = useState(vistaActual === 'proyecto');
   const [generandoWord, setGenerandoWord] = useState(false);
   const [generandoActaQuorum, setGenerandoActaQuorum] = useState(false);
+  const [generandoZip, setGenerandoZip] = useState(false);
+  const [generandoZipEngroses, setGenerandoZipEngroses] = useState(false);
   const [modalNumeroAbierto, setModalNumeroAbierto] = useState(false);
   const [numeroEditado, setNumeroEditado] = useState(numero); // ✅ ahora `numero` ya existe
 
   const listaCerrada = sesionActivaFecha ? !!sesiones[sesionActivaFecha]?.listaCerrada : false;
   const sesionEnCurso = !!horaInicioSesion && !horaFinSesion;
+  const sesionCelebrada = !!horaInicioSesion && !!horaFinSesion;
+  const hayArchivos = secciones.some(s => s.archivos && s.archivos.length > 0) || (listaCerrada && secciones.length > 0);
 
   useEffect(() => {
     if (vistaActual === 'proyecto') setAcordeonAbierto(true);
@@ -124,8 +130,34 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
     }
   }
 
+  async function descargarZip() {
+    setGenerandoZip(true);
+    try {
+      await generarZipArchivosSesion(secciones, proyectoMeta, listaCerrada);
+    } catch (err) {
+      alert('No se pudo generar el ZIP: ' + err.message);
+    } finally {
+      setGenerandoZip(false);
+    }
+  }
+
+  async function descargarZipEngroses() {
+    setGenerandoZipEngroses(true);
+    try {
+      const puntosConCodigo = secciones
+        .map((sec, idx) => ({ sec, idx }))
+        .filter(({ sec }) => !(sec.fijo && sec.seccion === 'asuntos generales'))
+        .map(({ sec, idx }) => ({ sec, codigo: 'PLE/' + padNumber(idx + 1, 3) }));
+      await generarZipEngroses(puntosConCodigo, proyectoMeta, asistentes, secretarioEjecutivo);
+    } catch (err) {
+      alert('No se pudo generar el ZIP de engroses: ' + err.message);
+    } finally {
+      setGenerandoZipEngroses(false);
+    }
+  }
+
   return (
-    <aside className={'sidebar-principal' + (vistaActual === 'sesionPrevia' ? ' ancho-quorum' : '')} id="sidebarPrincipal">
+    <aside className={'sidebar-principal' + ((vistaActual === 'sesionPrevia' || (vistaActual === 'inicio' && sesionCelebrada)) ? ' ancho-quorum' : '')} id="sidebarPrincipal">
       <div className="sb-header">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
           <div className="sb-title" id="docTitleSidebar">Sesión {tipo} N° {numero}</div>
@@ -187,7 +219,11 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
         </div>
       </div>
 
-      <nav className="sb-nav" id="navPrincipal" style={vistaActual === 'sesionPrevia' ? { flex: '0 0 10px', overflowY: 'visible' } : undefined}>
+      <nav className="sb-nav" id="navPrincipal" style={
+        vistaActual === 'sesionPrevia' ? { flex: '0 0 10px', overflowY: 'visible' }
+        : (vistaActual === 'inicio' && sesionCelebrada) ? { flex: '0 1 auto', overflowY: 'visible' }
+        : undefined
+      }>
         {VISTAS.map(v => {
           if (esLector && (v.id === 'inicio' || v.id === 'proyecto')) return null;
           if (v.id === 'sesionPrevia' && !esSesionProxima) return null;
@@ -282,7 +318,7 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
         )}
       </nav>
 
-      <div id="resumenClasificacion" style={{ display: (vistaActual === 'sesionPrevia') ? 'none' : 'block', padding: '12px 16px', borderTop: '1px solid #e0e0e0', marginTop: 'auto', fontSize: '12px', color: '#444' }}>
+      <div id="resumenClasificacion" style={{ display: (vistaActual === 'sesionPrevia') ? 'none' : 'block', padding: '12px 16px', borderTop: '1px solid #e0e0e0', fontSize: '12px', color: '#444', marginTop: (vistaActual === 'inicio' && sesionCelebrada) ? 0 : 'auto' }}>
         <div style={{ fontWeight: '600', marginBottom: '5px' }}>
           {listaCerrada ? 'Lista de puntos cerrada' : 'Lista de puntos abierta'} · {secciones.length} punto{secciones.length === 1 ? '' : 's'}
         </div>
@@ -297,6 +333,60 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
           </button>
         )}
       </div>
+
+      {vistaActual === 'inicio' && sesionCelebrada && (
+        <div style={{ padding: '12px 16px 24px', borderTop: '1px solid #e0e0e0' }}>
+          <div style={{ padding: '14px', background: '#f1f9f1', borderRadius: '6px', border: '1px solid #a5d6a7', marginBottom: '10px' }}>
+            <div style={{ fontWeight: '600', fontSize: '13px', color: '#1a1a1a', marginBottom: '8px' }}>Sesión celebrada</div>
+            <p style={{ fontSize: '13px', color: '#333', marginBottom: '12px' }}>
+              <strong>Inicio:</strong> {new Date(horaInicioSesion).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+              {' · '}
+              <strong>Fin:</strong> {new Date(horaFinSesion).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+            </p>
+            {hayArchivos && (
+              <button
+                className="btn-nuevo-proyecto"
+                style={{ margin: '0 0 8px', width: '100%' }}
+                disabled={generandoZip}
+                onClick={descargarZip}
+              >
+                {generandoZip ? 'Generando ZIP...' : 'Descargar archivos de sesión'}
+              </button>
+            )}
+            <button
+              className="btn-nuevo-proyecto"
+              style={{ margin: 0, width: '100%' }}
+              disabled={generandoZipEngroses || secciones.length === 0}
+              onClick={descargarZipEngroses}
+            >
+              {generandoZipEngroses ? 'Generando ZIP...' : 'Descargar engroses (ZIP)'}
+            </button>
+          </div>
+          <button
+            className="btn-nuevo-proyecto"
+            style={{ margin: '0 0 8px', width: '100%' }}
+            disabled={generandoWord || secciones.length === 0}
+            onClick={generarWord}
+          >
+            {generandoWord ? 'Generando...' : 'Descargar orden del día'}
+          </button>
+          <button
+            className="btn-nuevo-proyecto"
+            style={{ margin: '0 0 8px', width: '100%' }}
+            disabled={generandoActaQuorum || secciones.length === 0}
+            onClick={generarActaDesdeQuorum}
+          >
+            {generandoActaQuorum ? 'Generando...' : 'Descargar acta de sesión'}
+          </button>
+          <button
+            className="btn-nuevo-proyecto"
+            style={{ margin: 0, width: '100%', background: 'transparent', color: '#888', border: '1px solid #ccc' }}
+            onClick={restablecerSesionCelebracion}
+          >
+            Restablecer sesión
+          </button>
+        </div>
+      )}
 
       <div id="quorumContainer" style={{ display: (vistaActual === 'sesionPrevia') ? 'flex' : 'none', flexDirection: 'column', flex: '1', minHeight: 0, padding: '18px 22px', borderTop: '1px solid #e0e0e0' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '14px' }}>

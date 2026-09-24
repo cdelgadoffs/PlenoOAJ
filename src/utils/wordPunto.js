@@ -45,7 +45,7 @@ function lineaARuns(linea) {
   }));
 }
 
-function parrafosDeTexto(texto, opciones = {}) {
+export function parrafosDeTexto(texto, opciones = {}) {
   const lineas = (texto || '').split('\n').filter(l => l.trim() !== '');
   let contadorLista = 0;
   return lineas.map((linea, i) => {

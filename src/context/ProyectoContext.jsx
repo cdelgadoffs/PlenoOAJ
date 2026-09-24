@@ -351,6 +351,16 @@ export function ProyectoProvider({ children }) {
     setSecciones(prev => prev.map(s => s.id === id ? { ...s, ...cambios } : s));
   }
 
+  function actualizarActaOverride(fecha, clave, texto) {
+    if (!fecha) return;
+    setSesiones(prev => {
+      const sesion = prev[fecha];
+      if (!sesion) return prev;
+      const overrides = { ...(sesion.actaOverrides || {}), [clave]: texto };
+      return { ...prev, [fecha]: { ...sesion, actaOverrides: overrides } };
+    });
+  }
+
 
   function agregarActa(tipo, fecha) {
     const contenido = `Aprobación, en su caso, del acta de la sesión ${tipo.toLowerCase()} del ${formatearFechaES(fecha)}.`;
@@ -455,7 +465,7 @@ export function ProyectoProvider({ children }) {
     setSesiones(prev => {
       const sesion = prev[sesionActivaFecha];
       if (!sesion) return prev;
-      const { horaInicio, horaFin, terminada, ...resto } = sesion;
+      const { horaInicio, horaFin, terminada, actaOverrides, ...resto } = sesion;
       return { ...prev, [sesionActivaFecha]: resto };
     });
     setSecciones(prev => prev.map(s => s.engroseEnviado ? { ...s, engroseEnviado: false } : s));
@@ -558,7 +568,7 @@ export function ProyectoProvider({ children }) {
     cargarSesion, eliminarSesion, regenerarCalendario, agregarVacacion, agregarAsueto, eliminarExcepcion,
     asistentes, agregarAsistente, eliminarAsistente, editarAsistente, toggleAsistentePresente,
     secretarioEjecutivo, guardarSecretarioEjecutivo, eliminarSecretarioEjecutivo,
-    actualizarPunto, agregarActa, crearSesionExtraordinaria, adjuntarArchivoAPunto, setOneDriveFolder,
+    actualizarPunto, actualizarActaOverride, agregarActa, crearSesionExtraordinaria, adjuntarArchivoAPunto, setOneDriveFolder,
     toggleListaCerrada, comenzarSesionCelebracion, finalizarSesionCelebracion, restablecerSesionCelebracion, terminarSesionCelebracion,
     actualizarHoraInicioCelebracion, actualizarHoraFinCelebracion, ajustarNumerosDesde,
     anclasNumeracion, setAnclasNumeracion
