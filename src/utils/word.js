@@ -20,7 +20,7 @@ const MARGEN_DERECHO = 1440; // 2.54 cm
 
 function limpiarAsteriscos(texto) {
   if (!texto) return texto;
-  return limpiarMarcadores(texto).replace(/\*/g, '');
+  return limpiarMarcadores(texto).replace(/\*/g, '').replace(/%%(.+?)%%/g, '$1');
 }
 
 // Función para añadir espacio entre caracteres y doble espacio entre palabras

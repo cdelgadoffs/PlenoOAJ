@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react';
 import { useProyecto } from '../context/ProyectoContext.jsx';
 import EditorOcultable from './EditorOcultable.jsx';
-import { construirBloquesActa, textoDeBloque, generarWordActa } from '../utils/wordActa.js';
+import { construirBloquesActa, textoDeBloque, generarWordActa, generarWordActaPublica, descargarBlobActa } from '../utils/wordActa.js';
 import '../styles/VistaPreviaFlotante.css';
 
 export default function VistaPreviaActa() {
   const { secciones, sesiones, sesionActivaFecha, proyectoMeta, asistentes, actualizarActaOverride } = useProyecto();
   const [editando, setEditando] = useState(false);
   const [generando, setGenerando] = useState(false);
+  const [generandoPublica, setGenerandoPublica] = useState(false);
 
   const sesionActiva = (sesionActivaFecha ? sesiones[sesionActivaFecha] : null) || {};
   const overrides = sesionActiva.actaOverrides || {};
@@ -30,11 +31,22 @@ export default function VistaPreviaActa() {
   async function descargar() {
     setGenerando(true);
     try {
-      await generarWordActa(secciones, proyectoMeta, asistentes, sesionActiva);
+      descargarBlobActa(await generarWordActa(secciones, proyectoMeta, asistentes, sesionActiva));
     } catch (err) {
       alert('No se pudo generar el acta: ' + err.message);
     } finally {
       setGenerando(false);
+    }
+  }
+
+  async function descargarPublica() {
+    setGenerandoPublica(true);
+    try {
+      descargarBlobActa(await generarWordActaPublica(secciones, proyectoMeta, asistentes, sesionActiva));
+    } catch (err) {
+      alert('No se pudo generar el acta pública: ' + err.message);
+    } finally {
+      setGenerandoPublica(false);
     }
   }
 
@@ -66,6 +78,9 @@ export default function VistaPreviaActa() {
           )}
           <button type="button" className="vp-header-btn" title="Descargar Word" disabled={generando} onClick={descargar}>
             <i className="fas fa-download"></i>
+          </button>
+          <button type="button" className="vp-header-btn" title="Descargar acta pública" disabled={generandoPublica} onClick={descargarPublica}>
+            <i className="fas fa-eye-slash"></i>
           </button>
         </div>
       </div>

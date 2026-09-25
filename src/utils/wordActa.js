@@ -3,12 +3,18 @@ import { Document, Packer, Paragraph, TextRun, AlignmentType, ImageRun, Header, 
 import { parsearFechaLocal, padNumber } from './fechas.js';
 import { cargarImagen } from './logoDocx.js';
 import { numeroALetras, corregirAcentosFecha, convertirNumeroALetras } from './fechaLetras.js';
-import { limpiarMarcadores } from './texto.js';
+import { limpiarMarcadores, ocultarParaActa } from './texto.js';
 
-// ========== LIMPIEZA DE ASTERISCOS ==========
-function limpiarAsteriscos(texto) {
+// ========== LIMPIEZA DE MARCADORES ==========
+function limpiarMarcadoresBasicos(texto) {
   if (!texto) return texto;
   return limpiarMarcadores(texto).replace(/\*/g, '');
+}
+
+function limpiarAsteriscos(texto, publica) {
+  const limpio = limpiarMarcadoresBasicos(texto);
+  if (!limpio) return limpio;
+  return publica ? ocultarParaActa(limpio) : limpio.replace(/%%(.+?)%%/g, '$1');
 }
 
 // ========== FORMATEAR LÍNEA DE ACUERDO ==========
@@ -32,10 +38,10 @@ function formatearLineaAcuerdo(linea) {
 function generarTextoVotacion(sec, asistentes) {
   if (!sec.tipoVotacion) return '';
   let v;
-  try { v = JSON.parse(sec.tipoVotacion); } catch { return limpiarAsteriscos(sec.tipoVotacion); }
+  try { v = JSON.parse(sec.tipoVotacion); } catch { return limpiarMarcadoresBasicos(sec.tipoVotacion); }
 
   const estadoLabel = v.estado ? 'aprueba' : 'acuerda';
-  const lineasAcuerdo = limpiarAsteriscos(sec.acuerdo || '').split('\n').filter(l => l.trim() !== '');
+  const lineasAcuerdo = (limpiarMarcadoresBasicos(sec.acuerdo || '') || '').split('\n').filter(l => l.trim() !== '');
   const esAcuerdoUnico = lineasAcuerdo.length === 1 && /^ÚNICO\.?\s*/i.test(lineasAcuerdo[0].trim());
   const textoAcuerdoUnico = esAcuerdoUnico
     ? lineasAcuerdo[0].trim().replace(/^ÚNICO\.?\s*/i, '').replace(/\.\s*$/, '')
@@ -155,7 +161,7 @@ export function construirBloquesActa(secciones, proyectoMeta, asistentes = [], s
       return;
     }
 
-    let contenido = limpiarAsteriscos(sec.contenido) || '';
+    let contenido = limpiarMarcadoresBasicos(sec.contenido) || '';
     if (n === 1) {
       const fechaTexto = corregirAcentosFecha(`${diaLetras.toLowerCase()} de ${mes.toLowerCase()} de ${anioLetras.toLowerCase()}`);
       const totalPuntos = seccionesFiltradas.length;
@@ -163,7 +169,7 @@ export function construirBloquesActa(secciones, proyectoMeta, asistentes = [], s
       contenido = `Se somete a consideración el orden del día de la sesión ${tipoSesion.toLowerCase()} de ${fechaTexto}, con ${totalPuntosLetras} puntos.`;
     }
 
-    const acuerdo = limpiarAsteriscos(sec.acuerdo) || '';
+    const acuerdo = limpiarMarcadoresBasicos(sec.acuerdo) || '';
     const lineasAcuerdo = acuerdo.split('\n').filter(l => l.trim() !== '');
     const esAcuerdoUnico = lineasAcuerdo.length === 1 && /^ÚNICO\.?\s*/i.test(lineasAcuerdo[0].trim());
 
@@ -174,7 +180,7 @@ export function construirBloquesActa(secciones, proyectoMeta, asistentes = [], s
     const votacion = esFijoAprobacion
       ? textoVotoFijo
       : (sec.votacionTextoManual !== undefined
-        ? limpiarAsteriscos(sec.votacionTextoManual)
+        ? limpiarMarcadoresBasicos(sec.votacionTextoManual)
         : generarTextoVotacion(sec, asistentes));
     const tieneVotacion = !!votacion;
     const tieneAcuerdo = !esFijoAprobacion && !!acuerdo && !esAcuerdoUnico;
@@ -214,8 +220,8 @@ export function textoDeBloque(bloque, overrides = {}) {
   return editado !== undefined ? editado : bloque.textoAuto;
 }
 
-function parrafosDeBloque(bloque, overrides) {
-  const texto = textoDeBloque(bloque, overrides);
+function parrafosDeBloque(bloque, overrides, publica) {
+  const texto = limpiarAsteriscos(textoDeBloque(bloque, overrides), publica) || '';
   const interlineado115 = { line: 276, lineRule: 'auto' };
 
   switch (bloque.tipo) {
@@ -285,11 +291,12 @@ function parrafosDeBloque(bloque, overrides) {
 // Único generador del acta: arma los bloques desde los puntos actuales y
 // aplica encima los textos editados (sesionData.actaOverrides) que existan.
 // Editada o no, siempre es esta la versión final y más reciente.
-export async function generarWordActa(secciones, proyectoMeta, asistentes = [], sesionData = {}) {
+export async function generarWordActa(secciones, proyectoMeta, asistentes = [], sesionData = {}, opciones = {}) {
+  const publica = !!opciones.publica;
   const bloques = construirBloquesActa(secciones, proyectoMeta, asistentes, sesionData);
   if (bloques.length === 0) {
-    alert('No hay puntos para generar el acta (se excluyeron Asuntos Generales).');
-    return;
+    if (!opciones.silencioso) alert('No hay puntos para generar el acta (se excluyeron Asuntos Generales).');
+    return null;
   }
   const overrides = sesionData.actaOverrides || {};
 
@@ -305,7 +312,7 @@ export async function generarWordActa(secciones, proyectoMeta, asistentes = [], 
       spacing: { ...interlineado115, after: 500 },
       children: [new TextRun({ text: tituloTexto, bold: true, size: 28, color: '000000', font: 'Arial' })]
     }),
-    ...bloques.flatMap(b => parrafosDeBloque(b, overrides))
+    ...bloques.flatMap(b => parrafosDeBloque(b, overrides, publica))
   ];
 
   // ========== ENCABEZADO Y PIE DE PÁGINA ==========
@@ -338,10 +345,21 @@ export async function generarWordActa(secciones, proyectoMeta, asistentes = [], 
   });
 
   const blob = await Packer.toBlob(doc);
+  const nombreArchivo = `${publica ? 'Acta pública' : 'Acta'} - ${tituloSesion}.docx`;
+  return { blob, nombreArchivo };
+}
+
+export async function generarWordActaPublica(secciones, proyectoMeta, asistentes = [], sesionData = {}, opciones = {}) {
+  return generarWordActa(secciones, proyectoMeta, asistentes, sesionData, { ...opciones, publica: true });
+}
+
+export function descargarBlobActa(resultado) {
+  if (!resultado) return;
+  const { blob, nombreArchivo } = resultado;
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `Acta - ${tituloSesion}.docx`;
+  link.download = nombreArchivo;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

@@ -6,11 +6,12 @@ import { parsearFechaLocal, padNumber } from '../utils/fechas.js';
 import { SECCIONES_DEL_DOCUMENTO, obtenerPuntosFiltrados } from '../utils/puntos.js';
 import '../styles/SidebarPrincipal.css';
 import BotonListaCerrada from './BotonListaCerrada.jsx';
-import { generarWordOrdenDia } from '../utils/word.js';
 import { obtenerProximaSesion } from '../utils/calendario.js';
-import { generarWordActa } from '../utils/wordActa.js';
+import { generarWordActa, generarWordActaPublica, descargarBlobActa } from '../utils/wordActa.js';
 import { generarZipArchivosSesion } from '../utils/zipArchivos.js';
 import { generarZipEngroses } from '../utils/zipEngroses.js';
+import { adjuntarOrdenDelDiaAPunto1 } from '../utils/ordenDelDiaAdjunto.js';
+import { adjuntarActaDeSesionReferenciada } from '../utils/actaReferenciaAdjunto.js';
 import HorariosCelebracion from './HorariosCelebracion.jsx';
 import IndicadorEnVivo from './IndicadorEnVivo.jsx';
 import BotonTerminarSesion from './BotonTerminarSesion.jsx';
@@ -26,7 +27,7 @@ const SECCIONES_VISIBLES = SECCIONES_DEL_DOCUMENTO.filter(sec => sec !== 'licenc
 
 export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalPuntos = 0 }) {
   const { vistaActual, setVistaActual, terminoBusqueda, sidebarTerciarioAbierto, archivosTemporales, eliminarArchivoTemporalFn, panelVistaCompleta, setPanelVistaCompleta, seccionEnVista, scrollASeccionFn } = useUI();
-  const { proyectoMeta, secciones, seccionActual, setSeccionActual, setPuntoSeleccionadoId, sesiones, sesionActivaFecha, toggleAsistentePresente, asistentes, comenzarSesionCelebracion, finalizarSesionCelebracion, actualizarHoraInicioCelebracion, actualizarHoraFinCelebracion, ajustarNumerosDesde, restablecerSesionCelebracion, secretarioEjecutivo } = useProyecto();
+  const { proyectoMeta, secciones, seccionActual, setSeccionActual, setPuntoSeleccionadoId, sesiones, sesionActivaFecha, toggleAsistentePresente, asistentes, comenzarSesionCelebracion, finalizarSesionCelebracion, actualizarHoraInicioCelebracion, actualizarHoraFinCelebracion, ajustarNumerosDesde, restablecerSesionCelebracion, secretarioEjecutivo, actualizarPunto } = useProyecto();
 
   // ✅ Variables derivadas que se necesitan en los useState de abajo
   const tipo = proyectoMeta.tipoSesion || 'Ordinaria';
@@ -43,6 +44,7 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
   const [acordeonAbierto, setAcordeonAbierto] = useState(vistaActual === 'proyecto');
   const [generandoWord, setGenerandoWord] = useState(false);
   const [generandoActaQuorum, setGenerandoActaQuorum] = useState(false);
+  const [generandoActaQuorumPublica, setGenerandoActaQuorumPublica] = useState(false);
   const [generandoZip, setGenerandoZip] = useState(false);
   const [generandoZipEngroses, setGenerandoZipEngroses] = useState(false);
   const [modalNumeroAbierto, setModalNumeroAbierto] = useState(false);
@@ -57,6 +59,25 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
     if (vistaActual === 'proyecto') setAcordeonAbierto(true);
     else setPanelVistaCompleta(false);
   }, [vistaActual]);
+
+  useEffect(() => {
+    if (!listaCerrada) return;
+    const punto1 = secciones.find(s => s.id === 'sec_fijo_1');
+    if (!punto1) return;
+    const yaTiene = (punto1.archivos || []).some(a => a.esOrdenDelDia);
+    if (yaTiene) return;
+    adjuntarOrdenDelDiaAPunto1(secciones, proyectoMeta, actualizarPunto)
+      .catch(err => console.error('No se pudo adjuntar el orden del día al punto 1:', err));
+  }, [listaCerrada, secciones, proyectoMeta, actualizarPunto]);
+
+  useEffect(() => {
+    if (!listaCerrada) return;
+    const puntosActa = secciones.filter(s => s.id === 'sec_fijo_2' || (typeof s.id === 'string' && s.id.startsWith('acta_auto_')));
+    puntosActa.forEach(punto => {
+      adjuntarActaDeSesionReferenciada(punto, sesiones, actualizarPunto)
+        .catch(err => console.error('No se pudo adjuntar el acta de la sesión referenciada:', err));
+    });
+  }, [listaCerrada, secciones, sesiones, actualizarPunto]);
 
   // ⚠️ Estas dos líneas ya NO van aquí (se movieron arriba)
   // const tipo = proyectoMeta.tipoSesion || 'Ordinaria';
@@ -102,7 +123,7 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
     if (secciones.length === 0) return;
     setGenerandoWord(true);
     try {
-      const { blob, nombreArchivo } = await generarWordOrdenDia(secciones, proyectoMeta);
+      const { blob, nombreArchivo } = await adjuntarOrdenDelDiaAPunto1(secciones, proyectoMeta, actualizarPunto);
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -122,11 +143,23 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
     if (secciones.length === 0) { alert('No hay puntos para generar el acta.'); return; }
     setGenerandoActaQuorum(true);
     try {
-      await generarWordActa(secciones, proyectoMeta, asistentes, sesiones[sesionActivaFecha]);
+      descargarBlobActa(await generarWordActa(secciones, proyectoMeta, asistentes, sesiones[sesionActivaFecha]));
     } catch (err) {
       alert('No se pudo generar el acta: ' + err.message);
     } finally {
       setGenerandoActaQuorum(false);
+    }
+  }
+
+  async function generarActaPublicaDesdeQuorum() {
+    if (secciones.length === 0) { alert('No hay puntos para generar el acta.'); return; }
+    setGenerandoActaQuorumPublica(true);
+    try {
+      descargarBlobActa(await generarWordActaPublica(secciones, proyectoMeta, asistentes, sesiones[sesionActivaFecha]));
+    } catch (err) {
+      alert('No se pudo generar el acta pública: ' + err.message);
+    } finally {
+      setGenerandoActaQuorumPublica(false);
     }
   }
 
@@ -380,6 +413,14 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
           </button>
           <button
             className="btn-nuevo-proyecto"
+            style={{ margin: '0 0 8px', width: '100%' }}
+            disabled={generandoActaQuorumPublica || secciones.length === 0}
+            onClick={generarActaPublicaDesdeQuorum}
+          >
+            {generandoActaQuorumPublica ? 'Generando...' : 'Descargar acta pública'}
+          </button>
+          <button
+            className="btn-nuevo-proyecto"
             style={{ margin: 0, width: '100%', background: 'transparent', color: '#888', border: '1px solid #ccc' }}
             onClick={restablecerSesionCelebracion}
           >
@@ -463,6 +504,16 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
               onClick={generarActaDesdeQuorum}
             >
               {generandoActaQuorum ? 'Generando...' : `Descargar acta de Sesión ${tipo} N°${numero}`}
+            </button>
+          )}
+          {horaFinSesion && (
+            <button
+              className="btn-nuevo-proyecto"
+              style={{ margin: 0, width: '100%' }}
+              disabled={generandoActaQuorumPublica}
+              onClick={generarActaPublicaDesdeQuorum}
+            >
+              {generandoActaQuorumPublica ? 'Generando...' : `Descargar acta pública Sesión ${tipo} N°${numero}`}
             </button>
           )}
           {horaFinSesion && <BotonTerminarSesion />}

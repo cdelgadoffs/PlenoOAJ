@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useUI } from '../context/UIContext.jsx';
 import { useProyecto } from '../context/ProyectoContext.jsx';
 import { getTituloPunto, padNumber } from '../utils/fechas.js';
+import { renderConOcultos } from '../utils/texto.js';
 import { cargarRemitentesCorreo } from '../utils/storage.js';
 import { PLANTILLA_POR_DEFECTO } from '../utils/plantillasActa.js';
 import { INTRO_ACTA_NOMBRE, INTRO_ACTA_RESTO, PUENTE_ACTA_TEXTO } from '../utils/textosActa.js';
@@ -179,7 +180,7 @@ export default function ListaEngroses() {
         {puntosFiltrados.map(({ sec, idx }) => {
           const codigo = 'PLE/' + padNumber(idx + 1, 3);
           const correoDestino = remitentesCorreo[sec.dependencia];
-          const resumen = (sec.contenido || 'Sin contenido').replace(/\*\*/g, '');
+          const resumen = sec.contenido || 'Sin contenido';
           const seleccionado = sec.id === puntoVistaPreviaId;
           const marcado = seleccionados.has(sec.id);
           return (
@@ -205,7 +206,7 @@ export default function ListaEngroses() {
                     ? <span className="engrose-estado enviado">Enviado</span>
                     : <span className="engrose-estado pendiente">Pendiente</span>}
                 </div>
-                <div className="engrose-item-resumen">{resumen}</div>
+                <div className="engrose-item-resumen">{renderConOcultos(resumen)}</div>
                 {!correoDestino && (
                   <div className="engrose-sin-correo">Sin correo vinculado para {sec.dependencia || 'Pleno'}</div>
                 )}
