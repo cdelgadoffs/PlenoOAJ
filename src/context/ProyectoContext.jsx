@@ -128,10 +128,11 @@ export function ProyectoProvider({ children }) {
 
   function regenerarCalendario(nuevoDia) {
     setDiaSesion(nuevoDia);
+    setAnclasNumeracion({});
     let base = generarCalendarioAnual({}, nuevoDia, excepciones, new Date().getFullYear());
     base = aplicarExcepciones(base, excepciones, sesionActivaFecha);
     base = limpiarSesionesInvalidas(base, nuevoDia, sesionActivaFecha, excepciones);
-    base = recalcularNumerosSesion(base, anclasNumeracion);
+    base = recalcularNumerosSesion(base, {});
     setSesiones(base);
     const proxima = obtenerProximaSesion(base);
     if (proxima) cargarSesion(proxima);
