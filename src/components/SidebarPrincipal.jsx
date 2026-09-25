@@ -29,7 +29,6 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
   const { vistaActual, setVistaActual, terminoBusqueda, sidebarTerciarioAbierto, archivosTemporales, eliminarArchivoTemporalFn, panelVistaCompleta, setPanelVistaCompleta, seccionEnVista, scrollASeccionFn } = useUI();
   const { proyectoMeta, secciones, seccionActual, setSeccionActual, setPuntoSeleccionadoId, sesiones, sesionActivaFecha, toggleAsistentePresente, asistentes, comenzarSesionCelebracion, finalizarSesionCelebracion, actualizarHoraInicioCelebracion, actualizarHoraFinCelebracion, ajustarNumerosDesde, restablecerSesionCelebracion, secretarioEjecutivo, actualizarPunto } = useProyecto();
 
-  // ✅ Variables derivadas que se necesitan en los useState de abajo
   const tipo = proyectoMeta.tipoSesion || 'Ordinaria';
   const numero = proyectoMeta.numeroSesion || 1;
 
@@ -48,7 +47,7 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
   const [generandoZip, setGenerandoZip] = useState(false);
   const [generandoZipEngroses, setGenerandoZipEngroses] = useState(false);
   const [modalNumeroAbierto, setModalNumeroAbierto] = useState(false);
-  const [numeroEditado, setNumeroEditado] = useState(numero); // ✅ ahora `numero` ya existe
+  const [numeroEditado, setNumeroEditado] = useState(numero);
 
   const listaCerrada = sesionActivaFecha ? !!sesiones[sesionActivaFecha]?.listaCerrada : false;
   const sesionEnCurso = !!horaInicioSesion && !horaFinSesion;
@@ -78,10 +77,6 @@ export default function SidebarPrincipal({ onGenerarPDF, onAbrirCreacion, totalP
         .catch(err => console.error('No se pudo adjuntar el acta de la sesión referenciada:', err));
     });
   }, [listaCerrada, secciones, sesiones, actualizarPunto]);
-
-  // ⚠️ Estas dos líneas ya NO van aquí (se movieron arriba)
-  // const tipo = proyectoMeta.tipoSesion || 'Ordinaria';
-  // const numero = proyectoMeta.numeroSesion || 1;
 
   let fechaTexto = 'Fecha no definida';
   if (proyectoMeta.fecha) {

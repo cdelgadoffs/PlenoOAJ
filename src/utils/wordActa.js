@@ -1,11 +1,9 @@
-// src/utils/wordActa.js
 import { Document, Packer, Paragraph, TextRun, AlignmentType, ImageRun, Header, Footer, PageNumber } from 'docx';
 import { parsearFechaLocal, padNumber } from './fechas.js';
 import { cargarImagen } from './logoDocx.js';
 import { numeroALetras, corregirAcentosFecha, convertirNumeroALetras } from './fechaLetras.js';
 import { limpiarMarcadores, ocultarParaActa } from './texto.js';
 
-// ========== LIMPIEZA DE MARCADORES ==========
 function limpiarMarcadoresBasicos(texto) {
   if (!texto) return texto;
   return limpiarMarcadores(texto).replace(/\*/g, '');
@@ -17,7 +15,6 @@ function limpiarAsteriscos(texto, publica) {
   return publica ? ocultarParaActa(limpio) : limpio.replace(/%%(.+?)%%/g, '$1');
 }
 
-// ========== FORMATEAR LÍNEA DE ACUERDO ==========
 function formatearLineaAcuerdo(linea) {
   const patron = /^(PRIMERO|SEGUNDO|TERCERO|CUARTO|QUINTO|SEXTO|SÉPTIMO|OCTAVO|NOVENO|DÉCIMO|ÚNICO)(\.\s*|:\s*)(.*)/i;
   const match = linea.match(patron);
@@ -34,7 +31,6 @@ function formatearLineaAcuerdo(linea) {
   }
 }
 
-// ========== GENERAR TEXTO DE VOTACIÓN ==========
 function generarTextoVotacion(sec, asistentes) {
   if (!sec.tipoVotacion) return '';
   let v;
@@ -59,7 +55,6 @@ function generarTextoVotacion(sec, asistentes) {
     return `${articulo} ${gradoMap[a.grado] || ''} ${a.nombre}`.replace(/\s+/g, ' ').trim();
   }
 
-  // Mayoría de votos
   if (v.voto === 1 || v.voto === 2) {
     const cantidadTexto = v.voto === 1 ? 'cuatro' : 'tres';
     const nombresVotantes = (v.quorum && v.quorum.length > 0)
@@ -89,7 +84,6 @@ function generarTextoVotacion(sec, asistentes) {
   return base + '.';
 }
 
-// ========== TÍTULO ==========
 function calcularTituloActa(proyectoMeta) {
   const fechaObj = proyectoMeta.fecha ? parsearFechaLocal(proyectoMeta.fecha) : new Date();
   const mes = fechaObj.toLocaleDateString('es-ES', { month: 'long' }).toUpperCase();
@@ -112,12 +106,6 @@ function calcularTituloActa(proyectoMeta) {
   };
 }
 
-// ========== BLOQUES EDITABLES DEL ACTA ==========
-// Un "bloque" es cada fragmento de texto editable del acta (introducción,
-// contenido/votación/acuerdo/anexo de cada punto, cierre). El título nunca
-// es editable: siempre se recalcula desde proyectoMeta. `key` identifica el
-// bloque para poder guardar su texto editado en sesionData.actaOverrides;
-// `textoAuto` es lo que se mostraría si nunca se edita ese bloque.
 export function construirBloquesActa(secciones, proyectoMeta, asistentes = [], sesionData = {}) {
   const seccionesFiltradas = secciones.filter(sec =>
     sec.seccion?.toLowerCase() !== 'asuntos generales'
@@ -214,7 +202,6 @@ export function construirBloquesActa(secciones, proyectoMeta, asistentes = [], s
   return bloques;
 }
 
-// Texto final de un bloque: el editado por el usuario si existe, si no el automático.
 export function textoDeBloque(bloque, overrides = {}) {
   const editado = overrides[bloque.key];
   return editado !== undefined ? editado : bloque.textoAuto;
@@ -287,10 +274,6 @@ function parrafosDeBloque(bloque, overrides, publica) {
   }
 }
 
-// ========== FUNCIÓN PRINCIPAL ==========
-// Único generador del acta: arma los bloques desde los puntos actuales y
-// aplica encima los textos editados (sesionData.actaOverrides) que existan.
-// Editada o no, siempre es esta la versión final y más reciente.
 export async function generarWordActa(secciones, proyectoMeta, asistentes = [], sesionData = {}, opciones = {}) {
   const publica = !!opciones.publica;
   const bloques = construirBloquesActa(secciones, proyectoMeta, asistentes, sesionData);
@@ -303,7 +286,6 @@ export async function generarWordActa(secciones, proyectoMeta, asistentes = [], 
   const { tituloSesion, tituloTexto } = calcularTituloActa(proyectoMeta);
   const interlineado115 = { line: 276, lineRule: 'auto' };
 
-  // ========== CARGA DE IMAGEN ==========
   const imagenData = await cargarImagen('/logo.png');
 
   const parrafos = [
@@ -315,7 +297,6 @@ export async function generarWordActa(secciones, proyectoMeta, asistentes = [], 
     ...bloques.flatMap(b => parrafosDeBloque(b, overrides, publica))
   ];
 
-  // ========== ENCABEZADO Y PIE DE PÁGINA ==========
   const headerChildren = [];
   if (imagenData && imagenData.width > 0 && imagenData.height > 0) {
     const targetWidth = 120;

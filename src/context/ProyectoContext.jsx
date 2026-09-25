@@ -35,7 +35,6 @@ export function ProyectoProvider({ children }) {
   const [puntoPreviaSeleccionadoId, setPuntoPreviaSeleccionadoId] = useState(null);
   const [asistentes, setAsistentes] = useState(() => cargarAsistentes());
   const [secretarioEjecutivo, setSecretarioEjecutivo] = useState(() => cargarSecretarioEjecutivo());
-  // ✅ Fix B: anclas de numeración persistidas
   const [anclasNumeracion, setAnclasNumeracion] = useState(() => cargarAnclasNumeracion());
 
 
@@ -49,10 +48,8 @@ export function ProyectoProvider({ children }) {
   useEffect(() => { persistirExcepciones(excepciones); }, [excepciones]);
   useEffect(() => { persistirAsistentes(asistentes); }, [asistentes]);
   useEffect(() => { persistirSecretarioEjecutivo(secretarioEjecutivo); }, [secretarioEjecutivo]);
-  // ✅ Fix B: persistir anclas
   useEffect(() => { persistirAnclasNumeracion(anclasNumeracion); }, [anclasNumeracion]);
 
-  // ✅ Fix B: cuando cambian las anclas, recalcular los números de todas las sesiones
   useEffect(() => {
     setSesiones(prev => recalcularNumerosSesion(prev, anclasNumeracion));
   }, [anclasNumeracion]);
@@ -202,7 +199,6 @@ export function ProyectoProvider({ children }) {
     });
   }
 
-  // === FUNCIONES MODIFICADAS CON GUARD ===
   function moverPunto(id, direccion) {
     if (sesiones[sesionActivaFecha]?.listaCerrada) return;
     setSecciones(prev => {
@@ -297,10 +293,6 @@ export function ProyectoProvider({ children }) {
         copia[idxActual] = actualizado;
         return copia;
       }
-      // Cambiar de sección reposiciona el punto junto a los demás de su
-      // nueva sección (misma lógica que al crear un punto), para que la
-      // numeración consecutiva y el orden del documento exportado sigan
-      // coincidiendo con lo que se ve en pantalla.
       const sinPunto = prev.filter(s => s.id !== id);
       const insertIdx = getInsertIndex(sinPunto, nuevaSeccion);
       const copia = [...sinPunto];
@@ -411,7 +403,6 @@ export function ProyectoProvider({ children }) {
       return recalcularNumerosSesion(nuevas, anclasNumeracion);
     });
 
-    // Actualizar estados locales
     setSesionActivaFecha(fecha);
     setProyectoMeta({ tipoSesion: 'Extraordinaria', numeroSesion: 1, fecha });
     setSecciones([puntoOrdenDia]);
@@ -500,7 +491,6 @@ export function ProyectoProvider({ children }) {
     });
   }
 
-  // ✅ Fix A + B: guarda un ancla de numeración y refleja el cambio en proyectoMeta
   function ajustarNumerosDesde(fecha, nuevoNumero) {
     const sesion = sesiones[fecha];
     if (!sesion) return;
@@ -509,10 +499,8 @@ export function ProyectoProvider({ children }) {
     const anio = fecha.substring(0, 4);
     const clave = anio + '_' + tipo;
 
-    // Guardar ancla: a partir de esta fecha, la numeración arranca en nuevoNumero
     setAnclasNumeracion(prev => ({ ...prev, [clave]: { fecha, numero: nuevoNumero } }));
 
-    // Reflejar de inmediato en proyectoMeta si es la sesión activa
     if (fecha === sesionActivaFecha) {
       setProyectoMeta(prev => ({ ...prev, numeroSesion: nuevoNumero }));
     }

@@ -101,7 +101,6 @@ export function conPuntosFijosAsegurados(seccionesEntrada, tipoSesion) {
     }
   });
 
-  // Limpieza: si es extraordinaria, no debe quedar rastro de acta ni asuntos generales
   if (esExtraordinaria) {
     secciones = secciones.filter(s => s.id !== 'sec_fijo_2' && s.id !== 'sec_fijo_3');
   }
@@ -145,10 +144,8 @@ export function conPunto2Actualizado(secciones, proyectoMeta, sesiones, calcular
     })
     .sort();
 
-  // Punto base (sec_fijo_2): acta de la sesión inmediata anterior
   const contenidoBase = `Aprobación, en su caso, del acta de la sesión ${tipoActual} del ${formatearFechaES(fechaAnterior)}.`;
 
-  // Puntos adicionales: uno independiente por cada extraordinaria pendiente
   const nuevosAuto = extraordinarias.map(f => ({
     id: 'acta_auto_' + f,
     clasificacion: 'Pleno',
