@@ -86,6 +86,19 @@ export function ocultarParaActa(texto) {
   return texto.replace(/%%(.+?)%%/g, (_, contenido) => contenido.replace(/\S/g, '*'));
 }
 
+// Quita del texto cualquier marcador técnico interno del editor (negritas,
+// tamaño de fuente, listas, alineación) que no debe llegar tal cual a
+// destinos que no los interpretan: tarjetas planas, PDF y los .docx
+// generados. Conserva el texto visible, descarta solo la anotación.
+export function limpiarMarcadores(texto) {
+  if (!texto) return texto;
+  return texto
+    .replace(/\*\*/g, '')
+    .replace(/##fs[\d.]+##(.+?)##\/fs##/g, '$1')
+    .replace(/^##li##/gm, '')
+    .replace(/^##align-[a-z]+##/gm, '');
+}
+
 function procesarSegmentos(texto, prefijoKey) {
   const partes = texto.split(/(\*\*.+?\*\*|_.+?_|%%.+?%%|##fs[\d.]+##.+?##\/fs##)/g).filter(p => p !== '');
   return partes.map((parte, i) => {

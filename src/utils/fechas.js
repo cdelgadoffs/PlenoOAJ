@@ -78,7 +78,8 @@ export function obtenerFechasDisponiblesExtraordinaria(sesiones) {
   let cursor = inicio;
   while (cursor <= fin) {
     const diaSemana = parsearFechaLocal(cursor).getDay();
-    if (diaSemana !== 0 && diaSemana !== 3 && diaSemana !== 6) {
+    const yaCreada = sesiones[cursor]?.tipoSesion === 'Extraordinaria';
+    if (diaSemana !== 0 && diaSemana !== 3 && diaSemana !== 6 && !yaCreada) {
       disponibles.push({
         fecha: cursor,
         etiqueta: `${DIAS_SEMANA[diaSemana]} ${formatearFechaES(cursor)}`

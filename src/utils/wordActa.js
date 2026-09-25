@@ -1,16 +1,20 @@
-// src/utils/wordActa.js
-import { Document, Packer, Paragraph, TextRun, AlignmentType, ImageRun, Header, Footer, PageNumber, NumberFormat } from 'docx';
+import { Document, Packer, Paragraph, TextRun, AlignmentType, ImageRun, Header, Footer, PageNumber } from 'docx';
 import { parsearFechaLocal, padNumber } from './fechas.js';
 import { cargarImagen } from './logoDocx.js';
 import { numeroALetras, corregirAcentosFecha, convertirNumeroALetras } from './fechaLetras.js';
+import { limpiarMarcadores, ocultarParaActa } from './texto.js';
 
-// ========== LIMPIEZA DE ASTERISCOS ==========
-function limpiarAsteriscos(texto) {
+function limpiarMarcadoresBasicos(texto) {
   if (!texto) return texto;
-  return texto.replace(/\*\*/g, '').replace(/\*/g, '');
+  return limpiarMarcadores(texto).replace(/\*/g, '');
 }
 
-// ========== FORMATEAR LÍNEA DE ACUERDO ==========
+function limpiarAsteriscos(texto, publica) {
+  const limpio = limpiarMarcadoresBasicos(texto);
+  if (!limpio) return limpio;
+  return publica ? ocultarParaActa(limpio) : limpio.replace(/%%(.+?)%%/g, '$1');
+}
+
 function formatearLineaAcuerdo(linea) {
   const patron = /^(PRIMERO|SEGUNDO|TERCERO|CUARTO|QUINTO|SEXTO|SÉPTIMO|OCTAVO|NOVENO|DÉCIMO|ÚNICO)(\.\s*|:\s*)(.*)/i;
   const match = linea.match(patron);
@@ -27,14 +31,13 @@ function formatearLineaAcuerdo(linea) {
   }
 }
 
-// ========== GENERAR TEXTO DE VOTACIÓN ==========
 function generarTextoVotacion(sec, asistentes) {
   if (!sec.tipoVotacion) return '';
   let v;
-  try { v = JSON.parse(sec.tipoVotacion); } catch { return limpiarAsteriscos(sec.tipoVotacion); }
+  try { v = JSON.parse(sec.tipoVotacion); } catch { return limpiarMarcadoresBasicos(sec.tipoVotacion); }
 
   const estadoLabel = v.estado ? 'aprueba' : 'acuerda';
-  const lineasAcuerdo = (sec.acuerdo || '').split('\n').filter(l => l.trim() !== '');
+  const lineasAcuerdo = (limpiarMarcadoresBasicos(sec.acuerdo || '') || '').split('\n').filter(l => l.trim() !== '');
   const esAcuerdoUnico = lineasAcuerdo.length === 1 && /^ÚNICO\.?\s*/i.test(lineasAcuerdo[0].trim());
   const textoAcuerdoUnico = esAcuerdoUnico
     ? lineasAcuerdo[0].trim().replace(/^ÚNICO\.?\s*/i, '').replace(/\.\s*$/, '')
@@ -52,7 +55,6 @@ function generarTextoVotacion(sec, asistentes) {
     return `${articulo} ${gradoMap[a.grado] || ''} ${a.nombre}`.replace(/\s+/g, ' ').trim();
   }
 
-  // Mayoría de votos
   if (v.voto === 1 || v.voto === 2) {
     const cantidadTexto = v.voto === 1 ? 'cuatro' : 'tres';
     const nombresVotantes = (v.quorum && v.quorum.length > 0)
@@ -82,76 +84,41 @@ function generarTextoVotacion(sec, asistentes) {
   return base + '.';
 }
 
-// ========== FUNCIÓN PRINCIPAL ==========
-export async function generarWordActa(secciones, proyectoMeta, asistentes = [], sesionData = {}) {
-  // Filtrar para eliminar el punto de "Asuntos Generales"
-  const seccionesFiltradas = secciones.filter(sec =>
-    sec.seccion?.toLowerCase() !== 'asuntos generales' && !sec.confidencial
-  );
-
-  if (seccionesFiltradas.length === 0) {
-    alert('No hay puntos para generar el acta (se excluyeron Asuntos Generales).');
-    return;
-  }
-
+function calcularTituloActa(proyectoMeta) {
   const fechaObj = proyectoMeta.fecha ? parsearFechaLocal(proyectoMeta.fecha) : new Date();
   const mes = fechaObj.toLocaleDateString('es-ES', { month: 'long' }).toUpperCase();
   const anio = fechaObj.getFullYear();
-
   const diaNum = fechaObj.getDate();
   const diaLetras = convertirNumeroALetras(diaNum);
   const anioLetras = convertirNumeroALetras(anio);
-
-  const fechaConDia = `${diaLetras} DE ${mes} DE ${anioLetras}`;
-  const fechaConDiaCorregida = corregirAcentosFecha(fechaConDia);
-
+  const fechaConDiaCorregida = corregirAcentosFecha(`${diaLetras} DE ${mes} DE ${anioLetras}`);
   const tipoSesion = proyectoMeta.tipoSesion || '';
   const numeroSesion = proyectoMeta.numeroSesion || '';
   const numeroSesionNum = parseInt(numeroSesion, 10);
   const numeroSesionLetras = isNaN(numeroSesionNum) ? numeroSesion : convertirNumeroALetras(numeroSesionNum);
-
   const tituloSesion = tipoSesion && numeroSesion
     ? `SESIÓN ${tipoSesion.toUpperCase()} NÚMERO ${numeroSesionLetras}`
     : 'ACTA DE SESIÓN';
+  return {
+    tituloSesion,
+    tituloTexto: `ACTA DE LA ${tituloSesion} DEL PLENO DEL ÓRGANO DE ADMINISTRACIÓN JUDICIAL CORRESPONDIENTE AL DÍA ${fechaConDiaCorregida}`,
+    diaLetras, mes, anio, anioLetras, tipoSesion, fechaConDiaCorregida
+  };
+}
 
-  const parrafos = [];
-  const interlineado115 = { line: 276, lineRule: 'auto' };
+export function construirBloquesActa(secciones, proyectoMeta, asistentes = [], sesionData = {}) {
+  const seccionesFiltradas = secciones.filter(sec =>
+    sec.seccion?.toLowerCase() !== 'asuntos generales'
+  );
+  if (seccionesFiltradas.length === 0) return [];
 
-  // ========== CARGA DE IMAGEN ==========
-  // Tu logo está en public/logo.png → se sirve como /logo.png
-  const imagenData = await cargarImagen('/logo.png');
-  let imagenDataBin = null;
-  let imgWidth = 0, imgHeight = 0;
-  if (imagenData) {
-    imagenDataBin = imagenData.data;
-    imgWidth = imagenData.width;
-    imgHeight = imagenData.height;
-  }
+  const { diaLetras, mes, anio, anioLetras, tipoSesion, fechaConDiaCorregida } = calcularTituloActa(proyectoMeta);
 
-  // ========== TÍTULO ==========
-  const tituloTexto = `ACTA DE LA ${tituloSesion} DEL PLENO DEL ÓRGANO DE ADMINISTRACIÓN JUDICIAL CORRESPONDIENTE AL DÍA ${fechaConDiaCorregida}`;
-  parrafos.push(new Paragraph({
-    alignment: AlignmentType.JUSTIFIED,
-    spacing: { ...interlineado115, after: 500 },
-    children: [
-      new TextRun({
-        text: tituloTexto,
-        bold: true,
-        size: 28,
-        color: '000000',
-        font: 'Arial',
-      }),
-    ],
-  }));
-
-  // ========== INTRODUCCIÓN ==========
   const horaInicio = sesionData.horaInicio
     ? new Date(sesionData.horaInicio).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
     : '<<hora>>';
-
   const presidente = asistentes.find(a => a.presidente);
   const miembros = asistentes.filter(a => !a.presidente && a.presente);
-
   function formatearNombreIntro(a) {
     const gradoMap = {
       'Licenciatura': a.genero === 'femenino' ? 'licenciada' : 'licenciado',
@@ -160,49 +127,37 @@ export async function generarWordActa(secciones, proyectoMeta, asistentes = [], 
     };
     return `${gradoMap[a.grado] || ''} ${a.nombre}`.trim();
   }
-
   const nombresAsistentes = [
     ...miembros.map(formatearNombreIntro),
     presidente ? `y el Presidente ${formatearNombreIntro(presidente)}` : ''
   ].filter(Boolean).join(', ');
-
   const textoIntro = `En la Ciudad de México, siendo las ${horaInicio} horas del ${fechaConDiaCorregida.toLowerCase()}, se reúnen de manera presencial en el salón del Pleno del Órgano de Administración Judicial para celebrar la sesión ${tipoSesion.toLowerCase()} convocada por las y los integrantes: ${nombresAsistentes || '<<integrantes>>'}; con lo cual se da cuenta sobre la adopción de las siguientes determinaciones:`;
 
-  parrafos.push(new Paragraph({
-    alignment: AlignmentType.JUSTIFIED,
-    spacing: { ...interlineado115, before: 0, after: 300 },
-    indent: { firstLine: 720 },
-    children: [
-      new TextRun({
-        text: textoIntro,
-        bold: false,
-        size: 24,
-        color: '000000',
-        font: 'Arial',
-      }),
-    ],
-  }));
-
-  // ========== PUNTOS ==========
+  const bloques = [{ key: 'intro', tipo: 'intro', titulo: 'Introducción', textoAuto: textoIntro }];
   let numeroGlobal = 1;
 
   seccionesFiltradas.forEach(sec => {
-    const identificador = `${numeroGlobal}. PLE./${padNumber(numeroGlobal, 3)}.- `;
+    const n = numeroGlobal;
+    const identificador = `${n}. PLE./${padNumber(n, 3)}.- `;
 
-    // ----- CONTENIDO ESPECIAL PARA EL PRIMER PUNTO -----
-    let contenido = limpiarAsteriscos(sec.contenido) || '';
-    if (numeroGlobal === 1) {
-      const diaLetrasMin = diaLetras.toLowerCase();
-      const mesLetras = mes.toLowerCase();
-      const anioLetrasMin = anioLetras.toLowerCase();
-      const fechaTexto = `${diaLetrasMin} de ${mesLetras} de ${anioLetrasMin}`;
-      const fechaTextoCorregida = corregirAcentosFecha(fechaTexto);
-      const totalPuntos = seccionesFiltradas.length;
-      const totalPuntosLetras = numeroALetras(totalPuntos).toLowerCase();
-      contenido = `Se somete a consideración el orden del día de la sesión ${tipoSesion.toLowerCase()} de ${fechaTextoCorregida}, con ${totalPuntosLetras} puntos.`;
+    if (sec.confidencial) {
+      bloques.push({
+        key: `punto_${sec.id}_contenido`, tipo: 'confidencial', identificador,
+        titulo: `Punto ${n}`, textoAuto: 'CONFIDENCIAL'
+      });
+      numeroGlobal++;
+      return;
     }
 
-    const acuerdo = limpiarAsteriscos(sec.acuerdo) || '';
+    let contenido = limpiarMarcadoresBasicos(sec.contenido) || '';
+    if (n === 1) {
+      const fechaTexto = corregirAcentosFecha(`${diaLetras.toLowerCase()} de ${mes.toLowerCase()} de ${anioLetras.toLowerCase()}`);
+      const totalPuntos = seccionesFiltradas.length;
+      const totalPuntosLetras = numeroALetras(totalPuntos).toLowerCase();
+      contenido = `Se somete a consideración el orden del día de la sesión ${tipoSesion.toLowerCase()} de ${fechaTexto}, con ${totalPuntosLetras} puntos.`;
+    }
+
+    const acuerdo = limpiarMarcadoresBasicos(sec.acuerdo) || '';
     const lineasAcuerdo = acuerdo.split('\n').filter(l => l.trim() !== '');
     const esAcuerdoUnico = lineasAcuerdo.length === 1 && /^ÚNICO\.?\s*/i.test(lineasAcuerdo[0].trim());
 
@@ -210,154 +165,182 @@ export async function generarWordActa(secciones, proyectoMeta, asistentes = [], 
     const textoVotoFijo = sec.id === 'sec_fijo_1'
       ? 'El Pleno, en votación económica, por unanimidad, aprueba el orden del día.'
       : 'El Pleno, en votación económica, por unanimidad, aprueba el acta e instruye la elaboración y publicación de la versión pública.';
-
     const votacion = esFijoAprobacion
       ? textoVotoFijo
       : (sec.votacionTextoManual !== undefined
-        ? limpiarAsteriscos(sec.votacionTextoManual)
+        ? limpiarMarcadoresBasicos(sec.votacionTextoManual)
         : generarTextoVotacion(sec, asistentes));
     const tieneVotacion = !!votacion;
     const tieneAcuerdo = !esFijoAprobacion && !!acuerdo && !esAcuerdoUnico;
 
-    // 1. Punto de acuerdo
-    parrafos.push(new Paragraph({
-      indent: { left: 720, hanging: 360 },
-      spacing: { before: 160, after: 240 },
-      alignment: AlignmentType.JUSTIFIED,
-      children: [
-        new TextRun({ text: identificador, bold: true, size: 24, color: '000000', font: 'Arial' }),
-        new TextRun({ text: contenido, bold: false, size: 24, color: '000000', font: 'Arial' }),
-      ],
-    }));
-
-    // 2. Votación
+    bloques.push({ key: `punto_${sec.id}_contenido`, tipo: 'contenido', identificador, titulo: `Punto ${n}`, textoAuto: contenido });
     if (tieneVotacion) {
-      parrafos.push(new Paragraph({
-        indent: { left: 720 },
-        spacing: {
-          before: 0,
-          after: tieneAcuerdo ? 120 : 280,
-          line: 360,
-          lineRule: 'auto'
-        },
-        alignment: AlignmentType.JUSTIFIED,
-        children: [new TextRun({ text: votacion, size: 24, color: '000000', font: 'Arial' })],
-      }));
+      bloques.push({ key: `punto_${sec.id}_votacion`, tipo: 'votacion', titulo: `Punto ${n} · Votación`, tieneAcuerdoDespues: tieneAcuerdo, textoAuto: votacion });
     }
-
-    // 3. Acuerdo
     if (tieneAcuerdo) {
-      lineasAcuerdo.forEach((linea, i) => {
-        const children = formatearLineaAcuerdo(linea);
-        parrafos.push(new Paragraph({
-          indent: { left: 720 },
-          spacing: { before: 0, after: i === lineasAcuerdo.length - 1 ? 280 : 120 },
-          alignment: AlignmentType.JUSTIFIED,
-          children: children,
-        }));
-      });
+      bloques.push({ key: `punto_${sec.id}_acuerdo`, tipo: 'acuerdo', titulo: `Punto ${n} · Acuerdo`, textoAuto: lineasAcuerdo.join('\n') });
     }
-
-    // 4. Anexo (siempre)
-    const textoAnexo = `La documentación relativa a este punto se agrega al apéndice como Anexo ${numeroGlobal}.`;
-    parrafos.push(new Paragraph({
-      indent: { left: 720 },
-      spacing: { before: 0, after: 280 },
-      alignment: AlignmentType.JUSTIFIED,
-      children: [new TextRun({
-        text: textoAnexo,
-        size: 24,
-        color: '000000',
-        font: 'Arial'
-      })],
-    }));
+    bloques.push({
+      key: `punto_${sec.id}_anexo`, tipo: 'anexo', titulo: `Punto ${n} · Anexo`,
+      textoAuto: `La documentación relativa a este punto se agrega al apéndice como Anexo ${n}.`
+    });
 
     numeroGlobal++;
   });
 
-  // ========== CIERRE ==========
   let horaFin = '<<hora>>';
   if (sesionData.horaFin) {
     horaFin = new Date(sesionData.horaFin).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
   } else if (sesionData.horaInicio) {
     horaFin = new Date(sesionData.horaInicio).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
   }
+  bloques.push({
+    key: 'cierre', tipo: 'cierre', titulo: 'Cierre',
+    textoAuto: `No habiendo otro asunto que tratar, se da por concluida la sesión a las ${horaFin} horas del día de su fecha, firmando al calce el Presidente del Órgano de Administración Judicial y la persona titular de la Secretaría Ejecutiva del Pleno, de conformidad con lo dispuesto en el artículo 91 de la Ley Orgánica del Poder Judicial de la Federación.`
+  });
 
-  const textoCierre = `No habiendo otro asunto que tratar, se da por concluida la sesión a las ${horaFin} horas del día de su fecha, firmando al calce el Presidente del Órgano de Administración Judicial y la persona titular de la Secretaría Ejecutiva del Pleno, de conformidad con lo dispuesto en el artículo 91 de la Ley Orgánica del Poder Judicial de la Federación.`;
+  return bloques;
+}
 
-  parrafos.push(new Paragraph({
-    alignment: AlignmentType.JUSTIFIED,
-    spacing: { ...interlineado115, before: 280, after: 0 },
-    indent: { left: 720 },
-    children: [
-      new TextRun({
-        text: textoCierre,
-        size: 24,
-        color: '000000',
-        font: 'Arial'
-      })
-    ]
-  }));
+export function textoDeBloque(bloque, overrides = {}) {
+  const editado = overrides[bloque.key];
+  return editado !== undefined ? editado : bloque.textoAuto;
+}
 
-  // ========== ENCABEZADO Y PIE DE PÁGINA ==========
-  const headerChildren = [];
-  if (imagenDataBin && imgWidth > 0 && imgHeight > 0) {
-    const targetWidth = 120;
-    const aspectRatio = imgWidth / imgHeight;
-    const targetHeight = Math.round(targetWidth / aspectRatio);
+function parrafosDeBloque(bloque, overrides, publica) {
+  const texto = limpiarAsteriscos(textoDeBloque(bloque, overrides), publica) || '';
+  const interlineado115 = { line: 276, lineRule: 'auto' };
 
-    headerChildren.push(
-      new Paragraph({
-        alignment: AlignmentType.LEFT,
+  switch (bloque.tipo) {
+    case 'intro':
+      return [new Paragraph({
+        alignment: AlignmentType.JUSTIFIED,
+        spacing: { ...interlineado115, before: 0, after: 300 },
+        indent: { firstLine: 720 },
+        children: [new TextRun({ text: texto, size: 24, color: '000000', font: 'Arial' })]
+      })];
+    case 'confidencial':
+      return [new Paragraph({
+        indent: { left: 720, hanging: 360 },
+        spacing: { before: 160, after: 240 },
+        alignment: AlignmentType.JUSTIFIED,
         children: [
-          new ImageRun({
-            data: imagenDataBin,
-            transformation: { width: targetWidth, height: targetHeight },
-            type: 'png',
-          }),
-        ],
-      })
-    );
+          new TextRun({ text: bloque.identificador, bold: true, size: 24, color: '000000', font: 'Arial' }),
+          new TextRun({ text: texto, bold: true, size: 24, color: '000000', font: 'Arial' })
+        ]
+      })];
+    case 'contenido':
+      return [new Paragraph({
+        indent: { left: 720, hanging: 360 },
+        spacing: { before: 160, after: 240 },
+        alignment: AlignmentType.JUSTIFIED,
+        children: [
+          new TextRun({ text: bloque.identificador, bold: true, size: 24, color: '000000', font: 'Arial' }),
+          new TextRun({ text: texto, bold: false, size: 24, color: '000000', font: 'Arial' })
+        ]
+      })];
+    case 'votacion':
+      return [new Paragraph({
+        indent: { left: 720 },
+        spacing: { before: 0, after: bloque.tieneAcuerdoDespues ? 120 : 280, line: 360, lineRule: 'auto' },
+        alignment: AlignmentType.JUSTIFIED,
+        children: [new TextRun({ text: texto, size: 24, color: '000000', font: 'Arial' })]
+      })];
+    case 'acuerdo': {
+      const lineas = texto.split('\n').filter(l => l.trim() !== '');
+      return lineas.map((linea, i) => new Paragraph({
+        indent: { left: 720 },
+        spacing: { before: 0, after: i === lineas.length - 1 ? 280 : 120 },
+        alignment: AlignmentType.JUSTIFIED,
+        children: formatearLineaAcuerdo(linea)
+      }));
+    }
+    case 'anexo':
+      return [new Paragraph({
+        indent: { left: 720 },
+        spacing: { before: 0, after: 280 },
+        alignment: AlignmentType.JUSTIFIED,
+        children: [new TextRun({ text: texto, size: 24, color: '000000', font: 'Arial' })]
+      })];
+    case 'cierre':
+      return [new Paragraph({
+        alignment: AlignmentType.JUSTIFIED,
+        spacing: { ...interlineado115, before: 280, after: 0 },
+        indent: { left: 720 },
+        children: [new TextRun({ text: texto, size: 24, color: '000000', font: 'Arial' })]
+      })];
+    default:
+      return [];
+  }
+}
+
+export async function generarWordActa(secciones, proyectoMeta, asistentes = [], sesionData = {}, opciones = {}) {
+  const publica = !!opciones.publica;
+  const bloques = construirBloquesActa(secciones, proyectoMeta, asistentes, sesionData);
+  if (bloques.length === 0) {
+    if (!opciones.silencioso) alert('No hay puntos para generar el acta (se excluyeron Asuntos Generales).');
+    return null;
+  }
+  const overrides = sesionData.actaOverrides || {};
+
+  const { tituloSesion, tituloTexto } = calcularTituloActa(proyectoMeta);
+  const interlineado115 = { line: 276, lineRule: 'auto' };
+
+  const imagenData = await cargarImagen('/logo.png');
+
+  const parrafos = [
+    new Paragraph({
+      alignment: AlignmentType.JUSTIFIED,
+      spacing: { ...interlineado115, after: 500 },
+      children: [new TextRun({ text: tituloTexto, bold: true, size: 28, color: '000000', font: 'Arial' })]
+    }),
+    ...bloques.flatMap(b => parrafosDeBloque(b, overrides, publica))
+  ];
+
+  const headerChildren = [];
+  if (imagenData && imagenData.width > 0 && imagenData.height > 0) {
+    const targetWidth = 120;
+    const targetHeight = Math.round(targetWidth / (imagenData.width / imagenData.height));
+    headerChildren.push(new Paragraph({
+      alignment: AlignmentType.LEFT,
+      children: [new ImageRun({ data: imagenData.data, transformation: { width: targetWidth, height: targetHeight }, type: 'png' })]
+    }));
   } else {
-    console.warn('Encabezado sin logo: no se pudo cargar /logo.png', { imgWidth, imgHeight, tieneData: !!imagenDataBin });
+    console.warn('Encabezado sin logo: no se pudo cargar /logo.png');
   }
 
   const footerChildren = [
     new Paragraph({
       alignment: AlignmentType.RIGHT,
-      children: [
-        new TextRun({
-          children: [PageNumber.CURRENT],
-          bold: true,
-          size: 20,
-          color: '000000',
-          font: 'Arial',
-        }),
-      ],
-    }),
+      children: [new TextRun({ children: [PageNumber.CURRENT], bold: true, size: 20, color: '000000', font: 'Arial' })]
+    })
   ];
 
-  const section = {
-    properties: {},
-    headers: {
-      default: new Header({
-        children: headerChildren,
-      }),
-    },
-    footers: {
-      default: new Footer({
-        children: footerChildren,
-      }),
-    },
-    children: parrafos,
-  };
+  const doc = new Document({
+    sections: [{
+      properties: {},
+      headers: { default: new Header({ children: headerChildren }) },
+      footers: { default: new Footer({ children: footerChildren }) },
+      children: parrafos
+    }]
+  });
 
-  const doc = new Document({ sections: [section] });
   const blob = await Packer.toBlob(doc);
+  const nombreArchivo = `${publica ? 'Acta pública' : 'Acta'} - ${tituloSesion}.docx`;
+  return { blob, nombreArchivo };
+}
+
+export async function generarWordActaPublica(secciones, proyectoMeta, asistentes = [], sesionData = {}, opciones = {}) {
+  return generarWordActa(secciones, proyectoMeta, asistentes, sesionData, { ...opciones, publica: true });
+}
+
+export function descargarBlobActa(resultado) {
+  if (!resultado) return;
+  const { blob, nombreArchivo } = resultado;
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `Acta - ${tituloSesion}.docx`;
+  link.download = nombreArchivo;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

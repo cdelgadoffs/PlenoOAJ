@@ -34,7 +34,7 @@ function extensionesEditor(placeholder) {
   ];
 }
 
-export default function EditorOcultable({ id, value, onChange, placeholder, autoAjustar, negritaTotal, modoAcuerdo, modoConsiderando, className, style, soloLectura, onFocusEditor }) {
+export default function EditorOcultable({ id, value, onChange, placeholder, autoAjustar, negritaTotal, modoAcuerdo, modoConsiderando, className, style, soloLectura, onFocusEditor, autoFocus, resetToken }) {
   const [botonPos, setBotonPos] = useState(null);
   const [textoSeleccionado, setTextoSeleccionado] = useState('');
   const ultimoValorExternoRef = useRef(value);
@@ -51,6 +51,21 @@ export default function EditorOcultable({ id, value, onChange, placeholder, auto
         ...(id ? { id } : null),
         class: claseEditable,
         style: Object.entries(estiloEditable).map(([k, v]) => `${k.replace(/[A-Z]/g, m => '-' + m.toLowerCase())}:${v}`).join(';')
+      },
+      // Al pegar (p. ej. desde Word), se descartan los estilos en línea del
+      // contenido de origen (font-size, color, fuente, etc.) para que no se
+      // cuelen marcadores de tamaño de letra (##fs##) ni otro formato ajeno
+      // a este editor; solo sobreviven negrita/itálica/listas/tablas.
+      transformPastedHTML(html) {
+        const contenedor = document.createElement('div');
+        contenedor.innerHTML = html;
+        contenedor.querySelectorAll('[style]').forEach(el => el.removeAttribute('style'));
+        contenedor.querySelectorAll('font').forEach(el => {
+          el.removeAttribute('size');
+          el.removeAttribute('color');
+          el.removeAttribute('face');
+        });
+        return contenedor.innerHTML;
       }
     },
     onUpdate: ({ editor }) => sincronizar(editor),
@@ -58,14 +73,22 @@ export default function EditorOcultable({ id, value, onChange, placeholder, auto
     onFocus: ({ editor }) => onFocusEditor && onFocusEditor(editor),
     onBlur: ({ editor }) => {
       setBotonPos(null);
-      editor.commands.setContent(markersAHtml(ultimoValorExternoRef.current) || '<p></p>', false);
+      editor.commands.setContent(markersAHtml(ultimoValorExternoRef.current) || '<p></p>', { emitUpdate: false });
     }
   }, []);
 
   useEffect(() => {
+    if (!editor || !autoFocus) return;
+    editor.commands.setContent(markersAHtml(value) || '<p></p>', { emitUpdate: false });
+    ultimoValorExternoRef.current = value;
+    editor.chain().focus('end').run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor, autoFocus, resetToken]);
+
+  useEffect(() => {
     if (!editor) return;
     if (value !== ultimoValorExternoRef.current && !editor.isFocused) {
-      editor.commands.setContent(markersAHtml(value) || '<p></p>', false);
+      editor.commands.setContent(markersAHtml(value) || '<p></p>', { emitUpdate: false });
     }
     ultimoValorExternoRef.current = value;
   }, [value, editor]);

@@ -6,8 +6,8 @@ import { formatearFechaES, padNumber } from '../utils/fechas.js';
 import { diferenciaTexto } from '../utils/diffTexto.js';
 import { crearCarpetaProyecto, crearCarpetaPunto, subirArchivoAOneDrive } from '../services/onedrive.js';
 import { guardarArchivo, obtenerArchivo, eliminarArchivo } from '../utils/archivosDB.js';
-import { esArchivoWord, extraerTextoWord } from '../utils/extraccionWord.js';
-import { generarWordPunto, WORD_MIME } from '../utils/wordPunto.js';
+import { generarWordPunto, nombreArchivoPuntoAcuerdo, WORD_MIME } from '../utils/wordPunto.js';
+import { getInsertIndex } from '../utils/puntos.js';
 import { PLANTILLA_POR_DEFECTO, crearBloquesPorDefecto } from '../utils/plantillasActa.js';
 import { INTRO_ACTA_NOMBRE, INTRO_ACTA_RESTO, PUENTE_ACTA_TEXTO } from '../utils/textosActa.js';
 import EditorOcultable from './EditorOcultable.jsx';
@@ -19,12 +19,18 @@ import '../styles/VistaPreviaFlotante.css';
 import { CATEGORIAS, REMITENTES_POR_CATEGORIA, TODAS_DEPENDENCIAS } from '../utils/dependencias.js';
 
 const INTRO_ACTA_MARKERS_POR_DEFECTO = `**${INTRO_ACTA_NOMBRE}**${INTRO_ACTA_RESTO}`;
+const CONTENIDO_POR_DEFECTO = 'Proyecto de Acuerdo del Pleno del Órgano de Administración Judicial ';
+const CONTENIDO_INFORME_POR_DEFECTO = 'Informe';
 
-function crearEstadoVacio() {
+function contenidoPorDefecto(seccion) {
+  return seccion === 'informes' ? CONTENIDO_INFORME_POR_DEFECTO : CONTENIDO_POR_DEFECTO;
+}
+
+function crearEstadoVacio(seccion) {
   return {
     categoria: 'pleno',
     remitente: 'Pleno',
-    contenido: '',
+    contenido: contenidoPorDefecto(seccion),
     tipoVotacion: JSON.stringify({ voto: 0, votacion: 0, estado: true }),
     acuerdo: '',
     archivos: [],
@@ -43,7 +49,17 @@ export default function SidebarTerciario() {
   const { obtenerAccessToken } = useAuth();
   const [form, setForm] = useState(crearEstadoVacio);
   const [oneDriveStatus, setOneDriveStatus] = useState('');
+  const [seccionDelForm, setSeccionDelForm] = useState(seccionActual);
+  const [tieneAporteReal, setTieneAporteReal] = useState(false);
+  const [resetToken, setResetToken] = useState(0);
   const asideRef = useRef(null);
+
+  if (sidebarTerciarioAbierto && !puntoEditandoId && seccionActual !== seccionDelForm) {
+    setSeccionDelForm(seccionActual);
+    setForm(crearEstadoVacio(seccionActual));
+    if (tieneAporteReal) setTieneAporteReal(false);
+    setResetToken(t => t + 1);
+  }
 
   useEffect(() => {
     if (!sidebarTerciarioAbierto) return;
@@ -76,8 +92,12 @@ export default function SidebarTerciario() {
         introTexto: sec.introTexto ?? INTRO_ACTA_MARKERS_POR_DEFECTO,
         puenteTexto: sec.puenteTexto ?? PUENTE_ACTA_TEXTO
       });
+      setTieneAporteReal(true);
+      setResetToken(t => t + 1);
     } else {
-      setForm(crearEstadoVacio());
+      setForm(crearEstadoVacio(seccionActual));
+      setTieneAporteReal(false);
+      setResetToken(t => t + 1);
     }
     setOneDriveStatus('');
   }, [sidebarTerciarioAbierto, puntoEditandoId]);
@@ -90,7 +110,7 @@ export default function SidebarTerciario() {
   }, [vistaActual]);
 
   useEffect(() => {
-    if (sidebarTerciarioAbierto && (seccionActual === 'aprobaciones' || seccionActual === 'asuntos generales')) {
+    if (sidebarTerciarioAbierto && seccionActual === 'aprobaciones') {
       setSidebarTerciarioAbierto(false);
       setPuntoEditandoId(null);
     }
@@ -114,13 +134,10 @@ export default function SidebarTerciario() {
 
   const opcionesRemitente = (REMITENTES_POR_CATEGORIA[form.categoria] || ['Pleno']).map(id => ({ id, label: id }));
   const categoriaActual = CATEGORIAS.find(c => c.id === form.categoria) || CATEGORIAS[0];
-  // El visor solo aparece cuando el usuario empieza a escribir de verdad
-  // (contenido, acuerdo o el texto de alguna sección), no solo porque ya
-  // haya secciones precargadas vacías por defecto. Esas secciones se
-  // preparan igual "detrás de escena" (VistaPreviaFlotante las precarga sin
-  // importar si es o no visible), así que en cuanto aparece ya las trae
-  // listas según la plantilla elegida.
-  const hayContenido = !!(form.contenido.trim() || form.acuerdo.trim() || form.bloquesActa.some(b => b.texto && b.texto.trim()));
+  const hayContenido = seccionActual !== 'informes' && tieneAporteReal;
+  function marcarAporte() {
+    if (!tieneAporteReal) setTieneAporteReal(true);
+  }
 
   function cambiarCategoria(categoria) {
     const opciones = REMITENTES_POR_CATEGORIA[categoria] || ['Pleno'];
@@ -144,25 +161,9 @@ export default function SidebarTerciario() {
       );
     }
     if (procesos.length === 0) return;
-    Promise.all(procesos).then(async (resultados) => {
+    Promise.all(procesos).then((resultados) => {
       setForm(f => ({ ...f, archivos: [...f.archivos, ...resultados.map(({ _file, ...r }) => r)] }));
       e.target.value = '';
-
-      const wordFile = resultados.find(r => esArchivoWord(r._file));
-      if (!wordFile) return;
-      if (form.contenido.trim() !== '' || form.acuerdo.trim() !== '') {
-        if (!confirm('Se detectó un documento Word. ¿Extraer el punto de acuerdo y los acuerdos, reemplazando el contenido actual?')) return;
-      }
-      const { puntoAcuerdo, acuerdos } = await extraerTextoWord(wordFile._file, seccionActual);
-      if (puntoAcuerdo || acuerdos) {
-        setForm(f => ({
-          ...f,
-          contenido: puntoAcuerdo || f.contenido,
-          acuerdo: acuerdos || f.acuerdo
-        }));
-      } else {
-        alert('No se encontró un párrafo "ACUERDO" ni una sección "ACUERDOS" en el documento.');
-      }
     }).catch(err => alert('Error al guardar archivos: ' + err.message));
   }
 
@@ -171,7 +172,9 @@ export default function SidebarTerciario() {
   }
 
   function limpiarFormulario() {
-    setForm(crearEstadoVacio());
+    setForm(crearEstadoVacio(seccionActual));
+    setTieneAporteReal(false);
+    setResetToken(t => t + 1);
     const inputArchivos = document.getElementById('archivosInput');
     const inputCarpeta = document.getElementById('carpetaInput');
     if (inputArchivos) inputArchivos.value = '';
@@ -185,7 +188,8 @@ export default function SidebarTerciario() {
 
   // Genera el .docx de respaldo del punto (mismo contenido que VistaPreviaFlotante)
   // y lo mezcla con los archivos ya adjuntados, reemplazando la versión auto anterior si existía.
-  async function conArchivoAutoAdjunto(contenido, acuerdo) {
+  // Siempre queda primero en la lista de adjuntos.
+  async function conArchivoAutoAdjunto(contenido, acuerdo, codigoPunto) {
     const anteriores = form.archivos.filter(a => !a.autogenerado);
     const autoPrevio = form.archivos.filter(a => a.autogenerado);
     const resultado = await generarWordPunto({ contenido, acuerdo, bloquesActa: form.bloquesActa, plantilla: form.plantilla, introTexto: form.introTexto, puenteTexto: form.puenteTexto }, proyectoMeta);
@@ -193,7 +197,8 @@ export default function SidebarTerciario() {
     autoPrevio.forEach(a => { eliminarArchivo(a.id).catch(() => {}); });
     const archivoAutoId = 'arch_auto_' + Date.now();
     await guardarArchivo(archivoAutoId, resultado.blob);
-    return [...anteriores, { id: archivoAutoId, nombre: resultado.nombreArchivo, tipo: WORD_MIME, autogenerado: true }];
+    const nombre = nombreArchivoPuntoAcuerdo(codigoPunto);
+    return [{ id: archivoAutoId, nombre, tipo: WORD_MIME, autogenerado: true }, ...anteriores];
   }
 
   async function confirmar() {
@@ -203,11 +208,19 @@ export default function SidebarTerciario() {
       alert('Debes completar el punto de acuerdo y los acuerdos antes de añadir el punto.');
       return;
     }
-    const archivosConAuto = await conArchivoAutoAdjunto(contenido, acuerdo);
+    const desdeAG = seccionActual === 'asuntos generales';
+    const seccionFinal = desdeAG
+      ? (form.seccionDestino || 'proyectos de acuerdo')
+      : seccionActual;
+    const codigoPunto = puntoEditandoId
+      ? 'PLE/' + padNumber(secciones.findIndex(s => s.id === puntoEditandoId) + 1, 3)
+      : 'PLE/' + padNumber(getInsertIndex(secciones, seccionFinal) + 1, 3);
+
+    const archivosConAuto = seccionActual === 'informes'
+      ? form.archivos
+      : await conArchivoAutoAdjunto(contenido, acuerdo, codigoPunto);
     if (puntoEditandoId) {
       const anterior = secciones.find(s => s.id === puntoEditandoId);
-      const idx = secciones.findIndex(s => s.id === puntoEditandoId);
-      const codigoPunto = 'PLE/' + padNumber(idx + 1, 3);
       const textoAnterior = `${anterior?.contenido || ''} ${anterior?.acuerdo || ''}`;
       const textoNuevo = `${contenido} ${acuerdo}`;
       const diffCambio = diferenciaTexto(textoAnterior, textoNuevo);
@@ -231,14 +244,10 @@ export default function SidebarTerciario() {
         { id: crypto.randomUUID(), puntoId: puntoEditandoId, codigoPunto, dependencia: form.remitente, contenido, acuerdo, diffCambio }
       ]);
       setPuntoEditandoId(null);
-      setForm(crearEstadoVacio());
+      setForm(crearEstadoVacio(seccionActual));
       setSidebarTerciarioAbierto(false);
       return;
     }
-    const desdeAG = seccionActual === 'asuntos generales';
-    const seccionFinal = desdeAG
-      ? (form.seccionDestino || 'proyectos de acuerdo')
-      : seccionActual;
 
     const nuevoId = agregarPunto({
       contenido,
@@ -259,7 +268,9 @@ export default function SidebarTerciario() {
     if (form.archivos.length > 0) {
       subirArchivosAOneDrive(nuevoId, form.archivos);
     }
-    setForm(f => ({ ...f, contenido: '', acuerdo: '', archivos: [], bloquesActa: crearBloquesPorDefecto(PLANTILLA_POR_DEFECTO), plantilla: PLANTILLA_POR_DEFECTO, introTexto: INTRO_ACTA_MARKERS_POR_DEFECTO, puenteTexto: PUENTE_ACTA_TEXTO }));
+    setForm(f => ({ ...f, contenido: contenidoPorDefecto(seccionActual), acuerdo: '', archivos: [], bloquesActa: crearBloquesPorDefecto(PLANTILLA_POR_DEFECTO), plantilla: PLANTILLA_POR_DEFECTO, introTexto: INTRO_ACTA_MARKERS_POR_DEFECTO, puenteTexto: PUENTE_ACTA_TEXTO }));
+    setTieneAporteReal(false);
+    setResetToken(t => t + 1);
   }
 
   async function subirArchivosAOneDrive(puntoId, archivos) {
@@ -357,12 +368,15 @@ export default function SidebarTerciario() {
             <div id="oneDriveStatus" className="onedrive-status">{oneDriveStatus}</div>
           </div>
           <div className="ter-field ter-field-grow">
+            <label className="ter-label">{seccionActual === 'informes' ? 'Informe' : 'Punto de acuerdo'}</label>
             <EditorOcultable
               id="cuerpoTextarea"
               value={form.contenido}
-              onChange={(v) => setForm(f => ({ ...f, contenido: v }))}
-              placeholder="Punto de acuerdo"
+              onChange={(v) => { marcarAporte(); setForm(f => ({ ...f, contenido: v })); }}
+              placeholder={seccionActual === 'informes' ? 'Informe' : '...por el que/cual se...'}
               negritaTotal
+              autoFocus={!puntoEditandoId}
+              resetToken={resetToken}
             />
           </div>
           {seccionActual !== 'informes' && (
@@ -371,7 +385,7 @@ export default function SidebarTerciario() {
               <EditorOcultable
                 id="acuerdoSelect"
                 value={form.acuerdo}
-                onChange={(v) => setForm(f => ({ ...f, acuerdo: v }))}
+                onChange={(v) => { marcarAporte(); setForm(f => ({ ...f, acuerdo: v })); }}
                 placeholder="Acuerdos"
                 modoAcuerdo
               />
@@ -405,7 +419,7 @@ export default function SidebarTerciario() {
         </div>
       </aside>
 
-    <VistaPreviaFlotante form={form} setForm={setForm} visible={hayContenido} anclaRef={asideRef} />
+    <VistaPreviaFlotante form={form} setForm={setForm} visible={hayContenido} anclaRef={asideRef} onAporte={marcarAporte} />
     </>
   );
 }

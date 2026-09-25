@@ -101,7 +101,6 @@ export function conPuntosFijosAsegurados(seccionesEntrada, tipoSesion) {
     }
   });
 
-  // Limpieza: si es extraordinaria, no debe quedar rastro de acta ni asuntos generales
   if (esExtraordinaria) {
     secciones = secciones.filter(s => s.id !== 'sec_fijo_2' && s.id !== 'sec_fijo_3');
   }
@@ -115,27 +114,38 @@ export function reordenarAsuntosGenerales(secciones) {
   return [...otros, ...generales];
 }
 
+function obtenerFechaSesionOrdinariaAnterior(sesiones, fechaActual) {
+  const anteriores = Object.keys(sesiones)
+    .filter(f => f < fechaActual && sesiones[f]?.tipoSesion === 'Ordinaria')
+    .sort();
+  return anteriores.length > 0 ? anteriores[anteriores.length - 1] : null;
+}
+
+function sesionCelebrada(sesion) {
+  return !!(sesion && sesion.horaInicio && sesion.horaFin);
+}
+
 export function conPunto2Actualizado(secciones, proyectoMeta, sesiones, calcularFechaAnterior, formatearFechaES, sumarDias) {
   const idx = secciones.findIndex(s => s.id === 'sec_fijo_2');
   if (idx === -1 || !proyectoMeta.fecha) return secciones;
-  const fechaAnterior = calcularFechaAnterior(proyectoMeta.fecha, 7);
+  const fechaAnterior = obtenerFechaSesionOrdinariaAnterior(sesiones, proyectoMeta.fecha) || calcularFechaAnterior(proyectoMeta.fecha, 7);
   if (!fechaAnterior) return secciones;
 
   const tipoActual = (proyectoMeta.tipoSesion || 'Ordinaria').toLowerCase();
+  const anteriorCelebrada = sesionCelebrada(sesiones[fechaAnterior]);
 
   const extraordinarias = Object.keys(sesiones)
     .filter(f => {
       if (sesiones[f].tipoSesion !== 'Extraordinaria') return false;
+      if (!sesionCelebrada(sesiones[f])) return false;
       if (sumarDias(f, 1) === proyectoMeta.fecha) return false;
       if (sumarDias(f, 1) === fechaAnterior) return f < proyectoMeta.fecha;
       return f > fechaAnterior && f < proyectoMeta.fecha;
     })
     .sort();
 
-  // Punto base (sec_fijo_2): acta de la sesión inmediata anterior
   const contenidoBase = `Aprobación, en su caso, del acta de la sesión ${tipoActual} del ${formatearFechaES(fechaAnterior)}.`;
 
-  // Puntos adicionales: uno independiente por cada extraordinaria pendiente
   const nuevosAuto = extraordinarias.map(f => ({
     id: 'acta_auto_' + f,
     clasificacion: 'Pleno',
@@ -149,27 +159,31 @@ export function conPunto2Actualizado(secciones, proyectoMeta, sesiones, calcular
     contenido: `Aprobación, en su caso, del acta de la sesión extraordinaria del ${formatearFechaES(f)}.`,
     seccion: 'aprobaciones',
     subbloque: 'Pleno',
-    aprobado: true
+    aprobado: true,
+    fechaReferencia: f
   }));
 
-  // DEBO AÑADIR RESTRICCIÓN DE QUE SI SE RETIRA UNA SESIÓN EXTRAORDINARIA DESDE CALENDARIZACIÓN, 
-  //EL OUNTO AUTOGENERADO DEBE DESAPARECER en tipo real!
   const sinAutosViejos = secciones.filter(s => s.id === 'sec_fijo_2' || !s.id.startsWith('acta_auto_'));
 
-  const base = sinAutosViejos.map(s => s.id === 'sec_fijo_2' ? {
-    ...s,
-    contenido: contenidoBase,
-    seccion: 'aprobaciones',
-    clasificacion: 'Pleno',
-    subbloque: 'Pleno'
-  } : s);
+  const base = sinAutosViejos
+    .filter(s => s.id !== 'sec_fijo_2' || anteriorCelebrada)
+    .map(s => s.id === 'sec_fijo_2' ? {
+      ...s,
+      contenido: contenidoBase,
+      seccion: 'aprobaciones',
+      clasificacion: 'Pleno',
+      subbloque: 'Pleno',
+      fechaReferencia: fechaAnterior
+    } : s);
 
   const idxBase = base.findIndex(s => s.id === 'sec_fijo_2');
+  const idxAncla = idxBase !== -1 ? idxBase : base.findIndex(s => s.id === 'sec_fijo_1');
+  const puntoInsercion = idxAncla !== -1 ? idxAncla + 1 : 0;
 
   return [
-    ...base.slice(0, idxBase + 1),
+    ...base.slice(0, puntoInsercion),
     ...nuevosAuto,
-    ...base.slice(idxBase + 1)
+    ...base.slice(puntoInsercion)
   ];
 }
 

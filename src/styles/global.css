@@ -20,6 +20,13 @@ body {
   flex-direction: column;
 }
 
+/* ===== TEXTO OCULTO (versión pública) ===== */
+.marca-oculta,
+.texto-oculto {
+  color: #d32f2f;
+  font-weight: 700;
+}
+
 /* ===== APP SHELL ===== */
 .app-shell.hidden {
   display: none;

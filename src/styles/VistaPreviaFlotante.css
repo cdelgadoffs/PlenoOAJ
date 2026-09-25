@@ -223,6 +223,12 @@
   /* La hoja sí recibe clics */
   pointer-events: auto;
 }
+.vista-previa-hoja,
+.vista-previa-hoja .ProseMirror,
+.vista-previa-hoja .ProseMirror p {
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+}
 
 .vista-previa-hoja [contenteditable]:empty::before {
   content: attr(data-placeholder);

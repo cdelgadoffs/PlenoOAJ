@@ -35,7 +35,6 @@ export function ProyectoProvider({ children }) {
   const [puntoPreviaSeleccionadoId, setPuntoPreviaSeleccionadoId] = useState(null);
   const [asistentes, setAsistentes] = useState(() => cargarAsistentes());
   const [secretarioEjecutivo, setSecretarioEjecutivo] = useState(() => cargarSecretarioEjecutivo());
-  // ✅ Fix B: anclas de numeración persistidas
   const [anclasNumeracion, setAnclasNumeracion] = useState(() => cargarAnclasNumeracion());
 
 
@@ -49,10 +48,8 @@ export function ProyectoProvider({ children }) {
   useEffect(() => { persistirExcepciones(excepciones); }, [excepciones]);
   useEffect(() => { persistirAsistentes(asistentes); }, [asistentes]);
   useEffect(() => { persistirSecretarioEjecutivo(secretarioEjecutivo); }, [secretarioEjecutivo]);
-  // ✅ Fix B: persistir anclas
   useEffect(() => { persistirAnclasNumeracion(anclasNumeracion); }, [anclasNumeracion]);
 
-  // ✅ Fix B: cuando cambian las anclas, recalcular los números de todas las sesiones
   useEffect(() => {
     setSesiones(prev => recalcularNumerosSesion(prev, anclasNumeracion));
   }, [anclasNumeracion]);
@@ -128,10 +125,11 @@ export function ProyectoProvider({ children }) {
 
   function regenerarCalendario(nuevoDia) {
     setDiaSesion(nuevoDia);
+    setAnclasNumeracion({});
     let base = generarCalendarioAnual({}, nuevoDia, excepciones, new Date().getFullYear());
     base = aplicarExcepciones(base, excepciones, sesionActivaFecha);
     base = limpiarSesionesInvalidas(base, nuevoDia, sesionActivaFecha, excepciones);
-    base = recalcularNumerosSesion(base, anclasNumeracion);
+    base = recalcularNumerosSesion(base, {});
     setSesiones(base);
     const proxima = obtenerProximaSesion(base);
     if (proxima) cargarSesion(proxima);
@@ -152,6 +150,17 @@ export function ProyectoProvider({ children }) {
     let base = generarCalendarioAnual(sesiones, diaSesion, nuevasExcepciones, new Date().getFullYear());
     base = aplicarExcepciones(base, nuevasExcepciones, sesionActivaFecha);
     base = limpiarSesionesInvalidas(base, diaSesion, sesionActivaFecha, nuevasExcepciones);
+
+    if (sesionActivaFecha === fecha) {
+      const { [fecha]: sesionActiva, ...resto } = base;
+      base = {
+        ...resto,
+        [destino]: { ...(resto[destino] || {}), ...sesionActiva }
+      };
+      setSesionActivaFecha(destino);
+      setProyectoMeta(m => ({ ...m, fecha: destino }));
+    }
+
     setSesiones(recalcularNumerosSesion(base, anclasNumeracion));
   }
 
@@ -190,7 +199,6 @@ export function ProyectoProvider({ children }) {
     });
   }
 
-  // === FUNCIONES MODIFICADAS CON GUARD ===
   function moverPunto(id, direccion) {
     if (sesiones[sesionActivaFecha]?.listaCerrada) return;
     setSecciones(prev => {
@@ -285,10 +293,6 @@ export function ProyectoProvider({ children }) {
         copia[idxActual] = actualizado;
         return copia;
       }
-      // Cambiar de sección reposiciona el punto junto a los demás de su
-      // nueva sección (misma lógica que al crear un punto), para que la
-      // numeración consecutiva y el orden del documento exportado sigan
-      // coincidiendo con lo que se ve en pantalla.
       const sinPunto = prev.filter(s => s.id !== id);
       const insertIdx = getInsertIndex(sinPunto, nuevaSeccion);
       const copia = [...sinPunto];
@@ -340,6 +344,16 @@ export function ProyectoProvider({ children }) {
     setSecciones(prev => prev.map(s => s.id === id ? { ...s, ...cambios } : s));
   }
 
+  function actualizarActaOverride(fecha, clave, texto) {
+    if (!fecha) return;
+    setSesiones(prev => {
+      const sesion = prev[fecha];
+      if (!sesion) return prev;
+      const overrides = { ...(sesion.actaOverrides || {}), [clave]: texto };
+      return { ...prev, [fecha]: { ...sesion, actaOverrides: overrides } };
+    });
+  }
+
 
   function agregarActa(tipo, fecha) {
     const contenido = `Aprobación, en su caso, del acta de la sesión ${tipo.toLowerCase()} del ${formatearFechaES(fecha)}.`;
@@ -389,7 +403,6 @@ export function ProyectoProvider({ children }) {
       return recalcularNumerosSesion(nuevas, anclasNumeracion);
     });
 
-    // Actualizar estados locales
     setSesionActivaFecha(fecha);
     setProyectoMeta({ tipoSesion: 'Extraordinaria', numeroSesion: 1, fecha });
     setSecciones([puntoOrdenDia]);
@@ -444,7 +457,7 @@ export function ProyectoProvider({ children }) {
     setSesiones(prev => {
       const sesion = prev[sesionActivaFecha];
       if (!sesion) return prev;
-      const { horaInicio, horaFin, terminada, ...resto } = sesion;
+      const { horaInicio, horaFin, terminada, actaOverrides, ...resto } = sesion;
       return { ...prev, [sesionActivaFecha]: resto };
     });
     setSecciones(prev => prev.map(s => s.engroseEnviado ? { ...s, engroseEnviado: false } : s));
@@ -478,7 +491,6 @@ export function ProyectoProvider({ children }) {
     });
   }
 
-  // ✅ Fix A + B: guarda un ancla de numeración y refleja el cambio en proyectoMeta
   function ajustarNumerosDesde(fecha, nuevoNumero) {
     const sesion = sesiones[fecha];
     if (!sesion) return;
@@ -487,10 +499,8 @@ export function ProyectoProvider({ children }) {
     const anio = fecha.substring(0, 4);
     const clave = anio + '_' + tipo;
 
-    // Guardar ancla: a partir de esta fecha, la numeración arranca en nuevoNumero
     setAnclasNumeracion(prev => ({ ...prev, [clave]: { fecha, numero: nuevoNumero } }));
 
-    // Reflejar de inmediato en proyectoMeta si es la sesión activa
     if (fecha === sesionActivaFecha) {
       setProyectoMeta(prev => ({ ...prev, numeroSesion: nuevoNumero }));
     }
@@ -547,7 +557,7 @@ export function ProyectoProvider({ children }) {
     cargarSesion, eliminarSesion, regenerarCalendario, agregarVacacion, agregarAsueto, eliminarExcepcion,
     asistentes, agregarAsistente, eliminarAsistente, editarAsistente, toggleAsistentePresente,
     secretarioEjecutivo, guardarSecretarioEjecutivo, eliminarSecretarioEjecutivo,
-    actualizarPunto, agregarActa, crearSesionExtraordinaria, adjuntarArchivoAPunto, setOneDriveFolder,
+    actualizarPunto, actualizarActaOverride, agregarActa, crearSesionExtraordinaria, adjuntarArchivoAPunto, setOneDriveFolder,
     toggleListaCerrada, comenzarSesionCelebracion, finalizarSesionCelebracion, restablecerSesionCelebracion, terminarSesionCelebracion,
     actualizarHoraInicioCelebracion, actualizarHoraFinCelebracion, ajustarNumerosDesde,
     anclasNumeracion, setAnclasNumeracion

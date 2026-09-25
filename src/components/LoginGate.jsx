@@ -38,7 +38,7 @@ export default function LoginGate() {
           />
           <div className="lg-eyebrow">OAJ · SISTEMA DE SESIONES</div>
           <h1 className="lg-titulo">
-            Generador de<br />Orden del Día
+            Sistema de Gestión de<br />Sesiones del Pleno (SGSP)
           </h1>
           <p className="lg-descripcion">
             Planeación, votación y actas del Pleno del Órgano de Administración Judicial,

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { renderConOcultos, capitalizarPalabras } from '../utils/texto.js';
 import { PLANTILLAS, PLANTILLA_POR_DEFECTO, SECCIONES_POR_DEFECTO, crearBloquesPorDefecto } from '../utils/plantillasActa.js';
 import { generarWordPunto } from '../utils/wordPunto.js';
-import { generarTextoEngrose } from '../utils/textoEngrose.js';
+import { generarTextoEngrose, nombreArchivoEngrose } from '../utils/textoEngrose.js';
 import { useProyecto } from '../context/ProyectoContext.jsx';
 import EditorOcultable from './EditorOcultable.jsx';
 
@@ -13,12 +13,6 @@ const TIPOS_BLOQUE = [
 ];
 const PLACEHOLDER_SECCION = { id: '', label: 'Seleccionar sección...', icon: 'fa-list' };
 
-// Tipos de sección que puede ofrecer el selector dado el estado actual de
-// bloques: considerando/antecedente desaparecen en cuanto ya están
-// agregados. Si no queda ninguno fijo libre, "Personalizada..." quedaría
-// como única opción y el selector la marcaría sola (abriendo de una el
-// campo de título sin que el usuario lo pidiera), así que en ese caso se
-// antepone un placeholder neutro que hay que cambiar a propósito.
 function tiposDisponiblesPara(bloques) {
   const fijosLibres = TIPOS_BLOQUE.filter(t => t.id !== 'personalizada' && !bloques.some(b => b.tipo === t.id));
   const personalizada = TIPOS_BLOQUE.find(t => t.id === 'personalizada');
@@ -28,7 +22,7 @@ function tiposDisponiblesPara(bloques) {
 const TABLA_MAX_FILAS = 8;
 const TABLA_MAX_COLS = 10;
 
-export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, soloLectura, codigoLectura, remitenteLectura, onCerrarLectura }) {
+export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, soloLectura, codigoLectura, remitenteLectura, onCerrarLectura, onAporte }) {
   const { proyectoMeta, asistentes, secretarioEjecutivo } = useProyecto();
   const [pos, setPos] = useState(null);
   const plantilla = form.plantilla || PLANTILLA_POR_DEFECTO;
@@ -61,12 +55,18 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, 
 
   useEffect(() => {
     const tipos = SECCIONES_POR_DEFECTO[plantilla];
-    if (!tipos) return;
-    const puedeReemplazar = bloques.every(b => b.tipo !== 'personalizada' && !(b.texto && b.texto.trim()));
-    if (!puedeReemplazar) return;
+    if (!tipos) {
+      if (bloques.length > 0) setForm(f => ({ ...f, bloquesActa: [] }));
+      return;
+    }
     const actuales = bloques.map(b => b.tipo).join(',');
     if (actuales === tipos.join(',')) return;
-    setForm(f => ({ ...f, bloquesActa: crearBloquesPorDefecto(plantilla) }));
+
+    const vacios = crearBloquesPorDefecto(plantilla);
+    const ordenados = tipos.map(tipo => bloques.find(b => b.tipo === tipo) || vacios.find(b => b.tipo === tipo));
+    const personalizadas = bloques.filter(b => b.tipo === 'personalizada');
+
+    setForm(f => ({ ...f, bloquesActa: [...ordenados, ...personalizadas] }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plantilla]);
 
@@ -106,9 +106,10 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, 
 
   async function descargarWord() {
     const { blob, nombreArchivo } = await generarWordPunto(form, proyectoMeta, { engrose: soloLectura ? { asistentes, secretarioEjecutivo } : null });
+    const nombreFinal = soloLectura ? nombreArchivoEngrose(codigoLectura) : nombreArchivo;
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = url; link.download = nombreArchivo;
+    link.href = url; link.download = nombreFinal;
     document.body.appendChild(link); link.click(); document.body.removeChild(link);
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
@@ -126,6 +127,7 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, 
     setForm(f => ({ ...f, bloquesActa: [...(f.bloquesActa || []), nuevo] }));
   }
   function actualizarBloque(id, texto) {
+    onAporte && onAporte();
     setForm(f => ({ ...f, bloquesActa: (f.bloquesActa || []).map(b => b.id === id ? { ...b, texto } : b) }));
   }
   function eliminarBloque(id) {
@@ -143,6 +145,28 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, 
   }
   function aplicarListaNumerada() {
     editorActivo()?.chain().focus().toggleOrderedList().run();
+  }
+  async function copiarSeleccion() {
+    const editor = editorActivo();
+    if (!editor) return;
+    const { from, to } = editor.state.selection;
+    const texto = from === to ? editor.getText() : editor.state.doc.textBetween(from, to, '\n');
+    if (!texto) return;
+    try {
+      await navigator.clipboard.writeText(texto);
+    } catch (err) {
+      console.error('No se pudo copiar al portapapeles:', err);
+    }
+  }
+  async function pegarPortapapeles() {
+    const editor = editorActivo();
+    if (!editor) return;
+    try {
+      const texto = await navigator.clipboard.readText();
+      if (texto) editor.chain().focus().insertContent(texto).run();
+    } catch (err) {
+      console.error('No se pudo pegar desde el portapapeles:', err);
+    }
   }
   function capitalizarSeleccion() {
     const editor = editorActivo();
@@ -235,51 +259,55 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, 
           >
             {PLANTILLAS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
           </select>
-          <div className="vp-dropdown-wrapper">
-            <button
-              type="button"
-              className="vp-header-btn"
-              title={`Sección: ${seccionActual.label}`}
-              onClick={() => setDropdownAbierto(d => d === 'seccion' ? null : 'seccion')}
-            >
-              <i className={`fas ${seccionActual.icon}`}></i>
-            </button>
-            {dropdownAbierto === 'seccion' && (
-              <div className="vp-dropdown-menu">
-                {tiposDisponibles.map(t => (
-                  <button
-                    type="button"
-                    key={t.id}
-                    className={`vp-dropdown-item${t.id === tipoNuevoBloque ? ' activo' : ''}`}
-                    onClick={() => { setTipoNuevoBloque(t.id); setDropdownAbierto(null); }}
-                  >
-                    <i className={`fas ${t.icon}`}></i>
-                    <span>{t.label}</span>
-                  </button>
-                ))}
+          {plantilla === 'personalizada' && (
+            <>
+              <div className="vp-dropdown-wrapper">
+                <button
+                  type="button"
+                  className="vp-header-btn"
+                  title={`Sección: ${seccionActual.label}`}
+                  onClick={() => setDropdownAbierto(d => d === 'seccion' ? null : 'seccion')}
+                >
+                  <i className={`fas ${seccionActual.icon}`}></i>
+                </button>
+                {dropdownAbierto === 'seccion' && (
+                  <div className="vp-dropdown-menu">
+                    {tiposDisponibles.map(t => (
+                      <button
+                        type="button"
+                        key={t.id}
+                        className={`vp-dropdown-item${t.id === tipoNuevoBloque ? ' activo' : ''}`}
+                        onClick={() => { setTipoNuevoBloque(t.id); setDropdownAbierto(null); }}
+                      >
+                        <i className={`fas ${t.icon}`}></i>
+                        <span>{t.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-          {esPersonalizada && (
-            <input
-              type="text"
-              className="vp-header-input"
-              value={tituloPersonalizado}
-              onChange={e => setTituloPersonalizado(e.target.value)}
-              placeholder="Título de la sección"
-              onKeyDown={e => { if (e.key === 'Enter') agregarBloque(); }}
-              autoFocus
-            />
+              {esPersonalizada && (
+                <input
+                  type="text"
+                  className="vp-header-input"
+                  value={tituloPersonalizado}
+                  onChange={e => setTituloPersonalizado(e.target.value)}
+                  placeholder="Título de la sección"
+                  onKeyDown={e => { if (e.key === 'Enter') agregarBloque(); }}
+                  autoFocus
+                />
+              )}
+              <button
+                type="button"
+                className="vp-header-btn"
+                title="Añadir sección"
+                onClick={agregarBloque}
+                disabled={!tipoNuevoBloque || (esPersonalizada && !tituloPersonalizado.trim())}
+              >
+                <i className="fas fa-plus"></i>
+              </button>
+            </>
           )}
-          <button
-            type="button"
-            className="vp-header-btn"
-            title="Añadir sección"
-            onClick={agregarBloque}
-            disabled={!tipoNuevoBloque || (esPersonalizada && !tituloPersonalizado.trim())}
-          >
-            <i className="fas fa-plus"></i>
-          </button>
           <span className="vp-header-sep"></span>
           {/* Deshacer/rehacer y formato: siempre visibles, para cualquier plantilla */}
           <button type="button" className="vp-header-btn" title="Deshacer" onMouseDown={(e) => { e.preventDefault(); deshacer(); }}>
@@ -287,6 +315,12 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, 
           </button>
           <button type="button" className="vp-header-btn" title="Rehacer" onMouseDown={(e) => { e.preventDefault(); rehacer(); }}>
             <i className="fas fa-redo"></i>
+          </button>
+          <button type="button" className="vp-header-btn" title="Copiar (Ctrl+C)" onMouseDown={(e) => { e.preventDefault(); copiarSeleccion(); }}>
+            <i className="fas fa-copy"></i>
+          </button>
+          <button type="button" className="vp-header-btn" title="Pegar (Ctrl+V)" onMouseDown={(e) => { e.preventDefault(); pegarPortapapeles(); }}>
+            <i className="fas fa-paste"></i>
           </button>
           <div className="vp-tabla-wrapper">
             <button
@@ -357,7 +391,7 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, 
           {plantilla === 'introduccion' && (
             <EditorOcultable
               value={form.introTexto}
-              onChange={(v) => setForm(f => ({ ...f, introTexto: v }))}
+              onChange={(v) => { onAporte && onAporte(); setForm(f => ({ ...f, introTexto: v })); }}
               placeholder="Fundamento..."
               className=""
               style={{ textAlign: 'justify', marginBottom: '20px', outline: 'none' }}
@@ -369,7 +403,7 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, 
           {plantilla === 'proyecto' && (
             <EditorOcultable
               value={form.contenido}
-              onChange={(v) => setForm(f => ({ ...f, contenido: v }))}
+              onChange={(v) => { onAporte && onAporte(); setForm(f => ({ ...f, contenido: v })); }}
               placeholder="Punto de acuerdo..."
               negritaTotal
               className="vp-contenido"
@@ -408,7 +442,7 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, 
             <>
               <EditorOcultable
                 value={form.puenteTexto}
-                onChange={(v) => setForm(f => ({ ...f, puenteTexto: v }))}
+                onChange={(v) => { onAporte && onAporte(); setForm(f => ({ ...f, puenteTexto: v })); }}
                 placeholder="Frase puente..."
                 className=""
                 style={{ textAlign: 'justify', margin: '10px 0', outline: 'none' }}
@@ -417,7 +451,7 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, 
               />
               <EditorOcultable
                 value={form.contenido}
-                onChange={(v) => setForm(f => ({ ...f, contenido: v }))}
+                onChange={(v) => { onAporte && onAporte(); setForm(f => ({ ...f, contenido: v })); }}
                 placeholder="Punto de acuerdo..."
                 negritaTotal
                 className="vp-contenido"
@@ -427,9 +461,22 @@ export default function VistaPreviaFlotante({ form, setForm, visible, anclaRef, 
               />
             </>
           )}
+          {plantilla === 'personalizada' && (
+            <EditorOcultable
+              value={form.contenido}
+              onChange={(v) => { onAporte && onAporte(); setForm(f => ({ ...f, contenido: v })); }}
+              placeholder="Punto de acuerdo..."
+              negritaTotal
+              className="vp-contenido"
+              style={{ marginBottom: '20px', outline: 'none' }}
+              soloLectura={soloLectura}
+              onFocusEditor={(ed) => { editorActivoRef.current = ed; }}
+            />
+          )}
+          {plantilla === 'proyecto' && <div className="vp-bloque-titulo">ACUERDO</div>}
           <EditorOcultable
             value={form.acuerdo}
-            onChange={(v) => setForm(f => ({ ...f, acuerdo: v }))}
+            onChange={(v) => { onAporte && onAporte(); setForm(f => ({ ...f, acuerdo: v })); }}
             placeholder="Acuerdos..."
             modoAcuerdo
             className=""

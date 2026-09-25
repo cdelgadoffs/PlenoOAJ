@@ -1,6 +1,13 @@
 import { describirVotacionEngrose } from './votacion.js';
 import { fechaEnLetras } from './fechaLetras.js';
 
+// El nombre visible sigue la convención "PLE/nnn" usada en toda la app, pero
+// para el nombre de archivo real (OneDrive, ZIP, descarga) se quita la barra
+// porque "/" no es válido en un nombre de archivo.
+export function nombreArchivoEngrose(codigo) {
+  return `ENGROSE_${(codigo || '').replace(/\//g, '')}.docx`;
+}
+
 export function nombreFirmante(asistente, conGrado) {
   if (!asistente) return conGrado ? '<<presidente>>' : '<<secretario>>';
   if (!conGrado) return asistente.nombre.toUpperCase();
