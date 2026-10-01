@@ -168,7 +168,7 @@ export default function Sync({ onVolver }) {
 
   async function restaurarDesdeCarpeta() {
     if (!soportado) { alert('Tu navegador no soporta la vinculación de carpetas locales. Usa Chrome o Edge de escritorio.'); return; }
-    if (!confirm('Se leerán los archivos de sesión (ord-*.json / ext-*.json) de la carpeta que elijas y se cargarán en la aplicación. ¿Continuar?')) return;
+    if (!confirm('Se leerán los archivos de sesión (ord-*.json / ext-*.json) de la carpeta que elijas y se cargarán en la aplicación sin vincular la carpeta. ¿Continuar?')) return;
     setRestaurando(true);
     try {
       const h = await window.showDirectoryPicker({ mode: 'readwrite' });
@@ -208,14 +208,9 @@ export default function Sync({ onVolver }) {
       setSesiones(prev => ({ ...prev, ...restauradas }));
       await fsLeerDiccionario(h);
 
-      setHandle(h);
-      setNombreCarpeta(h.name);
-      setNecesitaReconectar(false);
-      await fsGuardarHandle(claveUsuario, h);
-
-      alert(`Se restauraron ${leidos} sesión(es) desde "${h.name}" y la carpeta quedó vinculada.`);
+      alert(`Se importaron ${leidos} sesión(es) desde "${h.name}". La carpeta no quedó vinculada.`);
     } catch (err) {
-      if (err.name !== 'AbortError') { console.error('Error al restaurar desde carpeta:', err); alert('No se pudo restaurar el respaldo.'); }
+      if (err.name !== 'AbortError') { console.error('Error al importar respaldo:', err); alert('No se pudo importar el respaldo.'); }
     } finally {
       setRestaurando(false);
     }
@@ -239,7 +234,9 @@ export default function Sync({ onVolver }) {
       <div className="email-field">
         <label className="email-label">Carpeta de respaldo local</label>
         <div id="syncStatus" className={estadoClase}>{estadoTexto}</div>
-        <button id="btnVincularCarpeta" className="btn-enviar-email" style={{ marginTop: '8px' }} onClick={vincularCarpeta}>Seleccionar carpeta</button>
+        {!handle && (
+          <button id="btnVincularCarpeta" className="btn-enviar-email" style={{ marginTop: '8px' }} onClick={vincularCarpeta}>Seleccionar carpeta</button>
+        )}
         {!handle && !necesitaReconectar && (
           <button
             id="btnRestaurarRespaldo"
@@ -248,7 +245,7 @@ export default function Sync({ onVolver }) {
             disabled={restaurando}
             onClick={restaurarDesdeCarpeta}
           >
-            {restaurando ? 'Restaurando...' : 'Restaurar desde respaldo'}
+            {restaurando ? 'Importando...' : 'Importar respaldo'}
           </button>
         )}
         {(handle || necesitaReconectar) && (
