@@ -142,23 +142,26 @@ export default function Calendarizacion({ mostrarFormulario, setMostrarFormulari
               {opcionesAsuetoActuales.length > 0 && (
                 <div className="cal-form-fecha">
                   <label className="cal-form-label">Reprogramar a</label>
-                  <select id="asuetoDestino" className="ter-select cal-select" value={asuetoDestino} onChange={(e) => setAsuetoDestino(e.target.value)}>
+                  <select id="asuetoDestino" className="ter-select cal-select" value={asuetoDestino} onChange={(e) => {
+                    const destino = e.target.value;
+                    if (!destino) { setAsuetoDestino(''); return; }
+                    if (excepciones.asuetos.some(a => a.fecha === asuetoFecha)) {
+                      alert('Ya existe un asueto registrado en esa fecha.');
+                      setAsuetoFecha(''); setAsuetoDestino('');
+                      return;
+                    }
+                    agregarAsueto(asuetoFecha, destino);
+                    setAsuetoFecha(''); setAsuetoDestino('');
+                  }}>
                     <option value="">Selecciona destino</option>
                     {opcionesAsuetoActuales.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
                 </div>
               )}
             </div>
-            <div className="cal-form-hint">Si un día de sesión cae en asueto, la sesión se reprograma al día hábil anterior o siguiente.</div>
+            <div className="cal-form-hint">Si un día de sesión cae en asueto, la sesión se reprograma al día hábil anterior o siguiente. Al elegir el destino, el asueto se aplica de inmediato.</div>
             {opcionesAsuetoActuales.length > 0 && (
-              <>
-                <button id="btnAgregarAsueto" className="btn-add-invitado cal-btn-agregar" onClick={() => {
-                  if (!asuetoFecha || !asuetoDestino) return;
-                  agregarAsueto(asuetoFecha, asuetoDestino);
-                  setAsuetoFecha(''); setAsuetoDestino('');
-                }}>Agregar asueto</button>
-                <button id="btnCancelarAsueto" className="cal-btn-cancelar" onClick={() => { setAsuetoFecha(''); setAsuetoDestino(''); }}>Cancelar</button>
-              </>
+              <button id="btnCancelarAsueto" className="cal-btn-cancelar" onClick={() => { setAsuetoFecha(''); setAsuetoDestino(''); }}>Cancelar</button>
             )}
           </div>
 

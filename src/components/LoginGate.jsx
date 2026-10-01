@@ -36,13 +36,13 @@ export default function LoginGate() {
             alt="Logo institucional"
             className="lg-logo"
           />
-          <div className="lg-eyebrow">OAJ · SISTEMA DE SESIONES</div>
+          <div className="lg-eyebrow">OAJ · SIGEP</div>
           <h1 className="lg-titulo">
-            Sistema de Gestión de<br />Sesiones del Pleno (SGSP)
+            Sistema de Gestión<br />del Pleno
           </h1>
           <p className="lg-descripcion">
-            Planeación, votación y actas del Pleno del Órgano de Administración Judicial,
-            en un solo lugar.
+            Órgano de Administración Judicial<br />
+            Poder Judicial de la Federación
           </p>
           <div className="lg-fecha">{fechaHoy}</div>
         </div>
